@@ -1,0 +1,20 @@
+export type User = { id: string; name: string; handle: string; avatar: string; verified?: boolean };
+export type Comment = { id: string; userId: string; text: string; ts: number };
+export type Post = {
+  id: string;
+  authorId: string;
+  text: string;
+  image?: string;
+  likes: number;
+  reposts: number;
+  createdAt: number;
+  liked?: boolean;
+  bookmarked?: boolean;
+  comments: Comment[];
+  originalId?: string;
+  repostedByMe?: boolean;
+};
+export type DM = { id: string; from: "me" | string; text: string; ts: number };
+export type Thread = { id: string; participantId: string; last: string; messages: DM[]; unread?: boolean };
+export type Reel = { id: string; title: string; authorId: string; src: string; liked?: boolean; saved?: boolean };
+export type Tab = "home" | "messages" | "reels" | "media" | "profile";
