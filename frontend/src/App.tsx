@@ -29,7 +29,7 @@ export default function App() {
    const [posts, setPosts] = useState<Post[]>(SEED_POSTS);
    const [reels, setReels] = useState<Reel[]>([
       { id: "r1", title: "Sunset ride", authorId: "u2", src: "https://cdn.coverr.co/videos/coverr-a-car-driving-on-the-roads-1642/1080p.mp4", liked: false, saved: false },
-      { id: "r2", title: "Coffee drip ASMR", authorId: "u3", src: "https://cdn.coverr.co/videos/coverr-coffee-drip-8054/1080p.mp4", liked: false, saved: false },
+      { id: "r2", title: "Coffee drip ASMR", authorId: "u3", src: "https://pictshare.hnasheralneam.dev/mfp9f7.mp4", liked: false, saved: false },
       { id: "r3", title: "Coding vibes", authorId: "u4", src: "https://cdn.coverr.co/videos/coverr-a-man-typing-on-his-laptop-6963/1080p.mp4", liked: false, saved: false },
    ]);
 
