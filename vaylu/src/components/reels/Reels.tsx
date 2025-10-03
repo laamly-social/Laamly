@@ -1,3 +1,7 @@
+import Avatar from "../ui/Avatar";
+import InputField from "../ui/InputField";
+import GenericButton from "../ui/GenericButton";
+import Card from "../ui/Card";
 import { useRef, useState } from "react";
 import { Upload, PlusCircle, VolumeX, Volume2, Heart, Bookmark, Share2, MessageSquare } from "lucide-react";
 import { USERS } from "../../data/mock";
@@ -45,36 +49,36 @@ export default function Reels({
   };
 
   return (
-    <div className="reelsShell">
-      <div className="reelsUploader card shell-narrow">
+    <div className="h-[calc(100vh-1rem)] my-2 grid gap-8" style={{gridTemplateColumns: "20rem auto"}}>
+      <Card className="shell-narrow max-w-xl mx-auto my-8">
         <div className="card__body">
-          <div className="row gap8 wrap">
-            <input className="input" placeholder="Reel title (optional)" value={title} onChange={e => setTitle(e.target.value)} />
-            <input className="input" placeholder="Video URL or upload" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} />
-            <label className="btn btn--ghost" style={{ cursor: "pointer" }}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <InputField className="input bg-muted dark:bg-muted-dark" placeholder="Reel title (optional)" value={title} onChange={e => setTitle(e.target.value)} />
+            <InputField className="input bg-muted dark:bg-muted-dark" placeholder="Video URL or upload" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} />
+            <label className="btn rounded-xl bg-transparent text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark" style={{ cursor: "pointer" }}>
               <Upload size={16} /> Upload
-              <input type="file" accept="video/*" onChange={onPickVideo} style={{ display: "none" }} />
+              <InputField className="bg-muted dark:bg-muted-dark" type="file" accept="video/*" onChange={onPickVideo} style={{ display: "none" }} />
             </label>
-            <button className="btn" onClick={addReel}>
+            <GenericButton className="btn" onClick={addReel}>
               <PlusCircle size={16} /> Add Reel
-            </button>
+            </GenericButton>
           </div>
         </div>
-      </div>
+      </Card>
 
-      <div ref={wrapRef} className="reels reels--centered">
+      <div ref={wrapRef} className="reels reels--centered h-full">
         {reels.map(r => {
           const u = USERS.find(x => x.id === r.authorId)!;
           return (
-            <section key={r.id} className="reel">
+            <Card key={r.id} className="reel shadow-none h-full">
               <video src={r.src} muted={muted} playsInline loop onClick={togglePlay} />
-              <button className="mute" onClick={() => setMuted(m => !m)} aria-label="Toggle sound">
+              <GenericButton className="mute" onClick={() => setMuted(m => !m)} aria-label="Toggle sound">
                 {muted ? <VolumeX /> : <Volume2 />}
-              </button>
+              </GenericButton>
               <div className="reel__bar">
                 <div className="reel__meta">
-                  <div className="row gap8">
-                    <img className="avatar" src={u.avatar} alt={u.name} />
+                  <div className="flex items-center gap-2">
+                    <Avatar src={u.avatar} alt={u.name} />
                     <div>
                       <div className="meta__title">{u.name}</div>
                       <div className="meta__sub">
@@ -86,15 +90,15 @@ export default function Reels({
                 <div className="actions">
                   <IconBtn icon={Heart} label="Like Reel" active={r.liked} onClick={() => toggleReelLike(r.id)} />
                   <IconBtn icon={Bookmark} label="Save Reel" active={r.saved} onClick={() => toggleReelSave(r.id)} />
-                  <button className="btn btn--circle">
+                  <GenericButton className="btn rounded-full h-[40px] w-[40px] p-0">
                     <MessageSquare size={18} />
-                  </button>
-                  <button className="btn btn--circle">
+                  </GenericButton>
+                  <GenericButton className="btn rounded-full h-[40px] w-[40px] p-0">
                     <Share2 size={18} />
-                  </button>
+                  </GenericButton>
                 </div>
               </div>
-            </section>
+            </Card>
           );
         })}
       </div>

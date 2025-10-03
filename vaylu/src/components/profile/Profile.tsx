@@ -1,10 +1,15 @@
+import Avatar from "../ui/Avatar";
+import GenericButton from "../ui/GenericButton";
+import Chip from "../ui/Chip";
+import Card from "../ui/Card";
 import { useState } from "react";
-import { ChevronLeft, User as UserIcon } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { USERS } from "../../data/mock";
-import { clsx, formatTime } from "../../utils";
+import { clsx } from "../../utils";
 import Verified from "../ui/Verified";
 import UserChip from "../ui/UserChip";
 import type { Post, Reel } from "../../types";
+import PostComponent from "../feed/Post";
 
 export default function Profile(props: {
   userId: string;
@@ -39,13 +44,14 @@ export default function Profile(props: {
 
   return (
     <div className="profile">
-      <button className="chip" onClick={onBack}>
+      <Chip onClick={onBack}>
         <ChevronLeft size={16} /> Back
-      </button>
+      </Chip>
 
-      <div className="profile__header card">
+      {/* Use Card component for profile header */}
+      <Card className="profile__header">
         <div className="card__body profile__row">
-          <img className="profile__avatar" src={user.avatar} alt={user.name} />
+          <Avatar src={user.avatar} alt={user.name} className="w-20 h-20 border border-gray-300 dark:border-gray-700 object-cover rounded-full" />
           <div className="profile__meta">
             <div className="profile__name">
               {user.name} {user.verified && <Verified />}
@@ -61,150 +67,99 @@ export default function Profile(props: {
             </div>
           </div>
           {!isMe && (
-            <button
-              className={clsx("btn", (followMap[meId] || new Set()).has(user.id) ? "" : "btn--ghost")}
+            <GenericButton
+              className={clsx("btn", (followMap[meId] || new Set()).has(user.id) ? "" : "bg-transparent text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark")}
               onClick={() => followToggle(user.id)}
             >
               {(followMap[meId] || new Set()).has(user.id) ? "Following" : "Follow"}
-            </button>
+            </GenericButton>
           )}
         </div>
-      </div>
+      </Card>
 
-      <div className="row gap8" style={{ marginTop: 8, marginBottom: 8 }}>
-        <button className={clsx("chip", view === "posts" && "chip--active")} onClick={() => setView("posts")}>
+      <div className="flex items-center gap-2" style={{ marginTop: 8, marginBottom: 8 }}>
+        <Chip active={view === "posts"} onClick={() => setView("posts")}>
           Posts
-        </button>
-        <button className={clsx("chip", view === "reposts" && "chip--active")} onClick={() => setView("reposts")}>
+        </Chip>
+        <Chip active={view === "reposts"} onClick={() => setView("reposts")}>
           Reposts
-        </button>
+        </Chip>
         {isMe && (
           <>
-            <button
-              className={clsx("chip", view === "likedPosts" && "chip--active")}
-              onClick={() => setView("likedPosts")}
-            >
-              Liked Posts
-            </button>
-            <button
-              className={clsx("chip", view === "likedReels" && "chip--active")}
-              onClick={() => setView("likedReels")}
-            >
-              Liked Reels
-            </button>
-            <button
-              className={clsx("chip", view === "savedPosts" && "chip--active")}
-              onClick={() => setView("savedPosts")}
-            >
-              Saved Posts
-            </button>
-            <button
-              className={clsx("chip", view === "savedReels" && "chip--active")}
-              onClick={() => setView("savedReels")}
-            >
-              Saved Reels
-            </button>
+            <Chip active={view === "likedPosts"} onClick={() => setView("likedPosts")}>Liked Posts</Chip>
+            <Chip active={view === "likedReels"} onClick={() => setView("likedReels")}>Liked Reels</Chip>
+            <Chip active={view === "savedPosts"} onClick={() => setView("savedPosts")}>Saved Posts</Chip>
+            <Chip active={view === "savedReels"} onClick={() => setView("savedReels")}>Saved Reels</Chip>
           </>
         )}
-        <button
-          className={clsx("chip", view === "followers" && "chip--active")}
-          onClick={() => setView("followers")}
-        >
-          Followers
-        </button>
-        <button
-          className={clsx("chip", view === "following" && "chip--active")}
-          onClick={() => setView("following")}
-        >
-          Following
-        </button>
+        <Chip active={view === "followers"} onClick={() => setView("followers")}>Followers</Chip>
+        <Chip active={view === "following"} onClick={() => setView("following")}>Following</Chip>
       </div>
 
-      <div className="stack">
+      <div className="grid gap-4">
         {view === "posts" &&
-          originalPosts.map(p => {
-            const original = p.originalId ? posts.find(o => o.id === p.originalId) : null;
-            const isRepostCard = !!original;
-            const contentText = p.text || (isRepostCard ? original?.text || "" : "");
-            const contentImage = p.image || (isRepostCard ? original?.image : undefined);
-            return (
-              <div key={p.id} className="card post">
-                <div className="card__header">
-                  <UserIcon size={16} /> {isRepostCard && original ? <span>Repost from {USERS.find(u => u.id === original.authorId)?.name}</span> : <span>Post</span>}
-                </div>
-                <div className="card__body">
-                  {isRepostCard && original && (
-                    <div className="repostLine" style={{ margin: "6px 0 8px 0", fontSize: "12px" }}>
-                      (original by{" "}
-                      <button className="linklike" onClick={() => openProfile(original.authorId)}>
-                        {USERS.find(u => u.id === original.authorId)?.name}
-                      </button>
-                      )
-                    </div>
-                  )}
-                  {contentText && <p className="post__text" style={{ marginBottom: 8 }}>{contentText}</p>}
-                  {contentImage && <img className="post__img" src={contentImage} alt="post" />}
-                </div>
-              </div>
-            );
-          })}
+          originalPosts.map(p => (
+            <PostComponent
+              key={p.id}
+              post={p}
+              meId={meId}
+              posts={posts}
+              setPosts={props.setPosts}
+              openProfile={openProfile}
+              addComment={() => {}}
+              deletePost={() => {}}
+              toggleLike={() => {}}
+              toggleRepost={() => {}}
+            />
+          ))}
 
         {view === "reposts" &&
-          repostsList.map(p => {
-            const original = posts.find(o => o.id === p.originalId)!;
-            return (
-              <div key={p.id} className="card post">
-                <div className="card__header">
-                  <UserIcon size={16} /> Repost
-                </div>
-                <div className="card__body">
-                  <div className="repostLine" style={{ margin: "6px 0 8px 0", fontSize: "12px" }}>
-                    (original by{" "}
-                    <button className="linklike" onClick={() => openProfile(original.authorId)}>
-                      {USERS.find(u => u.id === original.authorId)?.name}
-                    </button>
-                    )
-                  </div>
-                  {original.text && <p className="post__text" style={{ marginBottom: 8 }}>{original.text}</p>}
-                  {original.image && <img className="post__img" src={original.image} alt="post" />}
-                </div>
-              </div>
-            );
-          })}
+          repostsList.map(p => (
+            <PostComponent
+              key={p.id}
+              post={p}
+              meId={meId}
+              posts={posts}
+              setPosts={props.setPosts}
+              openProfile={openProfile}
+              addComment={() => {}}
+              deletePost={() => {}}
+              toggleLike={() => {}}
+              toggleRepost={() => {}}
+            />
+          ))}
 
         {view === "likedPosts" &&
-          likedPosts.map(p => {
-            const owner = USERS.find(u => u.id === p.authorId)!;
-            return (
-              <div key={p.id} className="card post">
-                <div className="card__header">
-                  <UserChip userId={owner.id} onClickName={() => openProfile(owner.id)} />
-                  <span className="post__meta">{formatTime(p.createdAt)}</span>
-                </div>
-                <div className="card__body">
-                  {p.text && <p className="post__text">{p.text}</p>}
-                  {p.image && <img className="post__img" src={p.image} alt="post" />}
-                </div>
-              </div>
-            );
-          })}
+          likedPosts.map(p => (
+            <PostComponent
+              key={p.id}
+              post={p}
+              meId={meId}
+              posts={posts}
+              setPosts={props.setPosts}
+              openProfile={openProfile}
+              addComment={() => {}}
+              deletePost={() => {}}
+              toggleLike={() => {}}
+              toggleRepost={() => {}}
+            />
+          ))}
 
         {view === "savedPosts" &&
-          savedPosts.map(p => {
-            const owner = USERS.find(u => u.id === p.authorId)!;
-            return (
-              <div key={p.id} className="card post">
-                <div className="card__header">
-                  <UserChip userId={owner.id} onClickName={() => openProfile(owner.id)} />
-                  <span className="post__meta">{formatTime(p.createdAt)}</span>
-                </div>
-                <div className="card__body">
-                  {p.text && <p className="post__text">{p.text}</p>}
-                  {p.image && <img className="post__img" src={p.image} alt="post" />}
-                </div>
-              </div>
-            );
-          })}
+          savedPosts.map(p => (
+            <PostComponent
+              key={p.id}
+              post={p}
+              meId={meId}
+              posts={posts}
+              setPosts={props.setPosts}
+              openProfile={openProfile}
+              addComment={() => {}}
+              deletePost={() => {}}
+              toggleLike={() => {}}
+              toggleRepost={() => {}}
+            />
+          ))}
 
         {view === "likedReels" &&
           likedReels.map(r => {
@@ -212,8 +167,8 @@ export default function Profile(props: {
             return (
               <div key={r.id} className="card">
                 <div className="card__body">
-                  <div className="row gap8">
-                    <img className="avatar" src={u.avatar} alt={u.name} />
+                  <div className="flex items-center gap-2">
+                    <Avatar src={u.avatar} alt={u.name} />
                     <div>
                       <div style={{ fontWeight: 700 }}>{u.name}</div>
                       <div style={{ fontSize: "12px" }}>{r.title}</div>
@@ -230,8 +185,8 @@ export default function Profile(props: {
             return (
               <div key={r.id} className="card">
                 <div className="card__body">
-                  <div className="row gap8">
-                    <img className="avatar" src={u.avatar} alt={u.name} />
+                  <div className="flex items-center gap-2">
+                    <Avatar src={u.avatar} alt={u.name} />
                     <div>
                       <div style={{ fontWeight: 700 }}>{u.name}</div>
                       <div style={{ fontSize: "12px" }}>{r.title}</div>

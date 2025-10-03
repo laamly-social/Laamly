@@ -1,7 +1,7 @@
 import type { User, Post } from "../types";
 
 export const USERS: User[] = [
-  { id: "u1", name: "Raiyan Z.", handle: "@raiyan", avatar: "https://i.pravatar.cc/100?img=13", verified: true },
+  { id: "u1", name: "Raiyan Z.", handle: "@raiyan", avatar: "https://pictshare.hnasheralneam.dev/hh6q2m.png", verified: true },
   { id: "u2", name: "Ada Lovelace", handle: "@ada", avatar: "https://i.pravatar.cc/100?img=5", verified: true },
   { id: "u3", name: "Alan Turing", handle: "@turing", avatar: "https://i.pravatar.cc/100?img=12" },
   { id: "u4", name: "Grace Hopper", handle: "@grace", avatar: "https://i.pravatar.cc/100?img=30" },

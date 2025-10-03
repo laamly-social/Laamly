@@ -1,3 +1,6 @@
+import Avatar from "../ui/Avatar";
+import GenericButton from "../ui/GenericButton";
+import InputField from "../ui/InputField";
 import { useEffect, useRef, useState } from "react";
 import { Search, Bell, MoreHorizontal, Paperclip, Smile, Send } from "lucide-react";
 import { USERS } from "../../data/mock";
@@ -56,58 +59,64 @@ export default function Messages() {
   const lastTimestamp = (thread: Thread) => thread.messages[thread.messages.length - 1]?.ts ?? Date.now();
 
   return (
-    <div className="dmShell">
-      <aside className="sidebar">
+    <div className="grid h-[calc(100vh-1rem)] w-[calc(100vw-12.5rem)] rounded-xl border-1 border-border dark:border-border-dark overflow-hidden small:grid-cols-1 m-2 ml-0" style={{ gridTemplateColumns: "320px minmax(420px, 1fr)" }}>
+      <aside className="border-r-1 border-border dark:border-border-dark bg-panel dark:bg-panel-dark">
         <div className="sidebar__search">
-          <Search size={16} />
-          <input className="input" placeholder="Search DMs" />
+          <Search size={20} className="my-2" />
+          <InputField className="input bg-muted dark:bg-muted-dark" placeholder="Search DMs" />
         </div>
         <div>
           {threads.map(t => {
             const u = USERS.find(x => x.id === t.participantId)!;
             return (
-              <button
+              <div
                 key={t.id}
-                className={clsx("thread", activeId === t.id && "thread--active")}
+                className={
+                  `thread transition hover:bg-muted dark:hover:bg-muted-dark border-b-1 ${
+                    activeId === t.id
+                      ? "bg-muted dark:bg-muted-dark border-l-8 border-accent dark:border-accent"
+                      : "border-border dark:border-border-dark"
+                  }`
+                }
                 onClick={() => setActiveId(t.id)}
               >
-                <img className="avatar" src={u.avatar} alt={u.name} />
+                <Avatar src={u.avatar} alt={u.name} />
                 <div className="thread__content">
                   <div className="thread__row">
-                    <div className="thread__name">{u.name}</div>
-                    <div className="thread__time">{formatTime(lastTimestamp(t))}</div>
+                    <div className="text-text dark:text-text-dark font-bold">{u.name}</div>
+                    <div className="thread__time text-sub dark:text-sub-dark">{formatTime(lastTimestamp(t))}</div>
                   </div>
-                  <div className="thread__sub">
+                  <div className="thread__sub text-sub dark:text-sub-dark">
                     {t.last}
                     {t.unread && <span className="dot" />}
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
       </aside>
 
-      <section className="chat">
-        <div className="chat__top">
-          <div className="row gap8">{activeThread && <UserChip userId={activeThread.participantId} />}</div>
-          <div className="row gap8 muted">
+      <section className="chat overflow-auto">
+        <div className="chat__top bg-panel dark:bg-panel-dark border-b-1 border-border dark:border-border-dark">
+          <div className="flex items-center gap-2">{activeThread && <UserChip userId={activeThread.participantId} />}</div>
+          <div className="flex items-center gap-2 muted">
             <Bell size={16} />
             <MoreHorizontal size={16} />
           </div>
         </div>
-        <div className="chat__log">
+        <div className="chat__log bg-[linear-gradient(180deg,#dadada_0%,#ffffff_100%)] dark:bg-[linear-gradient(180deg,#12141a_0%,#090a0d_100%)]">
           {activeThread?.messages.map(m => {
             const mine = m.from === "me";
             return (
-              <div key={m.id} className={clsx("bubble", mine ? "bubble--me" : "bubble--them")}>
+              <div key={m.id} className={clsx("bubble rounded-2xl", mine ? "bubble--me bg-accent text-white" : "bubble--them bg-muted dark:bg-muted-dark text-text dark:text-text-dark")}>
                 <div className="bubble__text">{m.text}</div>
                 <time>{new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
               </div>
             );
           })}
           {typing && (
-            <div className="bubble bubble--them">
+            <div className="bubble bubble--me rounded-2xl">
               <span className="typing">
                 <i></i>
                 <i></i>
@@ -118,14 +127,14 @@ export default function Messages() {
           <div ref={endRef} />
         </div>
         <div className="chat__composer">
-          <button className="btn btn--ghost btn--circle" aria-label="attach">
+          <GenericButton className="btn bg-transparent border-t-1 border-border dark:border-border-dark text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark h-[40px] w-[40px] p-0" aria-label="attach">
             <Paperclip size={18} />
-          </button>
-          <button className="btn btn--ghost btn--circle" aria-label="emoji">
+          </GenericButton>
+          <GenericButton className="btn bg-transparent text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark h-[40px] w-[40px] p-0" aria-label="emoji">
             <Smile size={18} />
-          </button>
-          <input
-            className="input"
+          </GenericButton>
+          <InputField
+            className="input bg-muted dark:bg-muted-dark"
             placeholder="Message..."
             value={draft}
             onChange={e => setDraft(e.target.value)}
@@ -138,9 +147,9 @@ export default function Messages() {
             }}
             onBlur={() => setTyping(false)}
           />
-          <button className="btn" onClick={sendMessage}>
+          <GenericButton className="btn" onClick={sendMessage}>
             <Send size={16} /> Send
-          </button>
+          </GenericButton>
         </div>
       </section>
     </div>

@@ -1,11 +1,17 @@
-import { useState } from "react";
+import Avatar from "../ui/Avatar";
+import GenericButton from "../ui/GenericButton";
+import InputField from "../ui/InputField";
+import WhoToFollow from "../ui/WhoToFollow";
+import Card from "../ui/Card";
+import { useState, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Heart, Repeat, Share2, Upload, PlusCircle, Bookmark, BookmarkCheck, Trash2, MessageSquare } from "lucide-react";
+import { Upload, PlusCircle } from "lucide-react";
 import { USERS } from "../../data/mock";
-import { clsx, formatTime } from "../../utils";
-import IconBtn from "../ui/IconBtn";
+import { clsx } from "../../utils";
 import UserChip from "../ui/UserChip";
 import type { Post } from "../../types";
+import "../../index.css";
+import PostComponent from "./Post";
 
 export default function HomeFeed({
   meId,
@@ -98,126 +104,65 @@ export default function HomeFeed({
 
   const deletePost = (id: string) => setPosts(prev => prev.filter(p => p.id !== id));
 
-  const sortedPosts = [...posts].sort((a, b) =>
-    sort === "latest"
-      ? b.createdAt - a.createdAt
-      : b.likes + b.reposts + b.comments.length - (a.likes + a.reposts + a.comments.length)
-  );
+  const sortedPosts = useMemo(() => {
+    return [...posts].sort((a, b) =>
+      sort === "latest"
+        ? b.createdAt - a.createdAt
+        : b.likes + b.reposts + b.comments.length - (a.likes + a.reposts + a.comments.length)
+    );
+  }, [posts, sort]);
 
   const myFollowings = followMap[meId] || new Set<string>();
 
   return (
-    <div className="center">
+    <div className="center grid gap-4 w-full container" style={{gridTemplateColumns: "65% 35%"}}>
       <div className="col col--main">
-        <div className="composer card">
-          <div className="card__header card__header--between">
+        <Card className="p-2">
+          <div className="grid grid-cols-2 gap">
+            <GenericButton className={clsx("chip py-2", sort === "latest" && "chip--active bg-accent text-white")} onClick={() => setSort("latest")}>Latest</GenericButton>
+            <GenericButton className={clsx("chip py-2", sort === "top" && "chip--active bg-accent text-white")} onClick={() => setSort("top")}>Top</GenericButton>
+          </div>
+        </Card>
+        <Card className="composer">
+          <div className="card_header border-b-1 border-border dark:border-border-dark justify-between">
             <UserChip userId={meId} onClickName={() => openProfile(meId)} />
-            <div className="row gap8">
-              <button className={clsx("chip", sort === "latest" && "chip--active")} onClick={() => setSort("latest")}>Latest</button>
-              <button className={clsx("chip", sort === "top" && "chip--active")} onClick={() => setSort("top")}>Top</button>
-            </div>
           </div>
           <div className="card__body">
-            <textarea placeholder="What's happening?" value={text} onChange={e => setText(e.target.value)} />
-            <div className="row gap8 wrap">
-              <input className="input" placeholder="Optional image URL" value={imageUrl} onChange={e => setImageUrl(e.target.value)} />
-              <label className="btn btn--ghost" style={{ cursor: "pointer" }}>
+            <textarea className="bg-muted dark:bg-muted-dark border-1 border-border dark:border-border-dark text-text dark:text-text-dark rounded-xl w-full min-h-[96px] resize-y my-4 p-2" placeholder="What's happening?" value={text} onChange={e => setText(e.target.value)} />
+            <div className="flex items-center gap-2 flex-wrap">
+              <InputField className="input bg-muted dark:bg-muted-dark" placeholder="Optional image URL" value={imageUrl} onChange={e => setImageUrl(e.target.value)} />
+              <label className="btn rounded-xl btn--ghost bg-transparent text-text dark:text-text-dark hover:bg-muted" style={{ cursor: "pointer" }}>
                 <Upload size={16} /> Upload
-                <input type="file" accept="image/*" onChange={onPickImage} style={{ display: "none" }} />
+                <InputField className="bg-muted dark:bg-muted-dark" type="file" accept="image/*" onChange={onPickImage} style={{ display: "none" }} />
               </label>
-              <button className="btn" onClick={addPost}>
-                <PlusCircle size={16} /> Post
-              </button>
+              <GenericButton className="btn" onClick={addPost}>
+                Post
+              </GenericButton>
             </div>
           </div>
+        </Card>
+        <div className="grid">
+          {sortedPosts.map(p => (
+            <PostComponent
+              key={p.id}
+              post={p}
+              meId={meId}
+              posts={posts}
+              setPosts={setPosts}
+              openProfile={openProfile}
+              addComment={addComment}
+              deletePost={deletePost}
+              toggleLike={toggleLike}
+              toggleRepost={toggleRepost}
+            />
+          ))}
         </div>
-
-        <div className="stack">
-          <AnimatePresence>
-            {sortedPosts.map(p => {
-              const owner = USERS.find(u => u.id === p.authorId)!;
-              const original = p.originalId ? posts.find(x => x.id === p.originalId) : null;
-              const isRepost = !!original;
-              const postText = p.text || (isRepost ? original?.text || "" : "");
-              const postImage = p.image || (isRepost ? original?.image : undefined);
-
-              return (
-                <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-                  <div className="card post">
-                    <div className="card__header card__header--between">
-                      <div>
-                        <UserChip userId={owner.id} onClickName={() => openProfile(owner.id)} />
-                        {isRepost && original && (
-                          <div className="repostLine">
-                            reposted from{" "}
-                            <button className="linklike" onClick={() => openProfile(original.authorId)}>
-                              {USERS.find(u => u.id === original.authorId)?.name}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <div className="row gap8">
-                        <span className="post__meta">{formatTime(p.createdAt)}</span>
-                        <IconBtn
-                          icon={p.bookmarked ? BookmarkCheck : Bookmark}
-                          label="Bookmark"
-                          active={p.bookmarked}
-                          onClick={() => setPosts(prev => prev.map(x => (x.id === p.id ? { ...x, bookmarked: !x.bookmarked } : x)))}
-                        />
-                        {/* hide delete for repost cards */}
-                        {p.authorId === meId && !isRepost && (
-                          <IconBtn icon={Trash2} danger label="Delete" onClick={() => deletePost(p.id)} />
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="card__body">
-                      {postText && <p className="post__text">{postText}</p>}
-                      {postImage && <img className="post__img" src={postImage} alt="post" />}
-
-                      <div className="row gap12 wrap">
-                        <IconBtn
-                          icon={Heart}
-                          label="Like"
-                          count={isRepost ? original!.likes : p.likes}
-                          onClick={() => toggleLike(isRepost ? original!.id : p.id)}
-                          active={isRepost ? original!.liked : p.liked}
-                        />
-                        <IconBtn
-                          icon={Repeat}
-                          label="Repost"
-                          count={isRepost ? original!.reposts : p.reposts}
-                          onClick={() => toggleRepost(isRepost ? original!.id : p.id)}
-                          active={(isRepost ? original!.repostedByMe : p.repostedByMe) ?? false}
-                        />
-                        <IconBtn
-                          icon={MessageSquare}
-                          label="Comments"
-                          count={isRepost ? original!.comments.length : p.comments.length}
-                          onClick={() => {
-                            const el = document.getElementById(`cbox-${(isRepost ? original! : p).id}`);
-                            el?.focus();
-                          }}
-                        />
-                        <IconBtn icon={Share2} label="Share" />
-                      </div>
-
-                      {/* Comments */}
-                      <CommentsList post={isRepost ? original! : p} onAdd={addComment} />
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
-      </div>
+  </div>
 
       {/* Sidebar */}
-      <aside className="col col--side">
+      <aside className="col sticky t-20">
         <WhoToFollow meId={meId} followMap={followMap} followToggle={followToggle} openProfile={openProfile} />
         <Trends />
-        <QuickLinks />
       </aside>
 
       {/* Lightbox (optional, if you still use it) */}
@@ -232,88 +177,6 @@ export default function HomeFeed({
   );
 }
 
-/* Helpers inside HomeFeed file */
-
-function CommentsList({ post, onAdd }: { post: Post; onAdd: (postId: string, body: string) => void }) {
-  const [draft, setDraft] = useState("");
-  return (
-    <div className="comments">
-      {post.comments.map(c => {
-        const u = USERS.find(x => x.id === c.userId)!;
-        return (
-          <div key={c.id} className="comment">
-            <img className="avatar avatar--sm" src={u.avatar} alt={u.name} />
-            <div className="comment__body">
-              <div className="comment__top">
-                <span className="comment__name">{u.name}</span>
-                <span className="comment__time">{new Date(c.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-              </div>
-              <div className="comment__text">{c.text}</div>
-            </div>
-          </div>
-        );
-      })}
-      <div className="comment__composer">
-        <input
-          id={`cbox-${post.id}`}
-          className="input"
-          placeholder="Write a comment…"
-          value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === "Enter" && draft.trim()) {
-              onAdd(post.id, draft.trim());
-              setDraft("");
-            }
-          }}
-        />
-        <button
-          className="btn"
-          onClick={() => {
-            if (draft.trim()) {
-              onAdd(post.id, draft.trim());
-              setDraft("");
-            }
-          }}
-        >
-          Post
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function WhoToFollow({
-  meId,
-  followMap,
-  followToggle,
-  openProfile,
-}: {
-  meId: string;
-  followMap: { [id: string]: Set<string> };
-  followToggle: (uid: string) => void;
-  openProfile: (uid: string) => void;
-}) {
-  const myFollowings = followMap[meId] || new Set<string>();
-  return (
-    <div className="card">
-      <div className="card__header">Who to follow</div>
-      <div className="card__body side__list">
-        {USERS.filter(u => u.id !== meId && !myFollowings.has(u.id)).map(u => (
-          <div key={u.id} className="side__row">
-            <UserChip userId={u.id} small onClickName={() => openProfile(u.id)} />
-            <button className={clsx("btn", myFollowings.has(u.id) ? "" : "btn--ghost")} onClick={() => followToggle(u.id)}>
-              {myFollowings.has(u.id) ? "Following" : "Follow"}
-            </button>
-          </div>
-        ))}
-        {USERS.filter(u => u.id !== meId && !myFollowings.has(u.id)).length === 0 && (
-          <div className="muted">You're following everyone here!</div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function Trends() {
   const TRENDS = [
@@ -323,8 +186,8 @@ function Trends() {
     { tag: "ai", posts: 98000 },
   ];
   return (
-    <div className="card">
-      <div className="card__header">Trends</div>
+  <Card>
+      <div className="card_header border-b-1 border-border dark:border-border-dark">Trends</div>
       <div className="card__body side__list">
         {TRENDS.map(t => (
           <div key={t.tag} className="trend">
@@ -333,18 +196,6 @@ function Trends() {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function QuickLinks() {
-  return (
-    <div className="card">
-      <div className="card__header">Quick links</div>
-      <div className="card__body side__links">
-        <a className="link" href="#"><span>🔗</span> Docs</a>
-        <a className="link" href="#"><span>#</span> Tags</a>
-      </div>
-    </div>
+    </Card>
   );
 }
