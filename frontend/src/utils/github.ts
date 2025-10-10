@@ -1,7 +1,7 @@
-// Utility to fetch GitHub client ID from backend
-export async function fetchGithubClientId() {
-  const res = await fetch('/api/github-client-id');
-  if (!res.ok) throw new Error('Failed to fetch GitHub client ID');
+// src/utils/github.ts
+export async function fetchGithubClientId(): Promise<string | null> {
+  const res = await fetch("/api/github-client-id", { credentials: "include" });
+  if (!res.ok) return null;
   const data = await res.json();
-  return data.clientId;
+  return data.clientId ?? null;
 }

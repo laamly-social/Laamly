@@ -7,8 +7,34 @@ export default defineConfig({
   plugins: [tailwindcss(), react()],
   server: {
     proxy: {
-      '/api': {
-        target: 'http://localhost:8080',
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/posts": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/auth": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/github": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      // optional: hit health routes etc.
+      "/is-logged-in": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/api/me": {
+        target: "http://localhost:8080",
         changeOrigin: true,
         secure: false,
       },

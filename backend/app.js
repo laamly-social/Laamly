@@ -3,257 +3,193 @@ const express = require("express");
 const axios = require("axios");
 const mongoose = require("mongoose");
 const session = require("express-session");
-const bodyParser = require("body-parser");
+const cors = require("cors");
+require("dotenv").config(); 
 
 const app = express();
-// Trust proxy for session cookies to work with Vite dev server
-app.set('trust proxy', 1);
-require("dotenv").config();
-const PORT = process.env.PORT || 8080;
 
-// Logout route
-app.get("/logout", (req, res) => {
-   // console.log("/logout: session before destroy", req.session);
-      if (req.session) {
-         req.session.destroy((err) => {
-            if (err) {
-               console.error("Logout error:", err);
-               return res.status(500).send("Logout failed");
-            }
-            res.clearCookie("connect.sid", { path: "/" });
-            console.log("/logout: session destroyed, cookie cleared");
-            res.redirect("http://localhost:5173/logged-out");
-         });
-      } else {
-         // No session to destroy; just redirect
-         res.redirect("http://localhost:5173/logged-out");
-      }
-});
+// --- Hardcode local ports/origins for dev ---
+const FRONTEND_ORIGIN = "http://localhost:5173";
+const PORT = 8080; // hardcoded
 
+app.set("trust proxy", 1);
 
-mongoose.connect(
-   `mongodb+srv://vaylu:${process.env.MONGODB_PASSWORD}@cluster0.e1en0n4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`,
+// --- Core middleware ---
+app.use(
+  cors({
+    origin: FRONTEND_ORIGIN,
+    credentials: true,
+  })
+);
+app.use(express.json());
+app.use(express.static("public"));
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "dev-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false,
+      sameSite: "lax",
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60, // 1h
+    },
+  })
 );
 
+// --- Mongo ---
+mongoose.connect(
+  `mongodb+srv://vaylu:${process.env.MONGODB_PASSWORD}@cluster0.e1en0n4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
+);
+
+// --- Schemas/Models ---
 const userSchema = new mongoose.Schema({
-   githubId: String,
-   profile: Object, /*
-   {
-      description: something // will check if exists, if not use github
-   }
-   */
-   handle: String,
-   stats: Object,
-   postIds: Array /*{
-      visitors: Array,
-      visits: Number
-   } */
+  githubId: String,
+  profile: Object,
+  handle: String,
+  stats: Object,
+  postIds: [mongoose.Schema.Types.ObjectId],
 });
 
-const postSchemea = new mongoose.Schema({
-   content: String,
-   author: String, // author mongo id
-   urls: Array,
-   datePosted: Date,
-   stats: Object // views, likes, etc
+const postSchema = new mongoose.Schema({
+  content: String,
+  author: String, // githubId
+  urls: [String], // LINKS ONLY
+  datePosted: Date,
+  stats: Object,
 });
 
 let User, Post;
-try {
-   User = mongoose.model("VeyluUser");
-} catch (e) {
-   User = mongoose.model("VeyluUser", userSchema);
-}
-try {
-   Post = mongoose.model("VeyluPost");
-} catch (e) {
-   Post = mongoose.model("VeyluPost", postSchemea);
-}
+try { User = mongoose.model("VeyluUser"); } catch { User = mongoose.model("VeyluUser", userSchema); }
+try { Post = mongoose.model("VeyluPost"); } catch { Post = mongoose.model("VeyluPost", postSchema); }
 
-// Serve static files from the "public" folder
-app.use(express.static("public"));
-app.use(bodyParser.json());
+// --- Public helpers ---
+app.get("/", (_, res) => res.redirect(`${FRONTEND_ORIGIN}/`));
 
-app.use(
-   session({
-      secret: process.env.SESSION_SECRET,
-      resave: false,
-      saveUninitialized: true,
-      cookie: {
-         secure: false, // This will only work if you have https enabled!
-         sameSite: "lax", // Allow session cookie to be sent from frontend (localhost:5173)
-         httpOnly: false, // For local dev, allow JS to read cookie for debugging
-         maxAge: 60000, // 1 min
-      },
-   })
-);
-
-// Add route to provide GitHub client ID to frontend
-const githubClientIdRoute = require("./githubClientId");
-app.use("/api", githubClientIdRoute);
-
-// Add /api/me route for user info
-const meRoute = require("./me");
-app.use("/api", meRoute);
-
-// Public routes
-app.get("/", (req, res) => {
-   res.redirect("http://localhost:5173/");
+app.get("/logout", (req, res) => {
+  if (!req.session) return res.redirect(`${FRONTEND_ORIGIN}/logged-out`);
+  req.session.destroy(err => {
+    if (err) {
+      console.error("Logout error:", err);
+      return res.status(500).send("Logout failed");
+    }
+    res.clearCookie("connect.sid", { path: "/" });
+    return res.redirect(`${FRONTEND_ORIGIN}/logged-out`);
+  });
 });
 
-app.get("/posts", (req, res) => {
-   res.redirect("http://localhost:5173/posts");
+// --- Lightweight API used by frontend ---
+app.get("/api/github-client-id", (_req, res) => {
+  res.json({ clientId: process.env.GITHUB_CLIENT_ID || "" });
 });
 
-app.get("/my-posts", (req, res) => {
-   if (!req.session.user) {
-      return res.redirect("http://localhost:5173/logged-out");
-   }
-   res.redirect("http://localhost:5173/my-posts");
+app.get("/api/me", (req, res) => {
+  if (!req.session.user) return res.status(200).json({ user: null });
+  const u = req.session.user; // { id, login, avatar_url, ... }
+  res.json({
+    user: {
+      id: String(u.id),
+      name: u.login,
+      avatar: u.avatar_url || "",
+      verified: false,
+    }
+  });
 });
 
+app.get("/is-logged-in", (req, res) => {
+  res.json({ loggedIn: !!req.session.user });
+});
 
-// GitHub OAuth
-// Callback
+// --- GitHub OAuth ---
 app.get("/auth/github", (req, res) => {
-   // The req.query object has the query params that were sent to this route.
-   const requestToken = req.query.code;
-
-   axios({
-      method: "post",
-      url: `https://github.com/login/oauth/access_token?client_id=${process.env.GITHUB_CLIENT_ID}&client_secret=${process.env.GITHUB_CLIENT_SECRET}&code=${requestToken}`,
-      headers: {
-         accept: "application/json",
-      },
-   }).then((response) => {
-      req.session.github_access_token = response.data.access_token;
+  const requestToken = req.query.code;
+  axios({
+    method: "post",
+    url: `https://github.com/login/oauth/access_token?client_id=${process.env.GITHUB_CLIENT_ID}&client_secret=${process.env.GITHUB_CLIENT_SECRET}&code=${requestToken}`,
+    headers: { accept: "application/json" },
+  })
+    .then(({ data }) => {
+      req.session.github_access_token = data.access_token;
       res.redirect("/github/login");
-   });
+    })
+    .catch(err => {
+      console.error("GitHub token error:", err);
+      res.status(500).send("OAuth failed");
+    });
 });
 
 app.get("/github/login", (req, res) => {
-   axios({
-      method: "get",
-      url: `https://api.github.com/user`,
-      headers: {
-         Authorization: "token " + req.session.github_access_token,
-      },
-   }).then((response) => {
-      req.session.user = response.data;
-      githubOAuthLogin(req, res);
-   });
-});
-
-async function githubOAuthLogin(req, res) {
-   // Redirect to React frontend home after login
-   const reactHome = "http://localhost:5173/";
-   let isAccount = await githubOAuthUserExists(req.session.user.id);
-   if (isAccount) res.redirect(reactHome);
-   else createGithubOAuthUser(req.session.user.id, req, res, reactHome);
-}
-
-function createGithubOAuthUser(githubId, req, res, reactHome) {
-   // this shoudl also save the user name and profile picture url
-   const user = new User({
-      githubId: githubId,
-      handle: req.session.user.login,
-      profile: {
-         description: req.session.user.bio
+  axios({
+    method: "get",
+    url: `https://api.github.com/user`,
+    headers: { Authorization: `token ${req.session.github_access_token}` },
+  })
+    .then(async ({ data }) => {
+      req.session.user = data; // { id, login, avatar_url, bio, ... }
+      const exists = await User.findOne({ githubId: data.id });
+      if (!exists) {
+        await new User({
+          githubId: data.id,
+          handle: data.login,
+          profile: { description: data.bio },
+          postIds: [],
+        }).save();
       }
-   });
-   user.save().then((result) => {
-      res.redirect(reactHome);
-   });
-}
-
-async function githubOAuthUserExists(githubId) {
-   const user = await User.findOne({ githubId: githubId });
-   return user !== null;
-}
-
-function isLoggedIn(req) {
-   return req.session.user ? true : false;
-}
-
-// Get data
-app.get("/is-logged-in", (req, res) => {
-   res.json({ loggedIn: req.session.user ? true : false });
+      res.redirect(FRONTEND_ORIGIN);
+    })
+    .catch(err => {
+      console.error("GitHub profile error:", err);
+      res.status(500).send("Login failed");
+    });
 });
 
-
-
-// Posts
-app.post("/posts/create", (req, res) => {
-   if (!req.session.user) {
-      console.error("User not logged in");
+// --- Posts ---
+app.post("/posts/create", async (req, res) => {
+  try {
+    if (!req.session.user) {
       return res.status(401).json({ message: "You need to be logged in to post" });
-   }
-   const post = new Post({
+    }
+
+    const post = await Post.create({
       content: req.body.content,
-      urls: req.body.urls,
-      datePosted: req.body.datePosted,
-      author: req.session.user.id
-   });
-   post.save().then(() => {
-      res.json({ message: "Post created successfully!" });
-   });
-   User.findOne({ githubId: req.session.user.id })
-      .then((user) => {
-         if (user) {
-            user.postIds.push(post._id);
-            user.markModified("postIds");
-            return user.save();
-         } else {
-            throw new Error("User not found");
-         }
-      })
-      .then((savedUser) => {
-         // console.log("Post ID added to user:", savedUser);
-      })
-      .catch((err) => {
-         console.error(err);
-      });
+      urls: Array.isArray(req.body.urls) ? req.body.urls : [],
+      datePosted: req.body.datePosted ? new Date(req.body.datePosted) : new Date(),
+      author: String(req.session.user.id), // store githubId
+    });
+
+    await User.updateOne({ githubId: String(req.session.user.id) }, { $push: { postIds: post._id } });
+
+    return res.status(201).json({ message: "Post created successfully!", postId: post._id });
+  } catch (err) {
+    console.error("POST /posts/create failed:", err);
+    return res.status(500).json({ message: "Failed to create post" });
+  }
 });
 
-app.get("/posts/get-all", (req, res) => {
-   Post.find({})
-      .lean()
-      .then(async (posts) => {
-         for (const post of posts) {
-            try {
-               const author = await User.findOne({ githubId: post.author });
-
-               if (author) {
-                  post.authorName = author.name;
-                  post.authorHandle = author.handle;
-                  post.authorImage = author.profile;
-               }
-            } catch (err) {
-               console.error(`Error fetching author for post ${post._id}:`, err);
-            }
-            post.authorId = post.author;
-         }
-         res.json({ posts: posts });
-      })
-      .catch((err) => {
-         console.error("Error fetching posts:", err);
-         res.status(500).json({ message: "Error fetching posts" });
-      });
+app.get("/posts/get-all", async (_req, res) => {
+  try {
+    const posts = await Post.find({}).lean();
+    for (const p of posts) {
+      try {
+        const author = await User.findOne({ githubId: p.author }).lean();
+        if (author) {
+          p.authorHandle = author.handle;
+          p.authorImage = author.profile;
+        }
+        p.authorId = p.author;
+      } catch (e) {
+        console.error(`Author fetch error for ${p._id}:`, e);
+      }
+    }
+    return res.json({ posts });
+  } catch (err) {
+    console.error("Error fetching posts:", err);
+    return res.status(500).json({ message: "Error fetching posts" });
+  }
 });
 
-// Connect app
+// --- Start ---
 app.listen(PORT, () => {
-   console.info("Server is running on port " + PORT);
+  console.info("Server is running on port " + PORT);
 });
-
-
-// Add item to existing schema members - remember to add to sccd hema as well
-// User.updateMany(
-//    { stats: { $exists: true }},
-//    { $set: { stats: { visitors: [], visits: 0 } }},
-//    { multi: true }
-// ).then((oth) => {
-//    console.log(oth);
-// }).catch((err) => {
-//    console.error(err);
-// });
