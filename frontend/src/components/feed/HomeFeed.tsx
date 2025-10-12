@@ -8,7 +8,7 @@ import PostComponent from "./Post";
 import CreatePost from "./CreatePost";
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchAllPosts } from "../../utils/posts";
+import { fetchAllPosts, deletePost as deletePostApi } from "../../utils/posts";
 
 export default function HomeFeed({
   meId,
@@ -80,7 +80,14 @@ export default function HomeFeed({
     );
   };
 
-  const deletePost = (id: string) => setPosts(prev => prev.filter(p => p.id !== id));
+  const deletePost = async (id: string) => {
+    try {
+      await deletePostApi(id);
+      setPosts(prev => prev.filter(p => p.id !== id));
+    } catch (e) {
+      alert("Failed to delete post: " + (e instanceof Error ? e.message : e));
+    }
+  };
 
   const sortedPosts = useMemo(() => {
     return [...posts].sort((a, b) =>
@@ -119,7 +126,7 @@ export default function HomeFeed({
         <div className="grid">
           {sortedPosts.map(p => (
             <PostComponent
-              key={p.id}
+              key={p._id}
               post={p}
               meId={meId}
               posts={posts}
@@ -158,9 +165,8 @@ export default function HomeFeed({
 
 function Trends() {
   const TRENDS = [
-    { tag: "typescript", posts: 18200 },
-    { tag: "react", posts: 55100 },
-    { tag: "vaylu", posts: 820 },
+    { tag: "sharia", posts: 18200 },
+    { tag: "dawah", posts: 55100 },
     { tag: "ai", posts: 98000 },
   ];
   return (

@@ -21,6 +21,19 @@ interface PostProps {
   openProfile: (uid: string) => void;
   addComment: (postId: string, body: string) => void;
   deletePost: (id: string) => void;
+  /*
+
+const res = await fetch("/posts/delete", {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       credentials: "include",
+       body: JSON.stringify({
+         content: {
+          id: id
+         }
+       })
+     });
+  */
   toggleLike: (id: string) => void;
   toggleRepost: (id: string) => void;
 }
@@ -49,31 +62,22 @@ export default function Post({
   toggleLike,
   toggleRepost,
 }: PostProps) {
-  console.log("author id: "  + p.authorId)
-  const owner = {};
-  console.log("owner: " + owner)
-  console.log(p.authorInfo)
-
   const original = p.originalId ? posts.find(x => x.id === p.originalId) : undefined;
   const isRepost = !!original;
 
   const source = original ?? p;
 
-  const postText = p.text || (isRepost ? original?.text || "" : "");
+  const postText = p.content || (isRepost ? original?.content || "" : "");
 
   // Prefer the current post's media; fallback to original (for reposts)
   const media = useMemo(() => {
     const here = mediaUrlsFrom(p);
     return here.length ? here : mediaUrlsFrom(source);
   }, [p, source]);
-
-  // Show up to 5 items and overlay the last tile if more
-  const cap = 5;
-  const toShow = media.slice(0, cap);
-  const overflow = Math.max(0, media.length - cap);
+  const toShow = media;
 
   return (
-    <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+    <motion.div key={p.id} id={"id-"+p._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
       <Card className="post">
         <div className="card_header border-b-1 border-border dark:border-border-dark justify-between">
           <div>
@@ -105,14 +109,14 @@ export default function Post({
 
           <div className="flex items-center gap-2">
             <span className="text-sm text-sub dark:text-sub-dark">{formatTime(p.createdAt)}</span>
-            <IconBtn
+            {/* <IconBtn
               icon={p.bookmarked ? BookmarkCheck : Bookmark}
               label="Bookmark"
               active={!!p.bookmarked}
               onClick={() => setPosts(prev => prev.map(x => (x.id === p.id ? { ...x, bookmarked: !x.bookmarked } : x)))}
-            />
-            {p.authorId === meId && !isRepost && (
-              <IconBtn icon={Trash2} danger label="Delete" onClick={() => deletePost(p.id)} />
+            /> */}
+            {p.authorInfo.isCurrentUser && (
+              <IconBtn icon={Trash2} danger label="Delete" onClick={() => deletePost(p._id)} />
             )}
           </div>
         </div>
@@ -147,7 +151,7 @@ function CommentsList({ post, onAdd }: { post: PostType; onAdd: (postId: string,
   return (
     <div className="grid gap-2.5">
       {post.comments.map(c => {
-        const u = USERS.find(x => x.id === c.userId);
+        const u = {};
         return (
           <div key={c.id} className="flex gap-2">
             <Avatar src={u?.avatar || undefined} alt={u?.name ?? c.userId} size="sm" />

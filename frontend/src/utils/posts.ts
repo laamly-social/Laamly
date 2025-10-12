@@ -1,3 +1,19 @@
+/** Delete a post by ID on the backend */
+export async function deletePost(id: string): Promise<{ message: string }> {
+   const res = await fetch("/posts/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+         content: { id }
+      })
+   });
+   const ct = res.headers.get("content-type") || "";
+   const data = ct.includes("application/json") ? await res.json() : { message: await res.text() };
+   if (!res.ok) throw new Error((data as any)?.message || `Delete failed: ${res.status}`);
+   else document.querySelector(`#id-${id}`)?.remove();
+   return data;
+}
 // src/utils/posts.ts
 import type { Post } from "../types";
 

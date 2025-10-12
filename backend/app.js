@@ -58,6 +58,7 @@ const postSchema = new mongoose.Schema({
   urls: [String], // LINKS ONLY
   datePosted: Date,
   stats: Object,
+  deleted: { type: Boolean, default: false }
 });
 
 const messageSchema = new mongoose.Schema({
@@ -155,6 +156,31 @@ app.get("/github/login", (req, res) => {
 });
 
 // --- Posts ---
+app.post("/posts/delete", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "You need to be logged in to delete posts" });
+    }
+    const postId = req.body.id || req.body.content?.id;
+    if (!postId) {
+      return res.status(400).json({ message: "Missing post id" });
+    }
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+    if (String(post.author) !== String(req.session.user.id)) {
+      return res.status(403).json({ message: "You can only delete your own posts" });
+    }
+  await Post.updateOne({ _id: postId }, { $set: { deleted: true } });
+  return res.json({ message: "Post deleted successfully", postId });
+  } catch (err) {
+    console.error("POST /posts/delete failed:", err);
+    return res.status(500).json({ message: "Failed to delete post" });
+  }
+});
+
+
 app.post("/posts/create", async (req, res) => {
   try {
     if (!req.session.user) {
@@ -177,9 +203,9 @@ app.post("/posts/create", async (req, res) => {
   }
 });
 
-app.get("/posts/get-all", async (_req, res) => {
+app.get("/posts/get-all", async (req, res) => {
   try {
-    const posts = await Post.find({}).lean();
+  const posts = await Post.find({ deleted: { $ne: true } }).lean();
     for (const p of posts) {
       try {
         const author = await User.findOne({ githubId: p.author }).lean();
@@ -188,20 +214,18 @@ app.get("/posts/get-all", async (_req, res) => {
             profile: author.profile,
             handle: author.handle,
             avatar: author.profile.avatar,
-            name: author.profile.name
+            name: author.profile.name,
+            isCurrentUser: req.session.user ? (p.author === String(req.session.user.id)) : false
           }
-          console.error("loaded author, code is only kinda rubbish -> " + author.handle)
-        }
-        else {
-          console.error("unable to load author, code is literal trash")
         }
         p.authorId = p.author;
-        p.createdAt = new Date(p.datePosted).getTime(),
-        p.comments = []
+        p.createdAt = new Date(p.datePosted).getTime();
+        p.comments = [];
       } catch (e) {
         console.error(`Author fetch error for ${p._id}:`, e);
       }
     }
+    console.log(JSON.stringify(req.session))
     return res.json({ posts });
   } catch (err) {
     console.error("Error fetching posts:", err);
@@ -211,7 +235,7 @@ app.get("/posts/get-all", async (_req, res) => {
 
 // --- Start ---
 app.listen(PORT, () => {
-  console.info("Server is running on port " + PORT);
+  console.info("Server is running on port " + PORT + ", started " + new Date().toLocaleTimeString());
 });
 
 // User.updateMany(

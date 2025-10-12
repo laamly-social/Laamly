@@ -17,8 +17,11 @@ export type Comment = {
 };
 
 export type Post = {
+  content: any;
+  _id: Key | null | undefined;
   authorHandle: string;
   authorInfo: {
+    isCurrentUser: any;
     handle?: string;
     profile?: any;
     avatar?: string;
