@@ -1,6 +1,7 @@
 // Single source of truth for all shared types
 
 export type User = {
+  githubId: string;
   id: string;
   name: string;
   handle: string;
@@ -16,15 +17,21 @@ export type Comment = {
 };
 
 export type Post = {
+  authorHandle: string;
+  authorInfo: {
+    handle?: string;
+    profile?: any;
+    avatar?: string;
+    name?: string;
+  };
+  authorImage: any;
   id: string;
   authorId: string;
   text: string;   // <-- string only
   image?: string;
   likes: number;
-  reposts: number;
+  repostedBy: number;
   createdAt: number;
-  liked?: boolean;
-  bookmarked?: boolean;
   comments: Comment[];
   originalId?: string;    // if set, this post is a repost of originalId
   repostedByMe?: boolean; // did the logged-in user repost this original?

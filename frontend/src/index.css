@@ -97,9 +97,6 @@
 
    /* Avatars & User Chips */
    .avatar {
-      width: 28px;
-      height: 28px;
-      border-radius: 999px;
       object-fit: cover;
       border: 1px solid var(--border);
    }

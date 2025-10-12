@@ -135,7 +135,7 @@ export default function HomeFeed({
       </div>
 
       <aside className="col sticky t-20 h-fit">
-        <WhoToFollow meId={meId} followMap={followMap} followToggle={followToggle} openProfile={openProfile} />
+        {/* <WhoToFollow meId={meId} followMap={followMap} followToggle={followToggle} openProfile={openProfile} /> */}
         <Trends />
       </aside>
 

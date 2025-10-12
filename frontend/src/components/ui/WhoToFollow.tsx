@@ -1,5 +1,4 @@
 import React from "react";
-import { USERS } from "../../data/mock";
 import UserChip from "./UserChip";
 import GenericButton from "./GenericButton";
 import Card from "./Card";
@@ -18,7 +17,7 @@ export default function WhoToFollow({ meId, followMap, followToggle, openProfile
     <Card>
       <div className="card_header border-b-1 border-border dark:border-border-dark">Who to follow</div>
       <div className="card__body side__list">
-        {USERS.filter(u => u.id !== meId && !myFollowings.has(u.id)).map(u => (
+        {{}.filter(u => u.id !== meId && !myFollowings.has(u.id)).map(u => (
           <div key={u.id} className="side__row">
             <UserChip userId={u.id} small onClickName={() => openProfile(u.id)} />
             <GenericButton className={clsx("btn", myFollowings.has(u.id) ? "" : "bg-transparent text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark")} onClick={() => followToggle(u.id)}>
@@ -26,7 +25,7 @@ export default function WhoToFollow({ meId, followMap, followToggle, openProfile
             </GenericButton>
           </div>
         ))}
-        {USERS.filter(u => u.id !== meId && !myFollowings.has(u.id)).length === 0 && (
+        {{}.filter(u => u.id !== meId && !myFollowings.has(u.id)).length === 0 && (
           <div className="muted">You're following everyone here!</div>
         )}
       </div>

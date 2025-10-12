@@ -4,7 +4,6 @@ import Chip from "../ui/Chip";
 import Card from "../ui/Card";
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
-import { USERS } from "../../data/mock";
 import { clsx } from "../../utils";
 import Verified from "../ui/Verified";
 import UserChip from "../ui/UserChip";

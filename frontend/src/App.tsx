@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { USERS, SEED_POSTS } from "./data/mock";
 import type { Reel, Post, Tab } from "./types";
 import HomeFeed from "./components/feed/HomeFeed";
 import Messages from "./components/messages/Messages";
@@ -9,29 +8,16 @@ import Profile from "./components/profile/Profile";
 import { Header } from "./components/header";
 
 export default function App() {
-   const me = USERS[0];
    const [tab, setTab] = useState<Tab>("home");
    const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
-   const [followMap, setFollowMap] = useState<{ [id: string]: Set<string> }>(() => {
-      const map: { [id: string]: Set<string> } = {};
-      USERS.forEach(u => { map[u.id] = new Set(); });
-      return map;
-   });
+   const [followMap, setFollowMap] = useState<{ [id: string]: Set<string> }>({});
    const followToggle = (uid: string) => {
-      setFollowMap(prev => {
-         const newSet = new Set(prev[me.id]);
-         if (newSet.has(uid)) newSet.delete(uid); else newSet.add(uid);
-         return { ...prev, [me.id]: newSet };
-      });
+      setFollowMap(prev => prev); // No-op until user data is available
    };
 
-   const [posts, setPosts] = useState<Post[]>(SEED_POSTS);
-   const [reels, setReels] = useState<Reel[]>([
-      { id: "r1", title: "Sunset ride", authorId: "u2", src: "https://cdn.coverr.co/videos/coverr-a-car-driving-on-the-roads-1642/1080p.mp4", liked: false, saved: false },
-      { id: "r2", title: "Coffee drip ASMR", authorId: "u3", src: "https://pictshare.hnasheralneam.dev/mfp9f7.mp4", liked: false, saved: false },
-      { id: "r3", title: "Coding vibes", authorId: "u4", src: "https://cdn.coverr.co/videos/coverr-a-man-typing-on-his-laptop-6963/1080p.mp4", liked: false, saved: false },
-   ]);
+   const [posts, setPosts] = useState<Post[]>([]);
+   const [reels, setReels] = useState<Reel[]>([]);
 
    const toggleReelLike = (id: string) => setReels(prev => prev.map(r => r.id === id ? { ...r, liked: !r.liked } : r));
    const toggleReelSave = (id: string) => setReels(prev => prev.map(r => r.id === id ? { ...r, saved: !r.saved } : r));
@@ -48,7 +34,6 @@ export default function App() {
       <div className="grid" style={{ gridTemplateColumns: "12rem auto" }}>
          <div className="h-[100vh] sticky top-0 p-2 w-full">
             <Header
-               me={me}
                tab={tab}
                setTab={setTab}
                openProfile={openProfile}
@@ -61,7 +46,7 @@ export default function App() {
                   <div>
 
                      <HomeFeed
-                        meId={me.id}
+                        meId={"replacementid"}
                         posts={posts}
                         setPosts={setPosts}
                         followMap={followMap}
@@ -79,7 +64,7 @@ export default function App() {
                {tab === "profile" && profileUserId && (
                   <Profile
                      userId={profileUserId}
-                     meId={me.id}
+                     meId={"replacementid"}
                      posts={posts}
                      setPosts={setPosts}
                      followMap={followMap}

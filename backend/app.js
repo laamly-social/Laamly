@@ -4,7 +4,7 @@ const axios = require("axios");
 const mongoose = require("mongoose");
 const session = require("express-session");
 const cors = require("cors");
-require("dotenv").config(); 
+require("dotenv").config();
 
 const app = express();
 
@@ -58,6 +58,11 @@ const postSchema = new mongoose.Schema({
   urls: [String], // LINKS ONLY
   datePosted: Date,
   stats: Object,
+});
+
+const messageSchema = new mongoose.Schema({
+  members: [String], // userid
+  messages: [String]
 });
 
 let User, Post;
@@ -132,7 +137,12 @@ app.get("/github/login", (req, res) => {
         await new User({
           githubId: data.id,
           handle: data.login,
-          profile: { description: data.bio },
+
+          profile: {
+            description: data.bio,
+            name: data.name,
+            avatar: data.avatar_url
+          },
           postIds: [],
         }).save();
       }
@@ -174,10 +184,20 @@ app.get("/posts/get-all", async (_req, res) => {
       try {
         const author = await User.findOne({ githubId: p.author }).lean();
         if (author) {
-          p.authorHandle = author.handle;
-          p.authorImage = author.profile;
+          p.authorInfo = {
+            profile: author.profile,
+            handle: author.handle,
+            avatar: author.profile.avatar,
+            name: author.profile.name
+          }
+          console.error("loaded author, code is only kinda rubbish -> " + author.handle)
+        }
+        else {
+          console.error("unable to load author, code is literal trash")
         }
         p.authorId = p.author;
+        p.createdAt = new Date(p.datePosted).getTime(),
+        p.comments = []
       } catch (e) {
         console.error(`Author fetch error for ${p._id}:`, e);
       }
@@ -193,3 +213,13 @@ app.get("/posts/get-all", async (_req, res) => {
 app.listen(PORT, () => {
   console.info("Server is running on port " + PORT);
 });
+
+// User.updateMany(
+//   { stats: { $exists: true } },
+//   { $set: { stats: { visitors: [], visits: 0 } } },
+//   { multi: true }
+// ).then((oth) => {
+//   console.log(oth);
+// }).catch((err) => {
+//   console.error(err);
+// });

@@ -1,11 +1,10 @@
 import Avatar from "./Avatar";
 import GenericButton from "./GenericButton";
 import Verified from "./Verified";
-import { USERS } from "../../data/mock";
 import { clsx } from "../../utils";
 
 export default function UserChip({ userId, small, onClickName }: { userId: string; small?: boolean; onClickName?: () => void }) {
-  const u = USERS.find(x => x.id === userId) ?? USERS[0];
+  const u = {};
   return (
     <div className="flex gap-2 items-center">
          <Avatar src={u.avatar} alt={u.name} size={small ? "sm" : undefined} className={clsx("avatar", small && "avatar--sm")} />

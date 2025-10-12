@@ -1,5 +1,4 @@
 // src/components/feed/Post.tsx
-import { USERS } from "../../data/mock";
 import Card from "../ui/Card";
 import UserChip from "../ui/UserChip";
 import IconBtn from "../ui/IconBtn";
@@ -50,7 +49,10 @@ export default function Post({
   toggleLike,
   toggleRepost,
 }: PostProps) {
-  const owner = USERS.find(u => u.id === p.authorId) || null;
+  console.log("author id: "  + p.authorId)
+  const owner = {};
+  console.log("owner: " + owner)
+  console.log(p.authorInfo)
 
   const original = p.originalId ? posts.find(x => x.id === p.originalId) : undefined;
   const isRepost = !!original;
@@ -75,15 +77,15 @@ export default function Post({
       <Card className="post">
         <div className="card_header border-b-1 border-border dark:border-border-dark justify-between">
           <div>
-            {owner ? (
-              <UserChip userId={owner.id} onClickName={() => openProfile(owner.id)} />
+            {p.authorHandle ? (
+              <UserChip userId={p.authorHandle} onClickName={() => openProfile(p.authorHandle)} />
             ) : (
               <div className="flex items-center gap-2">
                 {/* IMPORTANT: pass undefined, not empty string */}
-                <Avatar src={undefined} alt={p.authorId} size="sm" />
+                <Avatar src={p.authorInfo.avatar} alt={p.authorId} size="sm" />
                 <div className="flex flex-col">
-                  <span className="font-semibold">{p.authorId}</span>
-                  <span className="text-sm opacity-70">@{p.authorId}</span>
+                  <span className="font-semibold">{p.authorInfo.name}</span>
+                  <span className="text-sm opacity-70">@{p.authorInfo.handle}</span>
                 </div>
               </div>
             )}

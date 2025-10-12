@@ -18,7 +18,7 @@ export default function Avatar({ src, alt, size = "md", className = "", ...props
     <img
       src={src}
       alt={alt}
-      className={["avatar", "hover:scale-135", "transition", sizeClass[size], className].filter(Boolean).join(" ")}
+      className={["avatar", "w-10", "h-10", "rounded-full", "hover:scale-125", "transition", sizeClass[size], className].filter(Boolean).join(" ")}
       {...props}
     />
   );

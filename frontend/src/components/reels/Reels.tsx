@@ -4,7 +4,6 @@ import GenericButton from "../ui/GenericButton";
 import Card from "../ui/Card";
 import { useRef, useState } from "react";
 import { Upload, PlusCircle, VolumeX, Volume2, Heart, Bookmark, Share2, MessageSquare } from "lucide-react";
-import { USERS } from "../../data/mock";
 import { useAutoplayOnView } from "../../hooks/useAutoplayOnView";
 import IconBtn from "../ui/IconBtn";
 import type { Reel } from "../../types";

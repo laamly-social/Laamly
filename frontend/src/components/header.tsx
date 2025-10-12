@@ -57,12 +57,12 @@ export function Header({ me, tab, setTab, openProfile }: HeaderProps) {
                >
                   <ImageIcon size={16} /> Media
                </GenericButton>
-               <Avatar
+               {/* <Avatar
                   src={me.avatar}
                   alt={me.name}
                   style={{ cursor: "pointer" }}
                   onClick={() => openProfile(me.id)}
-               />
+               /> */}
                <br />
                <br />
                {user && user.name ? (

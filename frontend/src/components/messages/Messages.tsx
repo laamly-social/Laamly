@@ -3,7 +3,6 @@ import GenericButton from "../ui/GenericButton";
 import InputField from "../ui/InputField";
 import { useEffect, useRef, useState } from "react";
 import { Search, Bell, MoreHorizontal, Paperclip, Smile, Send } from "lucide-react";
-import { USERS } from "../../data/mock";
 import { clsx, formatTime } from "../../utils";
 import UserChip from "../ui/UserChip";
 import type { DM, Thread } from "../../types";
