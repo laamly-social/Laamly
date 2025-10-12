@@ -5,66 +5,89 @@ type BackendPost = {
   _id: string;
   content: string;
   author: string;      // githubId
-  urls: string[];      // image/video links ONLY
+  urls?: string[];     // image/video links ONLY
   datePosted: string;  // ISO
   authorHandle?: string;
   authorImage?: any;
   authorId?: string;
 };
 
+const UPLOAD_API = "https://pictshare.hnasheralneam.dev/api/upload.php";
+const CREATE_POST_URL = "/posts/create";
+const GET_ALL_URL = "/posts/get-all";
+
+/** Fetch posts and KEEP the full urls[] array for multi-media posts */
 export async function fetchAllPosts(): Promise<Post[]> {
-  const res = await fetch("/posts/get-all", { credentials: "include" });
+  const res = await fetch(GET_ALL_URL, { credentials: "include" });
   if (!res.ok) return [];
+
   const data = await res.json();
   const list: BackendPost[] = data?.posts ?? [];
 
   return list
     .sort((a, b) => new Date(b.datePosted).getTime() - new Date(a.datePosted).getTime())
-    .map(p => ({
-      id: p._id,
-      authorId: p.author,            // still github id; UI falls back if unknown
-      text: p.content || "",
-      image: p.urls?.[0],
-      likes: 0,
-      reposts: 0,
-      createdAt: new Date(p.datePosted).getTime(),
-      comments: [],
-    }));
+    .map<Post>((p) => {
+      const urls = Array.isArray(p.urls) ? p.urls : [];
+      return {
+        id: String(p._id),
+        authorId: String(p.author),                   // still github id; UI falls back if unknown
+        text: p.content || "",
+        image: urls[0],                               // legacy/single-media fallback
+        urls,                                         // <-- keep ALL media for gallery/video
+        likes: 0,
+        reposts: 0,
+        createdAt: new Date(p.datePosted).getTime(),
+        comments: [],
+        liked: false,
+        repostedByMe: false,
+        bookmarked: false,
+      };
+    });
 }
 
+/** Upload images/videos to PictShare and return absolute URLs (https) */
 export async function uploadImages(files: File[]): Promise<string[]> {
   const urls: string[] = [];
   for (const file of files) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_code", "5219dd95-5672-44ca-8423-970afa123633");
+
     try {
-      const r = await fetch("https://pictshare.hnasheralneam.dev/api/upload.php", { method: "POST", body: formData });
+      const r = await fetch(UPLOAD_API, { method: "POST", body: formData });
       const ct = r.headers.get("content-type") || "";
-      const result = ct.includes("application/json") ? await r.json() : { status: "error", reason: await r.text() };
+      const result = ct.includes("application/json")
+        ? await r.json()
+        : { status: "error", reason: await r.text() };
+
       if ((result as any).status === "ok") {
         const raw = (result as any).url as string;
+        // Normalize to https absolute URL so <video>/<img> can load it directly
         urls.push(raw.replace("http://", "https://pictshare.hnasheralneam.dev"));
+      } else {
+        console.error("Upload failed:", result);
       }
-    } catch {
-      // swallow & continue
+    } catch (e) {
+      console.error("Upload error:", e);
     }
   }
   return urls;
 }
 
+/** Create a post on the backend – Mongo stores only the links in urls[] */
 export async function createPost(payload: { content: string; urls: string[]; meId: string }) {
-  const res = await fetch("/posts/create", {
+  const res = await fetch(CREATE_POST_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({
       content: payload.content,
-      urls: payload.urls,           // ONLY links stored in Mongo
+      urls: payload.urls,              // ONLY links stored in Mongo
       datePosted: new Date().toISOString(),
-      authorId: payload.meId,
+      authorId: payload.meId,          // not used server-side now, kept for parity
     }),
   });
+
   const ct = res.headers.get("content-type") || "";
   const data = ct.includes("application/json") ? await res.json() : { message: await res.text() };
   if (!res.ok) throw new Error((data as any)?.message || `Request failed: ${res.status}`);
