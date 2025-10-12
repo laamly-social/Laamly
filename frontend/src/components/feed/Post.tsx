@@ -4,6 +4,7 @@ import Card from "../ui/Card";
 import UserChip from "../ui/UserChip";
 import IconBtn from "../ui/IconBtn";
 import GenericButton from "../ui/GenericButton";
+import Carousel from "../ui/Carousel";
 import InputField from "../ui/InputField";
 import Avatar from "../ui/Avatar";
 import { Heart, Repeat, Share2, Bookmark, BookmarkCheck, Trash2, MessageSquare } from "lucide-react";
@@ -11,6 +12,7 @@ import { formatTime } from "../../utils";
 import type { Post as PostType } from "../../types";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
+import { div } from "framer-motion/client";
 
 interface PostProps {
   post: PostType;
@@ -114,42 +116,9 @@ export default function Post({
         </div>
 
         <div className="card__body">
-          {postText && <p className="text-lg whitespace-pre-wrap">{postText}</p>}
+          {postText && <p className="text-lg whitespace-pre-wrap mb-4">{postText}</p>}
 
-          {toShow.length > 0 && (
-            <div
-              className="grid gap-2 my-2"
-              style={{ gridTemplateColumns: toShow.length === 1 ? "1fr" : "1fr 1fr" }}
-            >
-              {toShow.map((url, i) => {
-                const showOverlay = overflow > 0 && i === toShow.length - 1;
-                const cls = "rounded-xl w-full overflow-hidden";
-                return (
-                  <div key={url + i} className="relative">
-                    {isVideo(url) ? (
-                      <video className={cls} controls playsInline preload="metadata" crossOrigin="anonymous"
-                        onError={(e) => {
-                          const v = e.currentTarget;
-                          // eslint-disable-next-line no-console
-                          console.error("Video failed to load", { url, error: v.error, networkState: v.networkState, readyState: v.readyState });
-                        }}
-                      >
-                        <source src={url} type="video/mp4" />
-                      </video>
-                    ) : (
-                      <img className={cls} src={url} alt="post media" />
-                    )}
-
-                    {showOverlay && (
-                      <div className="absolute inset-0 bg-black/50 text-white flex items-center justify-center text-2xl font-semibold rounded-xl">
-                        +{overflow}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <Carousel urls={toShow} />
 
           <div className="flex items-center gap-3 flex-wrap">
             <IconBtn icon={Heart} label="Like" count={source.likes} onClick={() => toggleLike(source.id)} active={!!source.liked} />
