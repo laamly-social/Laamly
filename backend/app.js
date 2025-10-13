@@ -9,7 +9,7 @@ require("dotenv").config();
 const app = express();
 
 // --- Hardcode local ports/origins for dev ---
-const FRONTEND_ORIGIN = "http://localhost:5173";
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
 const PORT = 8080; // hardcoded
 
 app.set("trust proxy", 1);
