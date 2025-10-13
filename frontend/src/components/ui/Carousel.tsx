@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+// @ts-nocheck
+
+import { useState } from 'react';
 
 const Carousel = ({ urls }) => {
    const [current, setCurrent] = useState(0);

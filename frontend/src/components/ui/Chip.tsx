@@ -1,4 +1,3 @@
-import React from "react";
 import GenericButton, { type GenericButtonProps } from "./GenericButton";
 import { clsx } from "../../utils";
 

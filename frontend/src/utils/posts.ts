@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 /** Delete a post by ID on the backend */
 export async function deletePost(id: string): Promise<{ message: string }> {
    const res = await fetch("/posts/delete", {

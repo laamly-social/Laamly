@@ -28,8 +28,7 @@ router.get('/me', async (req, res) => {
       user: {
         id: user.githubId,
         name: user.handle, // use handle as display name
-        avatar: req.session.user.avatar_url || '',
-        verified: false // or set from DB if you have this
+        avatar: req.session.user.avatar_url || ''
       }
     });
   } catch (e) {

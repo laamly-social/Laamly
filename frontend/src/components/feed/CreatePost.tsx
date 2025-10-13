@@ -1,7 +1,6 @@
 // src/components/feed/CreatePost.tsx
 import React, { useRef, useState } from "react";
 import Card from "../ui/Card";
-import UserChip from "../ui/UserChip";
 import GenericButton from "../ui/GenericButton";
 import { createPost, uploadImages } from "../../utils/posts";
 import { X } from "lucide-react"; // Still useful if you want a main close button, but we'll use it for image previews too
@@ -15,7 +14,7 @@ type CreatePostProps = {
 
 const MAX_MEDIA = 5;
 
-const CreatePost: React.FC<CreatePostProps> = ({ meId, openProfile, onPosted, onClose }) => {
+const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);

@@ -1,10 +1,9 @@
 
 import GenericButton from "./ui/GenericButton";
-import Avatar from "./ui/Avatar";
 import type { User } from "../types";
 import type { Tab } from "../types";
 import TabBtn from "./nav/TabBtn";
-import { Image as ImageIcon, Home, MessageSquare, PlayCircle as PlayTab } from "lucide-react";
+import { Image as ImageIcon, Home, MessageSquare, PlayCircle as PlayTab, MessageCircle, LetterText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchGithubClientId } from "../utils/github";
 import { fetchMe } from "../utils/me";
@@ -17,7 +16,7 @@ interface HeaderProps {
 }
 
 
-export function Header({ me, tab, setTab, openProfile }: HeaderProps) {
+export function Header({ tab, setTab }: HeaderProps) {
    const [githubClientId, setGithubClientId] = useState<string | null>(null);
    const [user, setUser] = useState<User | null>(null);
 
@@ -45,8 +44,8 @@ export function Header({ me, tab, setTab, openProfile }: HeaderProps) {
             </a>
             {/* MIDDLE: Navigation Tabs */}
             <div className="flex flex-col items-stretch w-full px-4 space-y-2">
-               <TabBtn icon={Home} label="Home" active={tab === "home"} onClick={() => setTab("home")} />
-               <TabBtn icon={MessageSquare} label="Messages" active={tab === "messages"} onClick={() => setTab("messages")} />
+               <TabBtn icon={Home} label="Posts" active={tab === "home"} onClick={() => setTab("home")} />
+               {/* <TabBtn icon={MessageSquare} label="Messages" active={tab === "messages"} onClick={() => setTab("messages")} /> */}
                <TabBtn icon={PlayTab} label="Reels" active={tab === "reels"} onClick={() => setTab("reels")} />
             </div>
             {/* BOTTOM: Media and User Profile */}

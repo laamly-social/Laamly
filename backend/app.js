@@ -97,8 +97,7 @@ app.get("/api/me", (req, res) => {
     user: {
       id: String(u.id),
       name: u.login,
-      avatar: u.avatar_url || "",
-      verified: false,
+      avatar: u.avatar_url || ""
     }
   });
 });

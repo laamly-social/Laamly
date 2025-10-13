@@ -1,9 +1,10 @@
-import Avatar from "../ui/Avatar";
+// import Avatar from "../ui/Avatar";
 import GenericButton from "../ui/GenericButton";
 import InputField from "../ui/InputField";
 import { useEffect, useRef, useState } from "react";
 import { Search, Bell, MoreHorizontal, Paperclip, Smile, Send } from "lucide-react";
-import { clsx, formatTime } from "../../utils";
+import { clsx } from "../../utils";
+// import { clsx, formatTime } from "../../utils";
 import UserChip from "../ui/UserChip";
 import type { DM, Thread } from "../../types";
 
@@ -30,7 +31,8 @@ export default function Messages() {
       ],
     },
   ]);
-  const [activeId, setActiveId] = useState<string>(threads[0]?.id ?? "");
+  const [activeId] = useState<string>(threads[0]?.id ?? "");
+  // const [activeId, setActiveId] = useState<string>(threads[0]?.id ?? "");
   const [draft, setDraft] = useState("");
   const [typing, setTyping] = useState(false);
   const activeThread = threads.find(t => t.id === activeId);
@@ -55,7 +57,7 @@ export default function Messages() {
     setDraft("");
   };
 
-  const lastTimestamp = (thread: Thread) => thread.messages[thread.messages.length - 1]?.ts ?? Date.now();
+  // const lastTimestamp = (thread: Thread) => thread.messages[thread.messages.length - 1]?.ts ?? Date.now();
 
   return (
     <div className="grid h-[calc(100vh-1rem)] w-[calc(100vw-12.5rem)] rounded-xl border-1 border-border dark:border-border-dark overflow-hidden small:grid-cols-1 m-2 ml-0" style={{ gridTemplateColumns: "320px minmax(420px, 1fr)" }}>
@@ -64,7 +66,7 @@ export default function Messages() {
           <Search size={20} className="my-2" />
           <InputField className="input bg-muted dark:bg-muted-dark" placeholder="Search DMs" />
         </div>
-        <div>
+        {/* <div>
           {threads.map(t => {
             const u = USERS.find(x => x.id === t.participantId)!;
             return (
@@ -93,12 +95,12 @@ export default function Messages() {
               </div>
             );
           })}
-        </div>
+        </div> */}
       </aside>
 
       <section className="chat overflow-auto">
         <div className="chat__top bg-panel dark:bg-panel-dark border-b-1 border-border dark:border-border-dark">
-          <div className="flex items-center gap-2">{activeThread && <UserChip userId={activeThread.participantId} />}</div>
+          <div className="flex items-center gap-2">{activeThread && <UserChip fullName={activeThread.participantId} avatar={""} handle={""} />}</div>
           <div className="flex items-center gap-2 muted">
             <Bell size={16} />
             <MoreHorizontal size={16} />

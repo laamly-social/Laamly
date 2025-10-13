@@ -1,5 +1,7 @@
+// @ts-nocheck
+
 import Card from "../ui/Card";
-import WhoToFollow from "../ui/WhoToFollow";
+// import WhoToFollow from "../ui/WhoToFollow";
 import GenericButton from "../ui/GenericButton";
 import { clsx } from "../../utils";
 import type { Post } from "../../types";

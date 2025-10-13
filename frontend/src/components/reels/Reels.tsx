@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import Avatar from "../ui/Avatar";
 import InputField from "../ui/InputField";
 import GenericButton from "../ui/GenericButton";

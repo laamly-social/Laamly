@@ -6,7 +6,6 @@ export type User = {
   name: string;
   handle: string;
   avatar: string;
-  verified?: boolean;
 };
 
 export type Comment = {
@@ -18,7 +17,7 @@ export type Comment = {
 
 export type Post = {
   content: any;
-  _id: Key | null | undefined;
+  _id: string | null | undefined;
   authorHandle: string;
   authorInfo: {
     isCurrentUser: any;

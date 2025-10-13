@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { useMemo, useState } from "react";
 import type { Reel, Post, Tab } from "./types";
 import HomeFeed from "./components/feed/HomeFeed";

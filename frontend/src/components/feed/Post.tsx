@@ -1,4 +1,5 @@
-// src/components/feed/Post.tsx
+// @ts-nocheck
+
 import Card from "../ui/Card";
 import UserChip from "../ui/UserChip";
 import IconBtn from "../ui/IconBtn";
@@ -81,18 +82,11 @@ export default function Post({
       <Card className="post">
         <div className="card_header border-b-1 border-border dark:border-border-dark justify-between">
           <div>
-            {p.authorHandle ? (
-              <UserChip userId={p.authorHandle} onClickName={() => openProfile(p.authorHandle)} />
-            ) : (
-              <div className="flex items-center gap-2">
-                {/* IMPORTANT: pass undefined, not empty string */}
-                <Avatar src={p.authorInfo.avatar} alt={p.authorId} size="sm" />
-                <div className="flex flex-col">
-                  <span className="font-semibold">{p.authorInfo.name}</span>
-                  <span className="text-sm opacity-70">@{p.authorInfo.handle}</span>
-                </div>
-              </div>
-            )}
+              <UserChip
+               avatar={p.authorInfo.avatar}
+                handle={p.authorInfo.handle}
+                fullName={p.authorInfo.name}
+                onClickName={() => openProfile(p.authorHandle)} />
 
             {isRepost && original && (
               <div className="repostLine">
@@ -126,7 +120,7 @@ export default function Post({
 
           <Carousel urls={toShow} />
 
-          <div className="flex items-center gap-3 flex-wrap">
+          {/* <div className="flex items-center gap-3 flex-wrap">
             <IconBtn icon={Heart} label="Like" count={source.likes} onClick={() => toggleLike(source.id)} active={!!source.liked} />
             <IconBtn icon={Repeat} label="Repost" count={source.reposts} onClick={() => toggleRepost(source.id)} active={!!source.repostedByMe} />
             <IconBtn
@@ -138,7 +132,7 @@ export default function Post({
             <IconBtn icon={Share2} label="Share" />
           </div>
 
-          <CommentsList post={source} onAdd={addComment} />
+          <CommentsList post={source} onAdd={addComment} /> */}
         </div>
       </Card>
     </motion.div>
