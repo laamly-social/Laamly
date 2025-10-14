@@ -4,9 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Card from "../ui/Card";
 import Avatar from "../ui/Avatar";
 import GenericButton from "../ui/GenericButton";
-import IconBtn from "../ui/IconBtn";
 import {
-  Plus, // NEW: floating FAB icon
   Upload,
   VolumeX,
   Volume2,
@@ -18,7 +16,6 @@ import {
   PlusCircle,
   X,
 } from "lucide-react";
-import { useAutoplayOnView } from "../../hooks/useAutoplayOnView";
 import type { Reel } from "../../types";
 import {
   uploadReelVideo,
@@ -38,48 +35,209 @@ export default function Reels({
   reels: Reel[];
   setReels: React.Dispatch<React.SetStateAction<Reel[]>>;
 }) {
-  // unified floating panel
+  // Floating panel (composer / comments)
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
   const [panelFor, setPanelFor] = useState<Reel | null>(null);
 
-  // composer state
+  // Composer
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
 
-  // playback
-  const wrapRef = useRef<HTMLDivElement | null>(null);
+  // Playback + navigation
+  const wrapRef = useRef<HTMLDivElement | null>(null); // scroll viewport
+  const itemRefs = useRef<HTMLDivElement[]>([]); // page nodes
+  const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
 
+  // Paging control flags
+  const isPagingRef = useRef(false); // throttle while animating
+  const wheelAccumRef = useRef(0);
+  const wheelTimerRef = useRef<number | null>(null);
+
+  // Touch tracking
+  const touchStartY = useRef<number | null>(null);
+  const touchDeltaY = useRef(0);
+
+  // Load data
+  useEffect(() => { (async () => setReels(await fetchAllReels()))(); }, [setReels]);
+
+  // Helpers
+  const clamp = (n: number, min = 0, max = itemRefs.current.length - 1) =>
+    Math.max(min, Math.min(max, n));
+
+  const setItemRef = (idx: number) => (el: HTMLDivElement | null) => {
+    if (el) itemRefs.current[idx] = el;
+  };
+
+  const goToIndex = (idx: number) => {
+    const root = wrapRef.current;
+    const el = itemRefs.current[idx];
+    if (!root || !el) return;
+    setActive(idx);
+    isPagingRef.current = true;
+
+    const top = el.offsetTop - root.offsetTop;
+    root.scrollTo({ top, behavior: "smooth" });
+
+    // simple settle timer; browsers differ on scrollend support
+    window.setTimeout(() => {
+      isPagingRef.current = false;
+      // ensure we're aligned (snap helps too)
+      const fix = el.offsetTop - root.offsetTop;
+      if (Math.abs(root.scrollTop - fix) > 2) root.scrollTop = fix;
+    }, 420);
+  };
+
+  // IntersectionObserver to catch manual drags (e.g., scrollbar or touch)
   useEffect(() => {
-    (async () => setReels(await fetchAllReels()))();
-  }, [setReels]);
+    const root = wrapRef.current;
+    if (!root || !itemRefs.current.length) return;
 
-  useAutoplayOnView(wrapRef);
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (isPagingRef.current) return;
+        let bestIdx = active;
+        let best = 0;
+        for (const e of entries) {
+          const idx = Number((e.target as HTMLElement).dataset.idx || 0);
+          if (e.intersectionRatio > best) {
+            best = e.intersectionRatio;
+            bestIdx = idx;
+          }
+        }
+        if (best >= 0.55 && bestIdx !== active) setActive(bestIdx);
+      },
+      { root, threshold: Array.from({ length: 11 }, (_, i) => i / 10) }
+    );
 
-  // ---- panel toggles ----
+    itemRefs.current.forEach((el) => el && obs.observe(el));
+    return () => obs.disconnect();
+  }, [reels.length]); // rerun when count changes
+
+  // Play only the active video
+  useEffect(() => {
+    const root = wrapRef.current;
+    if (!root) return;
+    const vids = Array.from(root.querySelectorAll("video")) as HTMLVideoElement[];
+    vids.forEach((v, i) => {
+      v.muted = muted;
+      if (i === active) v.play().catch(() => {});
+      else v.pause();
+    });
+  }, [active, muted, reels.length]);
+
+  // Wheel: convert continuous deltas into discrete page steps
+  useEffect(() => {
+    const root = wrapRef.current;
+    if (!root) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (panelMode) return; // don't steal scroll when panel open
+      e.preventDefault();
+
+      if (isPagingRef.current) return; // still snapping to previous command
+
+      wheelAccumRef.current += e.deltaY;
+      // debounce accumulation just a hair; trackpads emit many tiny deltas
+      if (wheelTimerRef.current) window.clearTimeout(wheelTimerRef.current);
+      wheelTimerRef.current = window.setTimeout(() => {
+        const amount = wheelAccumRef.current;
+        wheelAccumRef.current = 0;
+        if (Math.abs(amount) < 30) return; // ignore micro scroll
+
+        const dir = amount > 0 ? 1 : -1;
+        const next = clamp(active + dir);
+        if (next !== active) goToIndex(next);
+      }, 24);
+    };
+
+    root.addEventListener("wheel", onWheel, { passive: false });
+    return () => root.removeEventListener("wheel", onWheel as any);
+  }, [active, panelMode, reels.length]);
+
+  // Touch swipe -> discrete page
+  useEffect(() => {
+    const root = wrapRef.current;
+    if (!root) return;
+
+    const start = (e: TouchEvent) => {
+      if (panelMode) return;
+      touchStartY.current = e.touches[0].clientY;
+      touchDeltaY.current = 0;
+    };
+    const move = (e: TouchEvent) => {
+      if (panelMode) return;
+      if (touchStartY.current == null) return;
+      const y = e.touches[0].clientY;
+      touchDeltaY.current = y - touchStartY.current;
+      // prevent native scroll to keep lock feeling
+      if (Math.abs(touchDeltaY.current) > 10) e.preventDefault();
+    };
+    const end = () => {
+      if (panelMode) return;
+      const dy = touchDeltaY.current;
+      touchStartY.current = null;
+      touchDeltaY.current = 0;
+      if (isPagingRef.current) return;
+
+      if (Math.abs(dy) > 40) {
+        const dir = dy < 0 ? 1 : -1; // swipe up => next
+        const next = clamp(active + dir);
+        if (next !== active) goToIndex(next);
+      }
+    };
+
+    root.addEventListener("touchstart", start, { passive: false });
+    root.addEventListener("touchmove", move, { passive: false });
+    root.addEventListener("touchend", end);
+    return () => {
+      root.removeEventListener("touchstart", start as any);
+      root.removeEventListener("touchmove", move as any);
+      root.removeEventListener("touchend", end as any);
+    };
+  }, [active, panelMode, reels.length]);
+
+  // Arrow keys: discrete page
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (panelMode) return;
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      e.preventDefault();
+      if (isPagingRef.current) return;
+
+      const next =
+        e.key === "ArrowDown"
+          ? clamp(active + 1)
+          : clamp(active - 1);
+
+      if (next !== active) goToIndex(next);
+    };
+    window.addEventListener("keydown", onKey, { passive: false });
+    return () => window.removeEventListener("keydown", onKey);
+  }, [active, panelMode, reels.length]);
+
+  // Panel toggles
   const toggleComposer = () => {
     setPanelMode((m) => (m === "composer" ? null : "composer"));
     setPanelFor(null);
   };
-
   const toggleComments = (r: Reel) => {
     setPanelFor((prev) => {
-      const isSame = prev?.id === r.id;
-      setPanelMode((m) => (m === "comments" && isSame ? null : "comments"));
-      return isSame ? null : r;
+      const same = prev?.id === r.id;
+      setPanelMode((m) => (m === "comments" && same ? null : "comments"));
+      return same ? null : r;
     });
   };
 
-  // ---- composer handlers ----
+  // Composer handlers
   const onPickVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
     setFile(f);
     setPreview(f ? URL.createObjectURL(f) : "");
   };
-
   const addReel = async () => {
     if (!file) return;
     setUploading(true);
@@ -87,12 +245,8 @@ export default function Reels({
       const src = await uploadReelVideo(file);
       await createReel({ title: title.trim(), description: caption.trim(), src });
       if (preview) URL.revokeObjectURL(preview);
-      setFile(null);
-      setPreview("");
-      setTitle("");
-      setCaption("");
-      setPanelMode(null);
-      setPanelFor(null);
+      setFile(null); setPreview(""); setTitle(""); setCaption("");
+      setPanelMode(null); setPanelFor(null);
       setReels(await fetchAllReels());
     } catch (e) {
       console.error(e);
@@ -102,7 +256,6 @@ export default function Reels({
     }
   };
 
-  // keep your click-to-play
   const togglePlay = (e: React.MouseEvent<HTMLVideoElement>) => {
     const v = e.currentTarget;
     if (v.paused) v.play().catch(() => {});
@@ -126,21 +279,46 @@ export default function Reels({
     try {
       await deleteReel(id);
       setReels((prev) => prev.filter((r) => r.id !== id));
-    } catch {
-      alert("Delete failed");
-    }
+    } catch { alert("Delete failed"); }
   };
 
   return (
     <div className="relative">
-      {/* Center column with reels */}
-      <div ref={wrapRef} className="mx-auto my-6 w-full max-w-[820px] px-2">
-        {reels.map((r) => (
-          <Card key={r.id} className="relative overflow-hidden mb-8 p-0 rounded-2xl">
-            {/* 9:16 stage — tall with rounded card */}
+      {/* Hide scrollbar in FF/WebKit */}
+      <style>{`
+        .reelSnapViewport { scrollbar-width: none; }
+        .reelSnapViewport::-webkit-scrollbar { display: none; }
+      `}</style>
+
+      {/* Snapping viewport (we also programmatically lock to pages) */}
+      <div
+        ref={wrapRef}
+        className="reelSnapViewport mx-auto w-full max-w-[820px] px-2"
+        style={{
+          height: "calc(100vh - 24px)",
+          overflowY: "auto",
+          scrollSnapType: "y mandatory",
+          scrollBehavior: "smooth",
+          background: "transparent",
+        }}
+      >
+        {reels.map((r, i) => (
+          <Card
+            key={r.id}
+            ref={setItemRef(i)}
+            data-idx={i}
+            className="relative overflow-hidden p-0"
+            style={{
+              margin: "18px 0",
+              scrollSnapAlign: "start",
+              borderRadius: 18,
+            }}
+          >
+            {/* Stage 9:16; tall but view-safe */}
             <div
-              className="relative w-full overflow-hidden rounded-2xl"
-              style={{ aspectRatio: "9/16", maxHeight: "96vh", minHeight: "90vh" }}
+              className="relative w-full overflow-hidden"
+              style={{ aspectRatio: "9/16", minHeight: "88vh", maxHeight: "96vh" }}
+              data-idx={i}
             >
               <video
                 src={r.src + "/raw"}
@@ -153,8 +331,16 @@ export default function Reels({
                 onClick={togglePlay}
               />
 
-              {/* Action rail (upload removed here) */}
-              <div className="absolute right-3 top-[56%] -translate-y-1/2 flex flex-col gap-3 z-10">
+              {/* Action rail */}
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10">
+                <button
+                  className="backdrop-blur bg-black/35 hover:bg-black/45 text-white rounded-full h-11 w-11 grid place-items-center"
+                  title="Upload reel"
+                  onClick={toggleComposer}
+                >
+                  <Upload size={18} />
+                </button>
+
                 <button
                   className="backdrop-blur bg-black/35 hover:bg-black/45 text-white rounded-full h-11 w-11 grid place-items-center"
                   onClick={() => setMuted((m) => !m)}
@@ -212,14 +398,18 @@ export default function Reels({
                 <div className="relative flex items-center gap-3 text-white">
                   <Avatar src={r.authorInfo?.avatar || ""} alt={r.authorInfo?.name || ""} />
                   <div>
-                    <div className="font-semibold leading-tight">{r.authorInfo?.name || "Unknown"}</div>
+                    <div className="font-semibold leading-tight">
+                      {r.authorInfo?.name || "Unknown"}
+                    </div>
                     <div className="text-sm opacity-80 leading-tight">
                       @{r.authorInfo?.handle || "unknown"} {r.title ? `• ${r.title}` : ""}
                     </div>
                   </div>
                 </div>
                 {r.description && (
-                  <div className="relative mt-2 text-sm text-white/90 line-clamp-3">{r.description}</div>
+                  <div className="relative mt-2 text-sm text-white/90 line-clamp-3">
+                    {r.description}
+                  </div>
                 )}
               </div>
             </div>
@@ -227,32 +417,11 @@ export default function Reels({
         ))}
       </div>
 
-      {/* FAB: bottom-right “+” opens composer */}
-      {!panelMode && (
-        <button
-          onClick={toggleComposer}
-          aria-label="Create reel"
-          className="
-            fixed right-6 bottom-6 z-40
-            h-14 w-14 rounded-full
-            bg-accent text-white
-            shadow-xl hover:shadow-2xl
-            transition-all active:scale-95
-            flex items-center justify-center
-          "
-        >
-          <Plus size={24} />
-        </button>
-      )}
-
-      {/* Dim background when panel visible (click to close) */}
+      {/* Dim background when panel visible */}
       {panelMode && (
         <div
           className="fixed inset-0 bg-black/30 z-40"
-          onClick={() => {
-            setPanelMode(null);
-            setPanelFor(null);
-          }}
+          onClick={() => { setPanelMode(null); setPanelFor(null); }}
         />
       )}
 
@@ -265,10 +434,7 @@ export default function Reels({
             </div>
             <button
               className="btn rounded-full h-[32px] w-[32px] p-0"
-              onClick={() => {
-                setPanelMode(null);
-                setPanelFor(null);
-              }}
+              onClick={() => { setPanelMode(null); setPanelFor(null); }}
               aria-label="Close"
             >
               <X size={16} />
