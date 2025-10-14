@@ -191,7 +191,17 @@ app.post("/posts/comments/create", async (req, res) => {
       stats: {}
     });
     await post.save();
-    return res.json({ message: "Comment added", comments: post.comments });
+
+    const user = await User.findOne({ githubId: req.session.user.id }).lean();
+    const currentUserInfo = user ? {
+      id: req.session.user.id,
+      handle: user.handle,
+      name: user.profile?.name || user.handle,
+      avatar: user.profile?.avatar || "",
+      profile: user.profile
+    } : null;
+
+    return res.json({ message: "Comment added", currentUser: currentUserInfo });
   } catch (e) {
     console.error("POST /posts/comments/create failed:", e);
     return res.status(500).json({ message: "Failed to add comment" });

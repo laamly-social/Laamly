@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createComment } from "../../utils/comments";
-import { fetchMe } from "../../utils/me";
 import InputField from "../ui/InputField";
 import GenericButton from "../ui/GenericButton";
 import type { Post as PostType } from "../../types";
@@ -16,12 +15,6 @@ export default function CommentsList({ post, onAdd }: { post: PostType; onAdd?: 
          ts: c.datePosted || c.ts,
       }));
    });
-   const [currentUser, setCurrentUser] = useState<any>(null);
-
-   useEffect(() => {
-      // Fetch current user info for new comments
-      fetchMe().then(user => setCurrentUser(user)).catch(err => console.error("Failed to fetch user:", err));
-   }, []);
 
    const addComment = async () => {
       if (!draft.trim()) return;
@@ -29,18 +22,28 @@ export default function CommentsList({ post, onAdd }: { post: PostType; onAdd?: 
 
       try {
          const data = await createComment(post._id!, text);
-         if (data.comments) {
-            setComments(data.comments.map((c: any) => {
-               // If authorInfo is missing (newly created comment), use current user
-               const authorInfo = c.authorInfo || currentUser;
-               return {
-                  ...c,
-                  text: c.content || c.text, // normalize field
-                  ts: c.datePosted || c.ts,
-                  authorInfo: authorInfo,
-               };
-            }));
+         if (data.currentUser) {
+            // Create new comment object with current user info
+            const newComment = {
+               _id: `temp_${Date.now()}`,
+               author: data.currentUser.id,
+               content: text,
+               text: text,
+               datePosted: new Date().toISOString(),
+               ts: Date.now(),
+               stats: {},
+               authorInfo: {
+                  handle: data.currentUser.handle,
+                  name: data.currentUser.name,
+                  avatar: data.currentUser.avatar,
+                  isCurrentUser: true,
+               }
+            };
+
+            // Append new comment to existing comments
+            setComments(prev => [...prev, newComment]);
             setDraft("");
+
             // Notify parent component to update its state as well
             if (onAdd) {
                onAdd(post._id!, text);
@@ -55,45 +58,32 @@ export default function CommentsList({ post, onAdd }: { post: PostType; onAdd?: 
 
    return (
       <div className="grid gap-2.5">
-         {comments.map((c, idx) => {
-            const u = (c as any).authorInfo;
-            if (u?.deleted) {
+         <div className="bg-muted dark:bg-muted-dark rounded-xl border-1 border-border dark:border-border-dark">
+            {comments.map((c, idx) => {
+               const u = (c as any).authorInfo;
+               if (u?.deleted) { return (<div key={c._id || idx}></div>); }
+               const isLast = idx === comments.length - 1;
                return (
                   <div key={c._id || idx} className="flex gap-2">
-                     <div className="comment bg-muted dark:bg-muted-dark rounded-xl border-1 border-border dark:border-border-dark flex-1 px-4 py-2">
-                        <div className="flex justify-between text-text dark:text-text-dark text-xs mb-3">
+                     <div className={`comment ${isLast ? '' : 'border-b-1'} border-border dark:border-border-dark flex-1 px-6 py-4`}>
+                        <div className="flex justify-between text-text dark:text-text-dark text-xs mb-1">
                            <div>
-                              <span className="font-semibold text-sub">[deleted]</span>
+                              <UserChip
+                                 avatar={u?.avatar}
+                                 handle={u?.handle ?? c.author}
+                                 fullName={u?.name ?? c.author}
+                              />
                            </div>
                            <span className="opacity-[.75]">
                               {c.ts ? new Date(c.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
                            </span>
                         </div>
-                        <div className="mt-1 whitespace-pre-wrap mb-2">{c.text}</div>
+                        <div className="mt-1 ml-13 mb-1 whitespace-pre-wrap">{c.text}</div>
                      </div>
                   </div>
                );
-            }
-            return (
-               <div key={c._id || idx} className="flex gap-2">
-                  <div className="comment bg-muted dark:bg-muted-dark rounded-xl border-1 border-border dark:border-border-dark flex-1 px-4 py-2">
-                     <div className="flex justify-between text-text dark:text-text-dark text-xs mb-3">
-                        <div>
-                           <UserChip
-                              avatar={u?.avatar}
-                              handle={u?.handle ?? c.author}
-                              fullName={u?.name ?? c.author}
-                           />
-                        </div>
-                        <span className="opacity-[.75]">
-                           {c.ts ? new Date(c.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
-                        </span>
-                     </div>
-                     <div className="mt-1 whitespace-pre-wrap mb-2">{c.text}</div>
-                  </div>
-               </div>
-            );
-         })}
+            })}
+         </div>
 
          <div className="flex gap-2">
             <InputField
