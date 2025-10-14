@@ -118,7 +118,7 @@ export default function Reels({
       <div ref={wrapRef} className="reels reels--centered h-full">
         {reels.map(r => (
           <Card key={r.id} className="reel shadow-none h-full">
-            <video src={r.src} muted={muted} playsInline loop onClick={togglePlay} />
+            <video src={r.src + "/raw"} muted={muted} playsInline loop onClick={togglePlay}></video>
             <GenericButton className="mute" onClick={() => setMuted(m => !m)} aria-label="Toggle sound">
               {muted ? <VolumeX /> : <Volume2 />}
             </GenericButton>
