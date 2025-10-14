@@ -58,7 +58,13 @@ const postSchema = new mongoose.Schema({
   urls: [String], // LINKS ONLY
   datePosted: Date,
   stats: Object,
-  deleted: { type: Boolean, default: false }
+  deleted: { type: Boolean, default: false },
+  comments: [{
+    author: String,
+    content: String,
+    datePosted: Date,
+    stats: Object
+  }]
 });
 
 const messageSchema = new mongoose.Schema({
@@ -168,6 +174,31 @@ app.get("/github/login", (req, res) => {
 
 // --- Posts ---
 // Get all media from posts by the logged-in user
+app.post("/posts/comments/create", async (req, res) => {
+  try {
+    if (!req.session.user) return res.status(401).json({ message: "You need to be logged in" });
+    const postId = req.body.postId;
+    const text = req.body.text;
+
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    console.log(post)
+    post.comments.push({
+      author: String(req.session.user.id),
+      content: String(text),
+      datePosted: new Date(),
+      stats: {}
+    });
+    await post.save();
+    return res.json({ message: "Comment added", comments: post.comments });
+  } catch (e) {
+    console.error("POST /posts/comments/create failed:", e);
+    return res.status(500).json({ message: "Failed to add comment" });
+  }
+});
+
+
 app.get("/posts/getMedia", async (req, res) => {
   try {
     if (!req.session.user) {
@@ -269,7 +300,30 @@ app.get("/posts/get-all", async (req, res) => {
         }
         p.authorId = p.author;
         p.createdAt = new Date(p.datePosted).getTime();
-        p.comments = [];
+        if (Array.isArray(p.comments)) {
+          p.comments = await Promise.all(p.comments.map(async c => {
+            const commenter = await User.findOne({ githubId: c.author }).lean();
+            if (commenter) {
+              return {
+                ...c,
+                authorInfo: {
+                  profile: commenter.profile,
+                  handle: commenter.handle,
+                  avatar: commenter.profile?.avatar || "",
+                  name: commenter.profile?.name || commenter.handle,
+                  isCurrentUser: req.session.user ? (c.author === String(req.session.user.id)) : false
+                }
+              };
+            } else {
+              return {
+                ...c,
+                authorInfo: { deleted: true }
+              };
+            }
+          }));
+        } else {
+          p.comments = [];
+        }
       } catch (e) {
         console.error(`Author fetch error for ${p._id}:`, e);
       }
@@ -281,6 +335,9 @@ app.get("/posts/get-all", async (req, res) => {
     return res.status(500).json({ message: "Error fetching posts" });
   }
 });
+
+
+
 // --- Reels ---
 // Create a reel (expects a PictShare URL already uploaded from frontend)
 app.post("/reels/create", async (req, res) => {

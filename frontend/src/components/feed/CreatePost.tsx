@@ -96,11 +96,10 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
     e.preventDefault();
     setError(null);
     if (!text.trim()) return setError("Post content cannot be empty.");
-    if (files.length === 0) return setError("Please upload at least one image or video.");
 
     setUploading(true);
     try {
-      const urls = await uploadImages(files); // images AND videos; server stores only links
+      const urls = files.length > 0 ? await uploadImages(files) : []; // images AND videos; server stores only links
       await createPost({ content: text, urls, meId });
 
       // Reset state

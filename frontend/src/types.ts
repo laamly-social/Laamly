@@ -9,10 +9,22 @@ export type User = {
 };
 
 export type Comment = {
-  id: string;
-  userId: string;
-  text: string;   // <-- string only
-  ts: number;
+  _id?: string | number;
+  id?: string;
+  author?: string;  // githubId from backend
+  userId?: string;
+  content?: string; // from backend
+  text?: string;    // normalized field
+  datePosted?: string | Date;
+  ts?: number;
+  stats?: any;
+  authorInfo?: {
+    handle?: string;
+    name?: string;
+    avatar?: string;
+    isCurrentUser?: boolean;
+    deleted?: boolean;
+  };
 };
 
 export type Post = {

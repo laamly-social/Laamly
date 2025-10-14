@@ -13,6 +13,7 @@ import type { Post as PostType } from "../../types";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { div } from "framer-motion/client";
+import CommentsList from "./CommentsList";
 
 interface PostProps {
   post: PostType;
@@ -130,56 +131,11 @@ export default function Post({
               onClick={() => document.getElementById(`cbox-${source.id}`)?.focus()}
             />
             <IconBtn icon={Share2} label="Share" />
-          </div>
+          </div> */}
 
-          <CommentsList post={source} onAdd={addComment} /> */}
+          <CommentsList post={source} onAdd={addComment} />
         </div>
       </Card>
     </motion.div>
-  );
-}
-
-function CommentsList({ post, onAdd }: { post: PostType; onAdd: (postId: string, body: string) => void }) {
-  const [draft, setDraft] = useState("");
-
-  return (
-    <div className="grid gap-2.5">
-      {post.comments.map(c => {
-        const u = {};
-        return (
-          <div key={c.id} className="flex gap-2">
-            <Avatar src={u?.avatar || undefined} alt={u?.name ?? c.userId} size="sm" />
-            <div className="comment bg-muted dark:bg-muted-dark rounded-xl border-1 border-border dark:border-border-dark flex-1 px-4 py-2">
-              <div className="flex justify-between text-text dark:text-text-dark text-xs">
-                <span className="font-semibold">{u?.name ?? c.userId}</span>
-                <span className="opacity-[.75]">
-                  {new Date(c.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              </div>
-              <div className="mt-1 whitespace-pre-wrap">{c.text}</div>
-            </div>
-          </div>
-        );
-      })}
-
-      <div className="flex gap-2">
-        <InputField
-          id={`cbox-${post.id}`}
-          className="input bg-muted dark:bg-muted-dark"
-          placeholder="Write a comment…"
-          value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === "Enter" && draft.trim()) {
-              onAdd(post.id, draft.trim());
-              setDraft("");
-            }
-          }}
-        />
-        <GenericButton className="btn disabled:bg-muted disabled:dark:bg-muted-dark disabled:text-sub dark:disabled:text-sub-dark" disabled={!draft.trim()} onClick={() => draft.trim() && (onAdd(post.id, draft.trim()), setDraft(""))}>
-          Post
-        </GenericButton>
-      </div>
-    </div>
   );
 }

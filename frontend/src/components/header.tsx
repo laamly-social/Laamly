@@ -39,7 +39,7 @@ export function Header({ tab, setTab }: HeaderProps) {
             {/* TOP: Brand Name */}
             <a href="/" className="flex items-center">
                <h1 className="text-2xl font-bold text-black dark:text-white">
-                  Veylu
+                  Laamly
                </h1>
             </a>
             {/* MIDDLE: Navigation Tabs */}

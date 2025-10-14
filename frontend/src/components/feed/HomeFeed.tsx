@@ -75,7 +75,7 @@ export default function HomeFeed({
     if (!body.trim()) return;
     setPosts(prev =>
       prev.map(p =>
-        p.id === postId
+        p._id === postId
           ? { ...p, comments: [...p.comments, { id: `c_${Date.now()}`, userId: meId, text: body.trim(), ts: Date.now() }] }
           : p
       )
