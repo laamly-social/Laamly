@@ -66,10 +66,22 @@ const messageSchema = new mongoose.Schema({
   messages: [String]
 });
 
-let User, Post;
+// --- Reels Schema/Model ---
+const reelSchema = new mongoose.Schema({
+  author: String,               // githubId
+  title: String,
+  description: String,
+  src: String,                  // single video link (PictShare)
+  datePosted: { type: Date, default: Date.now },
+  likedBy: [String],            // githubId list
+  savedBy: [String],            // githubId list
+  deleted: { type: Boolean, default: false }
+});
+
+let User, Post, Reel;
 try { User = mongoose.model("VeyluUser"); } catch { User = mongoose.model("VeyluUser", userSchema); }
 try { Post = mongoose.model("VeyluPost"); } catch { Post = mongoose.model("VeyluPost", postSchema); }
-
+try { Reel = mongoose.model("VeyluReel"); } catch { Reel = mongoose.model("VeyluReel", reelSchema); }
 // --- Public helpers ---
 app.get("/", (_, res) => res.redirect(`${FRONTEND_ORIGIN}/`));
 
@@ -269,6 +281,109 @@ app.get("/posts/get-all", async (req, res) => {
     return res.status(500).json({ message: "Error fetching posts" });
   }
 });
+// --- Reels ---
+// Create a reel (expects a PictShare URL already uploaded from frontend)
+app.post("/reels/create", async (req, res) => {
+  try {
+    if (!req.session.user) return res.status(401).json({ message: "You need to be logged in" });
+    const { title = "", description = "", src } = req.body || {};
+    if (!src) return res.status(400).json({ message: "Missing video src" });
+
+    const reel = await Reel.create({
+      author: String(req.session.user.id),
+      title,
+      description,
+      src,
+      datePosted: new Date()
+    });
+
+    return res.status(201).json({ message: "Reel created", reelId: reel._id });
+  } catch (e) {
+    console.error("POST /reels/create failed:", e);
+    return res.status(500).json({ message: "Failed to create reel" });
+  }
+});
+
+// All reels (decorate with author info)
+app.get("/reels/get-all", async (req, res) => {
+  try {
+    const reels = await Reel.find({ deleted: { $ne: true } }).sort({ datePosted: -1 }).lean();
+    for (const r of reels) {
+      const author = await User.findOne({ githubId: r.author }).lean();
+      r.authorInfo = author ? {
+        handle: author.handle,
+        name: author.profile?.name || author.handle,
+        avatar: author.profile?.avatar || "",
+        isCurrentUser: req.session.user ? (r.author === String(req.session.user.id)) : false
+      } : { handle: "unknown", name: "Unknown", avatar: "", isCurrentUser: false };
+      r.likes = (r.likedBy || []).length;
+      r.saved = !!(req.session.user && r.savedBy?.includes(String(req.session.user.id)));
+      r.liked = !!(req.session.user && r.likedBy?.includes(String(req.session.user.id)));
+      r.createdAt = new Date(r.datePosted).getTime();
+    }
+    res.json({ reels });
+  } catch (e) {
+    console.error("GET /reels/get-all error:", e);
+    res.status(500).json({ message: "Error fetching reels" });
+  }
+});
+
+// Toggle like
+app.post("/reels/toggle-like", async (req, res) => {
+  try {
+    if (!req.session.user) return res.status(401).json({ message: "Login required" });
+    const { id } = req.body || {};
+    const uid = String(req.session.user.id);
+    const reel = await Reel.findById(id);
+    if (!reel) return res.status(404).json({ message: "Reel not found" });
+
+    const set = new Set(reel.likedBy?.map(String) || []);
+    set.has(uid) ? set.delete(uid) : set.add(uid);
+    reel.likedBy = Array.from(set);
+    await reel.save();
+    res.json({ liked: set.has(uid), likes: reel.likedBy.length });
+  } catch (e) {
+    console.error("POST /reels/toggle-like error:", e);
+    res.status(500).json({ message: "Failed" });
+  }
+});
+
+// Toggle save
+app.post("/reels/toggle-save", async (req, res) => {
+  try {
+    if (!req.session.user) return res.status(401).json({ message: "Login required" });
+    const { id } = req.body || {};
+    const uid = String(req.session.user.id);
+    const reel = await Reel.findById(id);
+    if (!reel) return res.status(404).json({ message: "Reel not found" });
+
+    const set = new Set(reel.savedBy?.map(String) || []);
+    set.has(uid) ? set.delete(uid) : set.add(uid);
+    reel.savedBy = Array.from(set);
+    await reel.save();
+    res.json({ saved: set.has(uid) });
+  } catch (e) {
+    console.error("POST /reels/toggle-save error:", e);
+    res.status(500).json({ message: "Failed" });
+  }
+});
+
+// Delete reel (owner only)
+app.post("/reels/delete", async (req, res) => {
+  try {
+    if (!req.session.user) return res.status(401).json({ message: "Login required" });
+    const { id } = req.body || {};
+    const reel = await Reel.findById(id);
+    if (!reel) return res.status(404).json({ message: "Reel not found" });
+    if (String(reel.author) !== String(req.session.user.id)) return res.status(403).json({ message: "Not your reel" });
+    await Reel.updateOne({ _id: id }, { $set: { deleted: true } });
+    res.json({ message: "Reel deleted", id });
+  } catch (e) {
+    console.error("POST /reels/delete error:", e);
+    res.status(500).json({ message: "Failed" });
+  }
+});
+
 
 // --- Start ---
 app.listen(PORT, () => {

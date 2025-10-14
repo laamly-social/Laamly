@@ -3,7 +3,7 @@ import GenericButton from "./ui/GenericButton";
 import type { User } from "../types";
 import type { Tab } from "../types";
 import TabBtn from "./nav/TabBtn";
-import { Image as ImageIcon, Home, MessageSquare, PlayCircle as PlayTab, MessageCircle, LetterText } from "lucide-react";
+import { Image as ImageIcon, Home, PlayCircle as PlayTab } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchGithubClientId } from "../utils/github";
 import { fetchMe } from "../utils/me";

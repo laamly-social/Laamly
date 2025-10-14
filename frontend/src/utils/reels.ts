@@ -1,0 +1,83 @@
+// src/utils/reels.ts
+const UPLOAD_API = "https://pictshare.hnasheralneam.dev/api/upload.php";
+
+export async function uploadReelVideo(file: File): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("upload_code", "5219dd95-5672-44ca-8423-970afa123633");
+
+  const r = await fetch(UPLOAD_API, { method: "POST", body: form });
+  const ct = r.headers.get("content-type") || "";
+  const data = ct.includes("application/json") ? await r.json() : { status: "error", reason: await r.text() };
+
+  if ((data as any).status !== "ok") throw new Error((data as any).reason || "Upload failed");
+  const raw = (data as any).url as string;
+  return raw.replace("http://", "https://pictshare.hnasheralneam.dev");
+}
+
+export async function createReel(payload: { title?: string; description?: string; src: string }) {
+  const res = await fetch("/reels/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Failed to create reel");
+  return data; // { message, reelId }
+}
+
+export async function fetchAllReels() {
+  const res = await fetch("/reels/get-all", { credentials: "include" });
+  if (!res.ok) return [];
+  const data = await res.json();
+  const list = data?.reels ?? [];
+  return list.map((r: any) => ({
+    id: String(r._id),
+    authorId: String(r.author),
+    title: r.title || "",
+    description: r.description || "",
+    src: r.src,
+    createdAt: r.createdAt || new Date(r.datePosted).getTime(),
+    liked: !!r.liked,
+    saved: !!r.saved,
+    likes: Number(r.likes || 0),
+    authorInfo: r.authorInfo || undefined,
+  }));
+}
+
+export async function toggleReelLike(id: string) {
+  const res = await fetch("/reels/toggle-like", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ id }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Failed");
+  return data as { liked: boolean; likes: number };
+}
+
+export async function toggleReelSave(id: string) {
+  const res = await fetch("/reels/toggle-save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ id }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Failed");
+  return data as { saved: boolean };
+}
+
+export async function deleteReel(id: string) {
+  const res = await fetch("/reels/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ id }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Failed");
+  return data;
+}
