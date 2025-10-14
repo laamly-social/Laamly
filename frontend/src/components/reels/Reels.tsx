@@ -6,6 +6,7 @@ import Avatar from "../ui/Avatar";
 import GenericButton from "../ui/GenericButton";
 import IconBtn from "../ui/IconBtn";
 import {
+  Plus, // NEW: floating FAB icon
   Upload,
   VolumeX,
   Volume2,
@@ -135,11 +136,10 @@ export default function Reels({
       {/* Center column with reels */}
       <div ref={wrapRef} className="mx-auto my-6 w-full max-w-[820px] px-2">
         {reels.map((r) => (
-          <Card key={r.id} className="relative overflow-hidden mb-8 p-0">
-            {/* 9:16 stage — taller but view-safe */}
+          <Card key={r.id} className="relative overflow-hidden mb-8 p-0 rounded-2xl">
+            {/* 9:16 stage — tall with rounded card */}
             <div
-              className="relative w-full overflow-hidden"
-              // Taller but still view-safe; a touch larger rounding too
+              className="relative w-full overflow-hidden rounded-2xl"
               style={{ aspectRatio: "9/16", maxHeight: "96vh", minHeight: "90vh" }}
             >
               <video
@@ -153,16 +153,8 @@ export default function Reels({
                 onClick={togglePlay}
               />
 
-              {/* Action rail, nudged down slightly */}
+              {/* Action rail (upload removed here) */}
               <div className="absolute right-3 top-[56%] -translate-y-1/2 flex flex-col gap-3 z-10">
-                <button
-                  className="backdrop-blur bg-black/35 hover:bg-black/45 text-white rounded-full h-11 w-11 grid place-items-center"
-                  title="Upload reel"
-                  onClick={toggleComposer}
-                >
-                  <Upload size={18} />
-                </button>
-
                 <button
                   className="backdrop-blur bg-black/35 hover:bg-black/45 text-white rounded-full h-11 w-11 grid place-items-center"
                   onClick={() => setMuted((m) => !m)}
@@ -234,6 +226,24 @@ export default function Reels({
           </Card>
         ))}
       </div>
+
+      {/* FAB: bottom-right “+” opens composer */}
+      {!panelMode && (
+        <button
+          onClick={toggleComposer}
+          aria-label="Create reel"
+          className="
+            fixed right-6 bottom-6 z-40
+            h-14 w-14 rounded-full
+            bg-accent text-white
+            shadow-xl hover:shadow-2xl
+            transition-all active:scale-95
+            flex items-center justify-center
+          "
+        >
+          <Plus size={24} />
+        </button>
+      )}
 
       {/* Dim background when panel visible (click to close) */}
       {panelMode && (
