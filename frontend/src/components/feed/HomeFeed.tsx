@@ -104,10 +104,13 @@ export default function HomeFeed({
   return (
     // Center the two-column feed and give the main column a comfortable, stable width
     <div
-      className="w-full mx-auto grid gap-6 px-2"
-      style={{ gridTemplateColumns: "minmax(680px, 760px) 340px", maxWidth: 1140 }}
+      className="w-full mx-auto grid gap-6 px-2 md:px-4"
+      style={{ 
+        gridTemplateColumns: "1fr", 
+        maxWidth: "100%"
+      }}
     >
-      <div className="col col--main">
+      <div className="col col--main max-w-[680px] mx-auto w-full">
         <Card className="p-2">
           <div className="grid grid-cols-2 gap-2">
             <GenericButton
@@ -146,10 +149,10 @@ export default function HomeFeed({
         </div>
       </div>
 
-      <aside className="col sticky t-20 h-fit">
-        {/* <WhoToFollow meId={meId} followMap={followMap} followToggle={followToggle} openProfile={openProfile} /> */}
+      {/* Hide trends sidebar on mobile - only show on larger screens if needed */}
+      {/* <aside className="col sticky t-20 h-fit hidden lg:block">
         <Trends />
-      </aside>
+      </aside> */}
 
       <AnimatePresence>
         {lightbox && (

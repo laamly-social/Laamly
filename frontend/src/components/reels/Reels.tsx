@@ -275,7 +275,7 @@ export default function Reels({
   };
 
   return (
-    <div className="relative h-[100vh] overflow-hidden">
+    <div className="relative overflow-hidden h-screen">
       {/* Hide scrollbar in FF/WebKit */}
       <style>{`
         .reelSnapViewport { scrollbar-width: none; }
@@ -285,13 +285,11 @@ export default function Reels({
       {/* Snapping viewport (we also programmatically lock to pages) */}
       <div
         ref={wrapRef}
-        className="reelSnapViewport mx-auto w-full max-w-[820px] px-2"
+        className="reelSnapViewport mx-auto w-full h-full px-2 md:px-0"
         style={{
-          height: "calc(100vh)",
           overflowY: "auto",
           scrollSnapType: "y mandatory",
           scrollBehavior: "smooth",
-          margin: "2vh 0"
         }}
       >
         {reels.map((r, i) => (
@@ -314,7 +312,7 @@ export default function Reels({
       {/* Fixed floating button - bottom right */}
       {!panelMode && (
         <button
-          className="fixed bottom-6 right-6 bg-accent hover:bg-accent-dark text-white rounded-full h-14 w-14 grid place-items-center shadow-lg z-30 transition-transform hover:scale-110"
+          className="fixed bottom-24 md:bottom-6 right-6 bg-accent hover:bg-accent-dark text-white rounded-full h-14 w-14 grid place-items-center shadow-lg z-30 transition-transform hover:scale-110"
           onClick={toggleComposer}
           title="Create new reel"
         >

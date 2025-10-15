@@ -60,7 +60,7 @@ const Carousel = ({ urls }) => {
             style={{ transform: `translateX(-${current * 100}%)` }}
          >
             {urls.map((url, index) => (
-               <div key={index} className="w-full rounded-xl flex-shrink-0 flex justify-center items-center h-[350px] relative overflow-hidden">
+               <div key={index} className="w-full rounded-xl flex-shrink-0 flex justify-center items-center h-[280px] sm:h-[350px] md:h-[400px] relative overflow-hidden">
                   {renderMedia(url)}
                </div>
             ))}

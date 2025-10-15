@@ -244,7 +244,7 @@ export default function Podcasts() {
 
   // Podcast Player View
   return (
-    <div className="container mx-auto p-4 md:p-8 max-w-7xl">
+    <div className="container mx-auto p-4 md:p-8 max-w-7xl pb-24 md:pb-8">
       {/* Back Button */}
       <button
         onClick={backToPodcastList}
@@ -268,7 +268,7 @@ export default function Podcasts() {
       {/* Main Content */}
       <main className="md:grid md:grid-cols-12 md:gap-8">
         {/* Episode List */}
-        <div className="md:col-span-5 lg:col-span-4 h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="md:col-span-5 lg:col-span-4 h-[50vh] md:h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
           <div className="space-y-3">
             {episodes.map((episode, index) => (
               <div

@@ -39,6 +39,28 @@
    box-sizing: border-box;
 }
 
+html, body {
+   margin: 0;
+   padding: 0;
+   width: 100%;
+   min-height: 100vh;
+   height: 100%;
+   overflow-x: hidden;
+}
+
+body {
+   background: var(--color-bg);
+}
+
+body.dark {
+   background: var(--color-bg-dark);
+}
+
+#root {
+   min-height: 100vh;
+   width: 100%;
+}
+
 @layer components {
    /* Container */
    .container {

@@ -46,9 +46,12 @@ export default function App({ initialData }: AppProps) {
       return [...images, ...videos];
    }, [posts, reels]);
 
+   // Check if current route is reels (needs full viewport)
+   const isReelsPage = location.pathname === '/reels';
+
    return (
-      <div className="grid" style={{ gridTemplateColumns: "12rem auto" }}>
-         <div className="h-[100vh] sticky top-0 p-2 w-full">
+      <div className="min-h-screen bg-bg dark:bg-bg-dark md:grid md:grid-cols-[12rem_auto]">
+         <div className="hidden md:block h-[100vh] sticky top-0 p-2 w-full">
             <Header
                openProfile={openProfile}
                githubClientId={initialData.githubClientId}
@@ -56,14 +59,23 @@ export default function App({ initialData }: AppProps) {
             />
          </div>
 
-         <div className="w-full m-h-[100vh] flex flex-col">
-            <main className="mx-auto">
+         {/* Mobile bottom nav (rendered in Header component) */}
+         <div className="md:hidden">
+            <Header
+               openProfile={openProfile}
+               githubClientId={initialData.githubClientId}
+               user={initialData.user}
+            />
+         </div>
+
+         <div className={`w-full flex flex-col ${isReelsPage ? 'h-screen overflow-hidden' : 'min-h-screen pb-20 md:pb-0'}`}>
+            <main className={`mx-auto w-full ${isReelsPage ? 'h-full p-0' : 'max-w-full px-0 md:px-4'}`}>
                <Routes>
                   <Route path="/" element={<Navigate to="/home" replace />} />
                   <Route path="/home" element={
                      <div>
                         <HomeFeed
-                           meId={"replacementid"}
+                           meId={initialData.user?.id || ""}
                            posts={posts}
                            setPosts={setPosts}
                            followMap={followMap}
@@ -88,8 +100,8 @@ export default function App({ initialData }: AppProps) {
                   <Route path="/podcasts" element={<Podcasts />} />
                   <Route path="/profile/:userId" element={
                      <Profile
-                        userId={profileUserId || ""}
-                        meId={"replacementid"}
+                        userId={initialData.user?.id || profileUserId || ""}
+                        meId={initialData.user?.id || ""}
                         posts={posts}
                         setPosts={setPosts}
                         followMap={followMap}

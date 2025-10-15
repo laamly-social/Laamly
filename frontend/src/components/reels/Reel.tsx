@@ -34,17 +34,24 @@ export default function ReelItem({
     <div
       ref={setItemRef}
       data-idx={index}
-      className="relative overflow-hidden p-0"
+      className="relative overflow-hidden p-0 flex items-center justify-center"
       style={{
-        margin: "18px 0",
+        height: "100vh",
+        width: "100%",
         scrollSnapAlign: "start",
-        borderRadius: 18
       }}
     >
       {/* Stage 9:16; tall but view-safe */}
       <div
-        className="relative w-full overflow-hidden"
-        style={{ aspectRatio: "9/16", height: "96vh" }}
+        className="relative overflow-hidden"
+        style={{ 
+          aspectRatio: "9/16", 
+          height: "100%",
+          maxHeight: "100vh",
+          width: "auto",
+          maxWidth: "100%",
+          borderRadius: 18
+        }}
         data-idx={index}
       >
         <video
