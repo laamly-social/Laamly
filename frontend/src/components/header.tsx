@@ -2,7 +2,7 @@
 import { useLocation } from "react-router-dom";
 import type { User } from "../types";
 import TabBtn from "./nav/TabBtn";
-import { Image as ImageIcon, Home, PlayCircle as PlayTab, Github } from "lucide-react";
+import { Image as ImageIcon, Home, PlayCircle as PlayTab, Github, Podcast } from "lucide-react";
 import Avatar from "./ui/Avatar";
 
 interface HeaderProps {
@@ -42,6 +42,7 @@ export function Header({ openProfile: _openProfile, githubClientId, user }: Head
                <TabBtn icon={Home} label="Posts" active={location.pathname === "/home"} to="/home" />
                {/* <TabBtn icon={MessageSquare} label="Messages" active={location.pathname === "/messages"} to="/messages" /> */}
                <TabBtn icon={PlayTab} label="Reels" active={location.pathname === "/reels"} to="/reels" />
+               <TabBtn icon={Podcast} label="Podcasts" active={location.pathname === "/podcasts"} to="/podcasts" />
             </div>
             {/* BOTTOM: User Profile */}
             <div className="flex flex-col items-center space-y-4">

@@ -8,6 +8,7 @@ import Messages from "./components/messages/Messages";
 import Reels from "./components/reels/Reels";
 import MediaGallery from "./components/media/MediaGallery";
 import Profile from "./components/profile/Profile";
+import Podcasts from "./components/podcasts/Podcasts";
 import { Header } from "./components/header";
 
 interface AppProps {
@@ -84,6 +85,7 @@ export default function App({ initialData }: AppProps) {
                      />
                   } />
                   <Route path="/media" element={<MediaGallery items={mediaItems} />} />
+                  <Route path="/podcasts" element={<Podcasts />} />
                   <Route path="/profile/:userId" element={
                      <Profile
                         userId={profileUserId || ""}
