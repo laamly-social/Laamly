@@ -50,14 +50,14 @@ export default function Profile(props: {
 
       {/* Use Card component for profile header */}
       <Card className="profile__header">
-        <div className="card__body profile__row">
+        <div className="p-3 flex items-center gap-3.5">
           <Avatar src={user.avatar} alt={user.name} className="w-20 h-20 border border-gray-300 dark:border-gray-700 object-cover rounded-full" />
-          <div className="profile__meta">
-            <div className="profile__name">
+          <div className="leading-none">
+            <div className="text-lg font-extrabold flex gap-1.5 items-center">
               {user.name}
             </div>
-            <div className="profile__handle">{user.handle}</div>
-            <div className="profile__stats">
+            <div className="text-sub dark:text-sub-dark text-[13px]">{user.handle}</div>
+            <div className="flex gap-3 mt-1 text-text dark:text-text-dark text-[13px]">
               <span>
                 <strong>{followers.length}</strong> Followers
               </span>
@@ -68,7 +68,12 @@ export default function Profile(props: {
           </div>
           {!isMe && (
             <GenericButton
-              className={clsx("btn", (followMap[meId] || new Set()).has(user.id) ? "" : "bg-transparent text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark")}
+              className={clsx(
+                "inline-flex gap-2 items-center justify-center h-9 px-3 cursor-pointer",
+                (followMap[meId] || new Set()).has(user.id) 
+                  ? "bg-accent text-white" 
+                  : "bg-transparent text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark"
+              )}
               onClick={() => followToggle(user.id)}
             >
               {(followMap[meId] || new Set()).has(user.id) ? "Following" : "Follow"}
@@ -166,7 +171,7 @@ export default function Profile(props: {
             const u = USERS.find(x => x.id === r.authorId)!;
             return (
               <div key={r.id} className="card">
-                <div className="card__body">
+                <div className="p-3">
                   <div className="flex items-center gap-2">
                     <Avatar src={u.avatar} alt={u.name} />
                     <div>
@@ -184,7 +189,7 @@ export default function Profile(props: {
             const u = USERS.find(x => x.id === r.authorId)!;
             return (
               <div key={r.id} className="card">
-                <div className="card__body">
+                <div className="p-3">
                   <div className="flex items-center gap-2">
                     <Avatar src={u.avatar} alt={u.name} />
                     <div>

@@ -9,7 +9,7 @@ import InputField from "../ui/InputField";
 import Avatar from "../ui/Avatar";
 import { Heart, Repeat, Share2, Bookmark, BookmarkCheck, Trash2, MessageSquare } from "lucide-react";
 import { formatTime } from "../../utils";
-import type { Post as PostType } from "../../types";
+import type { Post as PostType, User } from "../../types";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { div } from "framer-motion/client";
@@ -23,6 +23,7 @@ interface PostProps {
   openProfile: (uid: string) => void;
   addComment: (postId: string, body: string) => void;
   deletePost: (id: string) => void;
+  user: User | null;
   /*
 
 const res = await fetch("/posts/delete", {
@@ -63,6 +64,7 @@ export default function Post({
   deletePost,
   toggleLike,
   toggleRepost,
+  user,
 }: PostProps) {
   const original = p.originalId ? posts.find(x => x.id === p.originalId) : undefined;
   const isRepost = !!original;
@@ -81,7 +83,7 @@ export default function Post({
   return (
     <motion.div key={p.id} id={"id-"+p._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
       <Card className="post">
-        <div className="card_header border-b-1 border-border dark:border-border-dark justify-between">
+        <div className="p-3 border-b border-border dark:border-border-dark flex items-center gap-2.5 justify-between">
           <div>
               <UserChip
                avatar={p.authorInfo.avatar}
@@ -90,10 +92,10 @@ export default function Post({
                 onClickName={() => openProfile(p.authorHandle)} />
 
             {isRepost && original && (
-              <div className="repostLine">
+              <div className="mt-1.5 ml-11 text-sub dark:text-sub-dark text-xs">
                 reposted from{" "}
                 <button
-                  className="linklike text-linklike dark:text-linklike-dark"
+                  className="bg-none border-none cursor-pointer p-0 text-linklike dark:text-linklike-dark hover:text-white hover:underline"
                   onClick={() => openProfile(original.authorId)}
                 >
                   {USERS.find(u => u.id === original.authorId)?.name ?? original.authorId}
@@ -116,7 +118,7 @@ export default function Post({
           </div>
         </div>
 
-        <div className="card__body">
+        <div className="p-3">
           {postText && <p className="text-lg whitespace-pre-wrap mb-4">{postText}</p>}
 
           <Carousel urls={toShow} />
@@ -133,7 +135,7 @@ export default function Post({
             <IconBtn icon={Share2} label="Share" />
           </div> */}
 
-          <CommentsList post={source} onAdd={addComment} />
+          {user && <CommentsList post={source} onAdd={addComment} />}
         </div>
       </Card>
     </motion.div>

@@ -1,18 +1,9 @@
 // src/components/reels/Reels.tsx
 // @ts-nocheck
 import { useEffect, useRef, useState } from "react";
-import Card from "../ui/Card";
-import Avatar from "../ui/Avatar";
 import GenericButton from "../ui/GenericButton";
 import {
   Upload,
-  VolumeX,
-  Volume2,
-  Heart,
-  Bookmark,
-  Share2,
-  MessageSquare,
-  Trash2,
   PlusCircle,
   X,
 } from "lucide-react";
@@ -25,6 +16,7 @@ import {
   toggleReelSave,
   deleteReel,
 } from "../../utils/reels";
+import Reel from "./Reel";
 
 type PanelMode = "composer" | "comments" | null;
 
@@ -283,7 +275,7 @@ export default function Reels({
   };
 
   return (
-    <div className="relative">
+    <div className="relative h-[100vh] overflow-hidden">
       {/* Hide scrollbar in FF/WebKit */}
       <style>{`
         .reelSnapViewport { scrollbar-width: none; }
@@ -295,127 +287,40 @@ export default function Reels({
         ref={wrapRef}
         className="reelSnapViewport mx-auto w-full max-w-[820px] px-2"
         style={{
-          height: "calc(100vh - 24px)",
+          height: "calc(100vh)",
           overflowY: "auto",
           scrollSnapType: "y mandatory",
           scrollBehavior: "smooth",
-          background: "transparent",
+          margin: "2vh 0"
         }}
       >
         {reels.map((r, i) => (
-          <Card
+          <Reel
             key={r.id}
-            ref={setItemRef(i)}
-            data-idx={i}
-            className="relative overflow-hidden p-0"
-            style={{
-              margin: "18px 0",
-              scrollSnapAlign: "start",
-              borderRadius: 18,
-            }}
-          >
-            {/* Stage 9:16; tall but view-safe */}
-            <div
-              className="relative w-full overflow-hidden"
-              style={{ aspectRatio: "9/16", minHeight: "88vh", maxHeight: "96vh" }}
-              data-idx={i}
-            >
-              <video
-                src={r.src + "/raw"}
-                className="absolute inset-0 w-full h-full object-cover"
-                muted={muted}
-                playsInline
-                autoPlay
-                loop
-                preload="metadata"
-                onClick={togglePlay}
-              />
-
-              {/* Action rail */}
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10">
-                <button
-                  className="backdrop-blur bg-black/35 hover:bg-black/45 text-white rounded-full h-11 w-11 grid place-items-center"
-                  title="Upload reel"
-                  onClick={toggleComposer}
-                >
-                  <Upload size={18} />
-                </button>
-
-                <button
-                  className="backdrop-blur bg-black/35 hover:bg-black/45 text-white rounded-full h-11 w-11 grid place-items-center"
-                  onClick={() => setMuted((m) => !m)}
-                  title="Sound"
-                >
-                  {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                </button>
-
-                <button
-                  className="backdrop-blur bg-black/35 hover:bg-black/45 text-white rounded-full h-11 w-11 grid place-items-center"
-                  onClick={() => onLike(r.id)}
-                  title="Like"
-                >
-                  <Heart size={18} />
-                </button>
-                <div className="text-center text-xs text-white drop-shadow">{r.likes ?? 0}</div>
-
-                <button
-                  className="backdrop-blur bg-black/35 hover:bg-black/45 text-white rounded-full h-11 w-11 grid place-items-center"
-                  onClick={() => onSave(r.id)}
-                  title="Save"
-                >
-                  <Bookmark size={18} />
-                </button>
-
-                <button
-                  className="backdrop-blur bg-black/35 hover:bg-black/45 text-white rounded-full h-11 w-11 grid place-items-center"
-                  onClick={() => toggleComments(r)}
-                  title="Comments"
-                >
-                  <MessageSquare size={18} />
-                </button>
-
-                <button
-                  className="backdrop-blur bg-black/35 hover:bg-black/45 text-white rounded-full h-11 w-11 grid place-items-center"
-                  title="Share"
-                >
-                  <Share2 size={18} />
-                </button>
-
-                {r.authorInfo?.isCurrentUser && (
-                  <button
-                    className="backdrop-blur bg-black/35 hover:bg-black/45 text-white rounded-full h-11 w-11 grid place-items-center"
-                    onClick={() => onDelete(r.id)}
-                    title="Delete"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                )}
-              </div>
-
-              {/* Bottom meta */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4">
-                <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="relative flex items-center gap-3 text-white">
-                  <Avatar src={r.authorInfo?.avatar || ""} alt={r.authorInfo?.name || ""} />
-                  <div>
-                    <div className="font-semibold leading-tight">
-                      {r.authorInfo?.name || "Unknown"}
-                    </div>
-                    <div className="text-sm opacity-80 leading-tight">
-                      @{r.authorInfo?.handle || "unknown"} {r.title ? `• ${r.title}` : ""}
-                    </div>
-                  </div>
-                </div>
-                {r.description && (
-                  <div className="relative mt-2 text-sm text-white/90 line-clamp-3">
-                    {r.description}
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
+            reel={r}
+            index={i}
+            muted={muted}
+            setItemRef={setItemRef(i)}
+            togglePlay={togglePlay}
+            setMuted={setMuted}
+            onLike={onLike}
+            onSave={onSave}
+            toggleComments={toggleComments}
+            onDelete={onDelete}
+          />
         ))}
       </div>
+
+      {/* Fixed floating button - bottom right */}
+      {!panelMode && (
+        <button
+          className="fixed bottom-6 right-6 bg-accent hover:bg-accent-dark text-white rounded-full h-14 w-14 grid place-items-center shadow-lg z-30 transition-transform hover:scale-110"
+          onClick={toggleComposer}
+          title="Create new reel"
+        >
+          <PlusCircle size={24} />
+        </button>
+      )}
 
       {/* Dim background when panel visible */}
       {panelMode && (
@@ -433,7 +338,7 @@ export default function Reels({
               {panelMode === "composer" ? "Add Reel" : "Comments"}
             </div>
             <button
-              className="btn rounded-full h-[32px] w-[32px] p-0"
+              className="inline-flex gap-2 items-center justify-center rounded-full h-[32px] w-[32px] p-0 bg-accent text-white cursor-pointer"
               onClick={() => { setPanelMode(null); setPanelFor(null); }}
               aria-label="Close"
             >
@@ -459,11 +364,11 @@ export default function Reels({
                 <video className="rounded-xl w-full" src={preview} muted controls playsInline preload="metadata" />
               )}
               <div className="flex items-center gap-2">
-                <label className="btn rounded-xl bg-transparent hover:bg-muted dark:hover:bg-muted-dark cursor-pointer">
+                <label className="inline-flex gap-2 items-center justify-center h-9 px-3 rounded-xl bg-transparent hover:bg-muted dark:hover:bg-muted-dark cursor-pointer">
                   <Upload size={16} /> Upload video
                   <input type="file" accept="video/*" onChange={onPickVideo} className="hidden" />
                 </label>
-                <GenericButton className="btn" onClick={addReel} disabled={!file || uploading}>
+                <GenericButton className="inline-flex gap-2 items-center justify-center h-9 px-3 bg-accent text-white cursor-pointer" onClick={addReel} disabled={!file || uploading}>
                   <PlusCircle size={16} /> {uploading ? "Posting…" : "Add Reel"}
                 </GenericButton>
               </div>

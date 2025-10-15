@@ -9,7 +9,7 @@ export type GenericButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
 export default function GenericButton({ children, className = "", ...props }: GenericButtonProps) {
   return (
     <button
-      className={[className, "border-1 border-border dark:border-border-dark rounded-xl"].filter(Boolean).join(" ")}
+      className={[className, "border border-border dark:border-border-dark rounded-xl"].filter(Boolean).join(" ")}
       {...props}
     >
       {children}

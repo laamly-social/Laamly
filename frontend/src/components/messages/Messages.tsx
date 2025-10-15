@@ -60,9 +60,9 @@ export default function Messages() {
   // const lastTimestamp = (thread: Thread) => thread.messages[thread.messages.length - 1]?.ts ?? Date.now();
 
   return (
-    <div className="grid h-[calc(100vh-1rem)] w-[calc(100vw-12.5rem)] rounded-xl border-1 border-border dark:border-border-dark overflow-hidden small:grid-cols-1 m-2 ml-0" style={{ gridTemplateColumns: "320px minmax(420px, 1fr)" }}>
-      <aside className="border-r-1 border-border dark:border-border-dark bg-panel dark:bg-panel-dark">
-        <div className="sidebar__search">
+    <div className="grid h-[calc(100vh-1rem)] w-[calc(100vw-12.5rem)] rounded-xl border border-border dark:border-border-dark overflow-hidden small:grid-cols-1 m-2 ml-0" style={{ gridTemplateColumns: "320px minmax(420px, 1fr)" }}>
+      <aside className="border-r border-border dark:border-border-dark bg-panel dark:bg-panel-dark">
+        <div className="sticky top-0 bg-transparent p-2.5 flex gap-2">
           <Search size={20} className="my-2" />
           <InputField className="input bg-muted dark:bg-muted-dark" placeholder="Search DMs" />
         </div>
@@ -98,40 +98,40 @@ export default function Messages() {
         </div> */}
       </aside>
 
-      <section className="chat overflow-auto">
-        <div className="chat__top bg-panel dark:bg-panel-dark border-b-1 border-border dark:border-border-dark">
+      <section className="flex flex-col bg-transparent overflow-auto">
+        <div className="sticky top-0 p-3 flex items-center justify-between bg-panel dark:bg-panel-dark border-b border-border dark:border-border-dark">
           <div className="flex items-center gap-2">{activeThread && <UserChip fullName={activeThread.participantId} avatar={""} handle={""} />}</div>
-          <div className="flex items-center gap-2 muted">
+          <div className="flex items-center gap-2 text-sub dark:text-sub-dark">
             <Bell size={16} />
             <MoreHorizontal size={16} />
           </div>
         </div>
-        <div className="chat__log bg-[linear-gradient(180deg,#dadada_0%,#ffffff_100%)] dark:bg-[linear-gradient(180deg,#12141a_0%,#090a0d_100%)]">
+        <div className="flex-1 overflow-auto p-4 flex flex-col gap-2.5 bg-[linear-gradient(180deg,#dadada_0%,#ffffff_100%)] dark:bg-[linear-gradient(180deg,#12141a_0%,#090a0d_100%)]">
           {activeThread?.messages.map(m => {
             const mine = m.from === "me";
             return (
-              <div key={m.id} className={clsx("bubble rounded-2xl", mine ? "bubble--me bg-accent text-white" : "bubble--them bg-muted dark:bg-muted-dark text-text dark:text-text-dark")}>
-                <div className="bubble__text">{m.text}</div>
-                <time>{new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
+              <div key={m.id} className={clsx("max-w-[70%] py-2.5 px-3 text-sm rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.2)]", mine ? "self-end bg-accent text-white" : "self-start bg-muted dark:bg-muted-dark text-text dark:text-text-dark")}>
+                <div className="whitespace-pre-wrap leading-relaxed">{m.text}</div>
+                <time className="block mt-1 opacity-75 text-[10px]">{new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
               </div>
             );
           })}
           {typing && (
-            <div className="bubble bubble--me rounded-2xl">
-              <span className="typing">
-                <i></i>
-                <i></i>
-                <i></i>
+            <div className="max-w-[70%] py-2.5 px-3 text-sm rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.2)] self-end">
+              <span className="inline-flex gap-1">
+                <i className="w-1.5 h-1.5 rounded-full bg-[#bbb] inline-block animate-[blip_1s_infinite]"></i>
+                <i className="w-1.5 h-1.5 rounded-full bg-[#bbb] inline-block animate-[blip_1s_infinite_0.15s]"></i>
+                <i className="w-1.5 h-1.5 rounded-full bg-[#bbb] inline-block animate-[blip_1s_infinite_0.3s]"></i>
               </span>
             </div>
           )}
           <div ref={endRef} />
         </div>
-        <div className="chat__composer">
-          <GenericButton className="btn bg-transparent border-t-1 border-border dark:border-border-dark text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark h-[40px] w-[40px] p-0" aria-label="attach">
+        <div className="p-2.5 flex gap-2">
+          <GenericButton className="inline-flex gap-2 items-center justify-center bg-transparent border-t border-border dark:border-border-dark text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark h-[40px] w-[40px] p-0 cursor-pointer" aria-label="attach">
             <Paperclip size={18} />
           </GenericButton>
-          <GenericButton className="btn bg-transparent text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark h-[40px] w-[40px] p-0" aria-label="emoji">
+          <GenericButton className="inline-flex gap-2 items-center justify-center bg-transparent text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark h-[40px] w-[40px] p-0 cursor-pointer" aria-label="emoji">
             <Smile size={18} />
           </GenericButton>
           <InputField
@@ -148,7 +148,7 @@ export default function Messages() {
             }}
             onBlur={() => setTyping(false)}
           />
-          <GenericButton className="btn" onClick={sendMessage}>
+          <GenericButton className="inline-flex gap-2 items-center justify-center h-9 px-3 bg-accent text-white cursor-pointer" onClick={sendMessage}>
             <Send size={16} /> Send
           </GenericButton>
         </div>

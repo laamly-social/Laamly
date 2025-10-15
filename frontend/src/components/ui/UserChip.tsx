@@ -5,7 +5,7 @@ export default function UserChip({ avatar, handle, fullName, onClickName }: { av
     <div className="flex items-center gap-2">
       <Avatar src={avatar} alt={handle} size="sm" />
       <div className="flex flex-col">
-        <span className="font-semibold linkline text-linklike dark:text-linklike-dark" onClick={onClickName}>{fullName}</span>
+        <span className="font-semibold bg-none border-none cursor-pointer p-0 text-linklike dark:text-linklike-dark hover:text-white hover:underline" onClick={onClickName}>{fullName}</span>
         <span className="text-sm text-sub dark:text-sub-dark">@{handle}</span>
       </div>
     </div>

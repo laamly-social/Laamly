@@ -25,22 +25,22 @@ export default function MediaGallery() {
 
   return (
     <Card className="min-w-[60vw]">
-      <div className="card_header border-b-1 border-border dark:border-border-dark">
+      <div className="p-3 border-b border-border dark:border-border-dark flex items-center gap-2.5">
         <ImageIcon size={16} /> Media
       </div>
-      <div className="card__body grid gap-2.5" style={{
+      <div className="p-3 grid gap-2.5" style={{
         gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))"
       }}>
         {loading ? (
-          <div className="muted">Loading media...</div>
+          <div className="text-sub dark:text-sub-dark">Loading media...</div>
         ) : items.length === 0 ? (
-          <div className="muted">No media yet. Add a post image or a reel.</div>
+          <div className="text-sub dark:text-sub-dark">No media yet. Add a post image or a reel.</div>
         ) : (
           items.map(item =>
             item.kind === "image" ? (
-              <img key={item.id + item.url} src={item.url} className="object-cover w-full h-[180px] rounded-xl border-1 border-border dark:border-border-dark" alt="media" />
+              <img key={item.id + item.url} src={item.url} className="object-cover w-full h-[180px] rounded-xl border border-border dark:border-border-dark" alt="media" />
             ) : (
-              <video key={item.id + item.url} className="object-cover w-full h-[180px] rounded-xl border-1 border-border dark:border-border-dark" controls>
+              <video key={item.id + item.url} className="object-cover w-full h-[180px] rounded-xl border border-border dark:border-border-dark" controls>
                 <source
                   src={item.url + "/raw"}
                   type={(() => {

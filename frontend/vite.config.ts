@@ -18,7 +18,8 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      "/reels": {
+      // Only proxy /reels API endpoints, not the SPA route
+      "^/reels/(create|get-all|toggle-like|toggle-save|delete)": {
         target: "http://localhost:8080",
         changeOrigin: true,
         secure: false,

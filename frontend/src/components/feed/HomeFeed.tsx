@@ -4,7 +4,7 @@ import Card from "../ui/Card";
 // import WhoToFollow from "../ui/WhoToFollow";
 import GenericButton from "../ui/GenericButton";
 import { clsx } from "../../utils";
-import type { Post } from "../../types";
+import type { Post, User } from "../../types";
 import "../../index.css";
 import PostComponent from "./Post";
 import CreatePost from "./CreatePost";
@@ -19,6 +19,7 @@ export default function HomeFeed({
   followMap,
   followToggle,
   openProfile,
+  user,
 }: {
   meId: string;
   posts: Post[];
@@ -26,6 +27,7 @@ export default function HomeFeed({
   followMap: { [id: string]: Set<string> };
   followToggle: (uid: string) => void;
   openProfile: (uid: string) => void;
+  user: User | null;
 }) {
   const [sort, setSort] = useState<"latest" | "top">("latest");
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -123,7 +125,7 @@ export default function HomeFeed({
           </div>
         </Card>
 
-        <CreatePost meId={meId} openProfile={openProfile} onPosted={onPosted} />
+        {user && <CreatePost meId={meId} openProfile={openProfile} onPosted={onPosted} />}
 
         <div className="grid">
           {sortedPosts.map(p => (
@@ -138,6 +140,7 @@ export default function HomeFeed({
               deletePost={deletePost}
               toggleLike={toggleLike}
               toggleRepost={toggleRepost}
+              user={user}
             />
           ))}
         </div>
@@ -173,12 +176,12 @@ function Trends() {
   ];
   return (
     <Card>
-      <div className="card_header border-b-1 border-border dark:border-border-dark">Trends</div>
-      <div className="card__body side__list">
+      <div className="p-3 border-b border-border dark:border-border-dark flex items-center gap-2.5">Trends</div>
+      <div className="p-3 grid gap-2.5">
         {TRENDS.map(t => (
-          <div key={t.tag} className="trend">
+          <div key={t.tag} className="py-1.5 border-t first:border-t-0 border-border dark:border-border-dark">
             <div className="trend__tag">#{t.tag}</div>
-            <div className="trend__sub">{t.posts.toLocaleString()} posts</div>
+            <div className="text-sub dark:text-sub-dark text-xs">{t.posts.toLocaleString()} posts</div>
           </div>
         ))}
       </div>

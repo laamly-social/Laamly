@@ -121,7 +121,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
   return (
     <Card className="composer">
       <form onSubmit={handleCreatePost}>
-        <div className="card_header border-b-1 border-border dark:border-border-dark justify-between items-center">
+        <div className="p-3 border-b border-border dark:border-border-dark flex items-center gap-2.5 justify-between">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold">Make a post</h2>
           </div>
@@ -133,12 +133,12 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
               className="p-1 rounded-full hover:bg-muted dark:hover:bg-muted-dark"
               aria-label="Close"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           )}
         </div>
 
-        <div className="card__body p-4">
+        <div className="p-4">
           <textarea
             ref={textareaRef}
             maxLength={1500}

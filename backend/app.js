@@ -89,7 +89,35 @@ try { User = mongoose.model("VeyluUser"); } catch { User = mongoose.model("Veylu
 try { Post = mongoose.model("VeyluPost"); } catch { Post = mongoose.model("VeyluPost", postSchema); }
 try { Reel = mongoose.model("VeyluReel"); } catch { Reel = mongoose.model("VeyluReel", reelSchema); }
 // --- Public helpers ---
-app.get("/", (_, res) => res.redirect(`${FRONTEND_ORIGIN}/`));
+app.get("/", async (req, res) => {
+  // Embed initial data in the HTML response
+  let user = null;
+  
+  if (req.session.user) {
+    // Fetch user data from MongoDB
+    const dbUser = await User.findOne({ githubId: req.session.user.id }).lean();
+    if (dbUser) {
+      user = {
+        id: String(req.session.user.id),
+        name: dbUser.profile?.name || dbUser.handle,
+        avatar: dbUser.profile?.avatar || ""
+      };
+    }
+  }
+  
+  const initialData = {
+    githubClientId: process.env.GITHUB_CLIENT_ID || "",
+    user
+  };
+
+  // If this is an API request, redirect to frontend
+  if (req.headers.accept?.includes('application/json')) {
+    return res.redirect(`${FRONTEND_ORIGIN}/`);
+  }
+
+  // Otherwise, serve with initial data
+  res.redirect(`${FRONTEND_ORIGIN}/?data=${encodeURIComponent(JSON.stringify(initialData))}`);
+});
 
 app.get("/logout", (req, res) => {
   if (!req.session) return res.redirect(`${FRONTEND_ORIGIN}/logged-out`);
@@ -104,18 +132,44 @@ app.get("/logout", (req, res) => {
 });
 
 // --- Lightweight API used by frontend ---
+app.get("/api/initial-data", async (req, res) => {
+  let user = null;
+  
+  if (req.session.user) {
+    // Fetch user data from MongoDB
+    const dbUser = await User.findOne({ githubId: req.session.user.id }).lean();
+    if (dbUser) {
+      user = {
+        id: String(req.session.user.id),
+        name: dbUser.profile?.name || dbUser.handle,
+        avatar: dbUser.profile?.avatar || ""
+      };
+    }
+  }
+  
+  const initialData = {
+    githubClientId: process.env.GITHUB_CLIENT_ID || "",
+    user
+  };
+  res.json(initialData);
+});
+
 app.get("/api/github-client-id", (_req, res) => {
   res.json({ clientId: process.env.GITHUB_CLIENT_ID || "" });
 });
 
-app.get("/api/me", (req, res) => {
+app.get("/api/me", async (req, res) => {
   if (!req.session.user) return res.status(200).json({ user: null });
-  const u = req.session.user; // { id, login, avatar_url, ... }
+  
+  // Fetch user data from MongoDB
+  const dbUser = await User.findOne({ githubId: req.session.user.id }).lean();
+  if (!dbUser) return res.status(200).json({ user: null });
+  
   res.json({
     user: {
-      id: String(u.id),
-      name: u.login,
-      avatar: u.avatar_url || ""
+      id: String(req.session.user.id),
+      name: dbUser.profile?.name || dbUser.handle,
+      avatar: dbUser.profile?.avatar || ""
     }
   });
 });
