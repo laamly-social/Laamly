@@ -276,7 +276,7 @@ export default function Reels({
   };
 
   return (
-    <div className="relative overflow-hidden h-screen">
+    <div className="relative overflow-hidden h-screen flex">
       {/* Hide scrollbar in FF/WebKit */}
       <style>{`
         .reelSnapViewport { scrollbar-width: none; }
@@ -286,7 +286,9 @@ export default function Reels({
       {/* Snapping viewport (we also programmatically lock to pages) */}
       <div
         ref={wrapRef}
-        className="reelSnapViewport mx-auto w-full h-full px-2 md:px-0"
+        className={`reelSnapViewport mx-auto h-full px-2 md:px-0 transition-all duration-300 ${
+          panelMode ? "w-1/2" : "w-full"
+        }`}
         style={{
           overflowY: "auto",
           scrollSnapType: "y mandatory",
@@ -310,31 +312,9 @@ export default function Reels({
         ))}
       </div>
 
-      {/* Fixed floating button - bottom right */}
-      {!panelMode && (
-        <button
-          className="fixed bottom-24 md:bottom-6 right-6 bg-accent hover:bg-accent-dark text-white rounded-full h-14 w-14 grid place-items-center shadow-lg z-30 transition-transform hover:scale-110"
-          onClick={toggleComposer}
-          title="Create new reel"
-        >
-          <PlusCircle size={24} />
-        </button>
-      )}
-
-      {/* Dim background when panel visible */}
+      {/* Side panel (composer / comments) */}
       {panelMode && (
-        <div
-          className="fixed inset-0 bg-black/30 z-40"
-          onClick={() => {
-            setPanelMode(null);
-            setPanelFor(null);
-          }}
-        />
-      )}
-
-      {/* Floating rounded right panel */}
-      {panelMode && (
-        <aside className="fixed right-4 top-4 bottom-4 w-[420px] max-w-[92vw] bg-bg dark:bg-bg-dark border border-border dark:border-border-dark rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden">
+        <aside className="w-1/2 h-full bg-bg dark:bg-bg-dark border-l border-border dark:border-border-dark flex flex-col overflow-hidden">
           <div className="flex items-center justify-between p-3 border-b border-border dark:border-border-dark">
             <div className="font-semibold">
               {panelMode === "composer" ? "Add Reel" : "Comments"}
@@ -410,6 +390,15 @@ export default function Reels({
           )}
         </aside>
       )}
+
+      {/* Fixed floating button - bottom right */}
+      <button
+        className="fixed bottom-24 md:bottom-6 right-6 bg-accent hover:bg-accent-dark text-white rounded-full h-14 w-14 grid place-items-center shadow-lg z-30 transition-transform hover:scale-110"
+        onClick={toggleComposer}
+        title="Create new reel"
+      >
+        <PlusCircle size={24} />
+      </button>
     </div>
   );
 }
