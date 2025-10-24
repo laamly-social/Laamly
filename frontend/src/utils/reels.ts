@@ -1,4 +1,6 @@
 // src/utils/reels.ts
+import { apiEndpoint } from "../config";
+
 const UPLOAD_API = "https://pictshare.hnasheralneam.dev/api/upload.php";
 
 export async function uploadReelVideo(file: File): Promise<string> {
@@ -16,7 +18,7 @@ export async function uploadReelVideo(file: File): Promise<string> {
 }
 
 export async function createReel(payload: { title?: string; description?: string; src: string }) {
-  const res = await fetch("https://api.laamly.com/reels/create", {
+  const res = await fetch(apiEndpoint("/reels/create"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -28,7 +30,7 @@ export async function createReel(payload: { title?: string; description?: string
 }
 
 export async function fetchAllReels() {
-  const res = await fetch("https://api.laamly.com/reels/get-all", { credentials: "include" });
+  const res = await fetch(apiEndpoint("/reels/get-all"), { credentials: "include" });
   if (!res.ok) return [];
   const data = await res.json();
   const list = data?.reels ?? [];
@@ -47,7 +49,7 @@ export async function fetchAllReels() {
 }
 
 export async function toggleReelLike(id: string) {
-  const res = await fetch("https://api.laamly.com/reels/toggle-like", {
+  const res = await fetch(apiEndpoint("/reels/toggle-like"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -59,7 +61,7 @@ export async function toggleReelLike(id: string) {
 }
 
 export async function toggleReelSave(id: string) {
-  const res = await fetch("https://api.laamly.com/reels/toggle-save", {
+  const res = await fetch(apiEndpoint("/reels/toggle-save"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -71,7 +73,7 @@ export async function toggleReelSave(id: string) {
 }
 
 export async function deleteReel(id: string) {
-  const res = await fetch("https://api.laamly.com/reels/delete", {
+  const res = await fetch(apiEndpoint("/reels/delete"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",

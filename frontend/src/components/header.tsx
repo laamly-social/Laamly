@@ -4,6 +4,7 @@ import type { User } from "../types";
 import TabBtn from "./nav/TabBtn";
 import { Image as ImageIcon, Home, PlayCircle as PlayTab, Github, Podcast } from "lucide-react";
 import Avatar from "./ui/Avatar";
+import { API_URL } from "../config";
 
 interface HeaderProps {
    openProfile: (uid: string) => void;
@@ -15,7 +16,7 @@ interface HeaderProps {
 export function Header({ openProfile, githubClientId, user }: HeaderProps) {
    const location = useLocation();
 
-   const redirectUri = encodeURIComponent("https://api.laamly.com/auth/github");
+   const redirectUri = encodeURIComponent(`${API_URL}/auth/github`);
    const githubAuthUrl = githubClientId
       ? `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${redirectUri}`
       : undefined;
@@ -72,7 +73,7 @@ export function Header({ openProfile, githubClientId, user }: HeaderProps) {
                            Hi, {getFirstName(user.name)}!
                         </span>
                            <a
-                              href="https://api.laamly.com/logout"
+                              href={`${API_URL}/logout`}
                               className="transition-all py-2 px-4 w-full border bg-red-100 dark:bg-red-900 hover:bg-red-200 hover:dark:bg-red-800 border-red-300 dark:border-red-700 rounded-md text-red-700 dark:text-red-200 text-center block"
                            >
                               Log out

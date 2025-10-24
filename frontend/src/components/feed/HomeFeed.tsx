@@ -10,7 +10,7 @@ import PostComponent from "./Post";
 import CreatePost from "./CreatePost";
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchAllPosts, deletePost as deletePostApi } from "../../utils/posts";
+import { fetchAllPosts, deletePost as deletePostApi, togglePostLike } from "../../utils/posts";
 
 export default function HomeFeed({
   meId,
@@ -36,10 +36,15 @@ export default function HomeFeed({
   useEffect(() => { (async () => setPosts(await fetchAllPosts()))(); }, [setPosts]);
   const onPosted = async () => setPosts(await fetchAllPosts());
 
-  const toggleLike = (id: string) => {
-    setPosts(prev =>
-      prev.map(p => (p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p))
-    );
+  const toggleLike = async (postId: string) => {
+    try {
+      const { liked, likes } = await togglePostLike(postId);
+      setPosts(prev =>
+        prev.map(p => p._id === postId ? { ...p, liked, likes } : p)
+      );
+    } catch (error) {
+      console.error("Failed to toggle like:", error);
+    }
   };
 
   const toggleRepost = (originalId: string) => {

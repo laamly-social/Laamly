@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import LoggedOutPage from "./LoggedOutPage";
 import type { User } from "./types";
+import { apiEndpoint } from "./config";
 
 const path = window.location.pathname;
 
@@ -30,14 +31,36 @@ function getInitialDataFromURL(): { githubClientId: string | null; user: User | 
 // Fetch initial data from API if not in URL
 async function fetchInitialData(): Promise<{ githubClientId: string | null; user: User | null }> {
   try {
-    const response = await fetch("https://api.laamly.com/api/initial-data", {
+    const url = apiEndpoint("/api/initial-data");
+    console.log('[FETCH] Fetching from URL:', url);
+    console.log('[FETCH] Full URL will be:', window.location.origin + url);
+    
+    const response = await fetch(url, {
       credentials: "include"
     });
-    const data = await response.json();
-    return {
-      githubClientId: data.githubClientId || null,
-      user: data.user || null
-    };
+    
+    console.log('[FETCH] Response status:', response.status);
+    console.log('[FETCH] Response URL:', response.url);
+    
+    if (!response.ok) {
+      console.error("Failed to fetch initial data: HTTP", response.status);
+      return { githubClientId: null, user: null };
+    }
+    
+    const text = await response.text();
+    console.log('[FETCH] Response text (first 200 chars):', text.substring(0, 200));
+    
+    try {
+      const data = JSON.parse(text);
+      return {
+        githubClientId: data.githubClientId || null,
+        user: data.user || null
+      };
+    } catch (parseError) {
+      console.error("Failed to parse JSON:", parseError);
+      console.error("Response was:", text.substring(0, 500));
+      return { githubClientId: null, user: null };
+    }
   } catch (e) {
     console.error("Failed to fetch initial data:", e);
     return { githubClientId: null, user: null };

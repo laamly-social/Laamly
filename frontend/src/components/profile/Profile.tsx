@@ -10,6 +10,7 @@ import { clsx } from "../../utils";
 import UserChip from "../ui/UserChip";
 import type { Post, Reel, User } from "../../types";
 import PostComponent from "../feed/Post";
+import { apiEndpoint } from "../../config";
 
 export default function Profile(props: {
   userId: string;
@@ -38,7 +39,7 @@ export default function Profile(props: {
         setLoading(true);
         // For now, we only support viewing the logged-in user's profile
         // In the future, we can add an endpoint like /api/users/:userId
-        const res = await fetch('https://api.laamly.com/api/me', { credentials: 'include' });
+        const res = await fetch(apiEndpoint('/api/me'), { credentials: 'include' });
         const data = await res.json();
         if (data.user) {
           setUser({

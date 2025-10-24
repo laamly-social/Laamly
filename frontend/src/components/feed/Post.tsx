@@ -54,6 +54,8 @@ function mediaUrlsFrom(post: any): string[] {
   return [];
 }
 
+// ...existing code...
+
 export default function Post({
   post: p,
   meId,
@@ -66,12 +68,43 @@ export default function Post({
   toggleRepost,
   user,
 }: PostProps) {
+
   const original = p.originalId ? posts.find(x => x.id === p.originalId) : undefined;
   const isRepost = !!original;
 
   const source = original ?? p;
 
   const postText = p.content || (isRepost ? original?.content || "" : "");
+
+  // YouTube embed logic moved here so postText is in scope
+  const hasYoutubeLinks = postText.match(/(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=)?[A-Za-z0-9_-]{11}/g);
+  const videoImbeds = hasYoutubeLinks ? (
+    <div className="mb-3">
+      {hasYoutubeLinks.map((link: string, index: number) => {
+        // Extract video ID from various YouTube URL formats
+        let videoId = "";
+        const ytMatch = link.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+        if (ytMatch && ytMatch[1]) {
+          videoId = ytMatch[1];
+        }
+
+        if (!videoId) return null;
+
+        return (
+          <div key={index} className="mb-3 aspect-w-16 aspect-h-9">
+            <iframe
+              className="w-full mx-auto min-h-[20rem] rounded-lg"
+              src={`https://www.youtube.com/embed/${videoId}`}
+              title="YouTube video player"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
+          </div>
+        );
+      })}
+    </div>
+  ) : null;
 
   // Prefer the current post's media; fallback to original (for reposts)
   const media = useMemo(() => {
@@ -119,21 +152,28 @@ export default function Post({
         </div>
 
         <div className="p-3">
-          {postText && <p className="text-lg whitespace-pre-wrap mb-4">{postText}</p>}
+          {postText && <p className="text-lg whitespace-pre-wrap mb-3">{postText}</p>}
+          {videoImbeds}
 
           <Carousel urls={toShow} />
 
-          {/* <div className="flex items-center gap-3 flex-wrap">
-            <IconBtn icon={Heart} label="Like" count={source.likes} onClick={() => toggleLike(source.id)} active={!!source.liked} />
-            <IconBtn icon={Repeat} label="Repost" count={source.reposts} onClick={() => toggleRepost(source.id)} active={!!source.repostedByMe} />
+          <div className="inline-flex items-center gap-3 rounded-full flex-wrap bg-muted dark:bg-muted-dark border border-border dark:border-border-dark mb-3">
             <IconBtn
+              icon={Heart}
+              label="Like"
+              count={source.likes}
+              onClick={() => toggleLike(source._id!)}
+              active={!!source.liked}
+            />
+            {/* <IconBtn icon={Repeat} label="Repost" count={source.reposts} onClick={() => toggleRepost(source.id)} active={!!source.repostedByMe} /> */}
+            {/* <IconBtn
               icon={MessageSquare}
               label="Comments"
               count={source.comments.length}
-              onClick={() => document.getElementById(`cbox-${source.id}`)?.focus()}
-            />
-            <IconBtn icon={Share2} label="Share" />
-          </div> */}
+              onClick={() => document.getElementById(`cbox-${source._id}`)?.focus()}
+            /> */}
+            {/* <IconBtn icon={Share2} label="Share" /> */}
+          </div>
 
           {user && <CommentsList post={source} onAdd={addComment} />}
         </div>

@@ -1,8 +1,10 @@
 // @ts-nocheck
+import type { Post } from "../types";
+import { apiEndpoint } from "../config";
 
 /** Delete a post by ID on the backend */
 export async function deletePost(id: string): Promise<{ message: string }> {
-   const res = await fetch("https://api.laamly.com/posts/delete", {
+   const res = await fetch(apiEndpoint("/posts/delete"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -17,7 +19,6 @@ export async function deletePost(id: string): Promise<{ message: string }> {
    return data;
 }
 // src/utils/posts.ts
-import type { Post } from "../types";
 
 type BackendPost = {
    _id: string;
@@ -33,8 +34,8 @@ type BackendPost = {
 };
 
 const UPLOAD_API = "https://pictshare.hnasheralneam.dev/api/upload.php";
-const CREATE_POST_URL = "https://api.laamly.com/posts/create";
-const GET_ALL_URL = "https://api.laamly.com/posts/get-all";
+const CREATE_POST_URL = apiEndpoint("/posts/create");
+const GET_ALL_URL = apiEndpoint("/posts/get-all");
 
 /** Fetch posts and KEEP the full urls[] array for multi-media posts */
 export async function fetchAllPosts(): Promise<Post[]> {
@@ -98,4 +99,20 @@ export async function createPost(payload: { content: string; urls: string[]; meI
    const data = ct.includes("application/json") ? await res.json() : { message: await res.text() };
    if (!res.ok) throw new Error((data as any)?.message || `Request failed: ${res.status}`);
    return data; // { message, postId }
+}
+
+/** Toggle like on a post */
+export async function togglePostLike(postId: string): Promise<{ liked: boolean; likes: number }> {
+  const res = await fetch(apiEndpoint("/posts/toggle-like"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ postId }),
+  });
+
+  const ct = res.headers.get("content-type") || "";
+  const data = ct.includes("application/json") ? await res.json() : { message: await res.text() };
+  
+  if (!res.ok) throw new Error((data as any)?.message || `Failed to toggle like: ${res.status}`);
+  return data;
 }

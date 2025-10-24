@@ -44,6 +44,7 @@ export type Post = {
   text: string;   // <-- string only
   image?: string;
   likes: number;
+  liked?: boolean; // Whether the current user has liked this post
   repostedBy: number;
   createdAt: number;
   comments: Comment[];

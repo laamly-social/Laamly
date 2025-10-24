@@ -18,8 +18,8 @@ app.set("trust proxy", 1);
 const allowedOrigins = [
 	"https://laamly.com",
 	"https://laamly.hnasheralneam.dev",
-	"localhost:5177",
-	"localhost:5175"
+	"http://localhost:5177",
+	"http://localhost:5175"
 ];
 
 const corsOptions =  {
@@ -73,6 +73,7 @@ const userSchema = new mongoose.Schema({
   handle: String,
   stats: Object,
   postIds: [mongoose.Schema.Types.ObjectId],
+  likedPostIds: [mongoose.Schema.Types.ObjectId], // Posts this user has liked
 });
 
 const postSchema = new mongoose.Schema({
@@ -82,6 +83,7 @@ const postSchema = new mongoose.Schema({
   datePosted: Date,
   stats: Object,
   deleted: { type: Boolean, default: false },
+  likedBy: [String], // Array of githubIds who liked this post
   comments: [{
     author: String,
     content: String,
@@ -115,7 +117,7 @@ try { Reel = mongoose.model("VeyluReel"); } catch { Reel = mongoose.model("Veylu
 app.get("/", async (req, res) => {
   // Embed initial data in the HTML response
   let user = null;
-  
+
   if (req.session.user) {
     // Fetch user data from MongoDB
     const dbUser = await User.findOne({ githubId: req.session.user.id }).lean();
@@ -127,7 +129,7 @@ app.get("/", async (req, res) => {
       };
     }
   }
-  
+
   const initialData = {
     githubClientId: process.env.GITHUB_CLIENT_ID || "",
     user
@@ -157,7 +159,7 @@ app.get("/logout", (req, res) => {
 // --- Lightweight API used by frontend ---
 app.get("/api/initial-data", async (req, res) => {
   let user = null;
-  
+
   if (req.session.user) {
     // Fetch user data from MongoDB
     const dbUser = await User.findOne({ githubId: req.session.user.id }).lean();
@@ -169,7 +171,7 @@ app.get("/api/initial-data", async (req, res) => {
       };
     }
   }
-  
+
   const initialData = {
     githubClientId: process.env.GITHUB_CLIENT_ID || "",
     user
@@ -183,11 +185,11 @@ app.get("/api/github-client-id", (_req, res) => {
 
 app.get("/api/me", async (req, res) => {
   if (!req.session.user) return res.status(200).json({ user: null });
-  
+
   // Fetch user data from MongoDB
   const dbUser = await User.findOne({ githubId: req.session.user.id }).lean();
   if (!dbUser) return res.status(200).json({ user: null });
-  
+
   res.json({
     user: {
       id: String(req.session.user.id),
@@ -250,6 +252,67 @@ app.get("/github/login", (req, res) => {
 });
 
 // --- Posts ---
+// Toggle post like
+app.post("/posts/toggle-like", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "You need to be logged in" });
+    }
+
+    const { postId } = req.body;
+    if (!postId) {
+      return res.status(400).json({ message: "Missing post id" });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const userId = String(req.session.user.id);
+
+    // Initialize likedBy array if it doesn't exist
+    if (!post.likedBy) {
+      post.likedBy = [];
+    }
+
+    const likedBySet = new Set(post.likedBy.map(String));
+    const wasLiked = likedBySet.has(userId);
+
+    if (wasLiked) {
+      // Unlike: remove from post
+      likedBySet.delete(userId);
+      post.likedBy = Array.from(likedBySet);
+
+      // Remove from user's liked posts
+      await User.updateOne(
+        { githubId: userId },
+        { $pull: { likedPostIds: post._id } }
+      );
+    } else {
+      // Like: add to post
+      likedBySet.add(userId);
+      post.likedBy = Array.from(likedBySet);
+
+      // Add to user's liked posts
+      await User.updateOne(
+        { githubId: userId },
+        { $addToSet: { likedPostIds: post._id } }
+      );
+    }
+
+    await post.save();
+
+    res.json({
+      liked: !wasLiked,
+      likes: post.likedBy.length
+    });
+  } catch (err) {
+    console.error("POST /posts/toggle-like failed:", err);
+    return res.status(500).json({ message: "Failed to toggle like" });
+  }
+});
+
 // Get all media from posts by the logged-in user
 app.post("/posts/comments/create", async (req, res) => {
   try {
@@ -387,6 +450,11 @@ app.get("/posts/get-all", async (req, res) => {
         }
         p.authorId = p.author;
         p.createdAt = new Date(p.datePosted).getTime();
+
+        // Add like information
+        p.likes = (p.likedBy || []).length;
+        p.liked = !!(req.session.user && p.likedBy?.includes(String(req.session.user.id)));
+
         if (Array.isArray(p.comments)) {
           p.comments = await Promise.all(p.comments.map(async c => {
             const commenter = await User.findOne({ githubId: c.author }).lean();
