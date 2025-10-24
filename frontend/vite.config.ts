@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
           }
         },
         // Only proxy /reels API endpoints, not the SPA route
-        "^/reels/(create|get-all|toggle-like|toggle-save|delete)": {
+        "^/reels/(create|get-all|toggle-like|toggle-save|delete|comments)": {
           target: apiUrl,
           changeOrigin: true,
           secure: false,

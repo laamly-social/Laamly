@@ -1,13 +1,10 @@
 // src/components/reels/Reels.tsx
 // @ts-nocheck
+import ReelComments from "./ReelComments";
 import { useEffect, useRef, useState } from "react";
 import GenericButton from "../ui/GenericButton";
-import {
-  Upload,
-  PlusCircle,
-  X,
-} from "lucide-react";
-import type { Reel } from "../../types";
+import { Upload, PlusCircle, X } from "lucide-react";
+import type { Reel as ReelType } from "../../types";
 import {
   uploadReelVideo,
   createReel,
@@ -24,12 +21,12 @@ export default function Reels({
   reels,
   setReels,
 }: {
-  reels: Reel[];
-  setReels: React.Dispatch<React.SetStateAction<Reel[]>>;
+  reels: ReelType[];
+  setReels: React.Dispatch<React.SetStateAction<ReelType[]>>;
 }) {
   // Floating panel (composer / comments)
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
-  const [panelFor, setPanelFor] = useState<Reel | null>(null);
+  const [panelFor, setPanelFor] = useState<ReelType | null>(null);
 
   // Composer
   const [file, setFile] = useState<File | null>(null);
@@ -54,7 +51,9 @@ export default function Reels({
   const touchDeltaY = useRef(0);
 
   // Load data
-  useEffect(() => { (async () => setReels(await fetchAllReels()))(); }, [setReels]);
+  useEffect(() => {
+    (async () => setReels(await fetchAllReels()))();
+  }, [setReels]);
 
   // Helpers
   const clamp = (n: number, min = 0, max = itemRefs.current.length - 1) =>
@@ -182,9 +181,9 @@ export default function Reels({
       }
     };
 
-    root.addEventListener("touchstart", start, { passive: false });
-    root.addEventListener("touchmove", move, { passive: false });
-    root.addEventListener("touchend", end);
+    root.addEventListener("touchstart", start as any, { passive: false });
+    root.addEventListener("touchmove", move as any, { passive: false });
+    root.addEventListener("touchend", end as any);
     return () => {
       root.removeEventListener("touchstart", start as any);
       root.removeEventListener("touchmove", move as any);
@@ -200,15 +199,11 @@ export default function Reels({
       e.preventDefault();
       if (isPagingRef.current) return;
 
-      const next =
-        e.key === "ArrowDown"
-          ? clamp(active + 1)
-          : clamp(active - 1);
-
+      const next = e.key === "ArrowDown" ? clamp(active + 1) : clamp(active - 1);
       if (next !== active) goToIndex(next);
     };
-    window.addEventListener("keydown", onKey, { passive: false });
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey as any, { passive: false });
+    return () => window.removeEventListener("keydown", onKey as any);
   }, [active, panelMode, reels.length]);
 
   // Panel toggles
@@ -216,7 +211,7 @@ export default function Reels({
     setPanelMode((m) => (m === "composer" ? null : "composer"));
     setPanelFor(null);
   };
-  const toggleComments = (r: Reel) => {
+  const toggleComments = (r: ReelType) => {
     setPanelFor((prev) => {
       const same = prev?.id === r.id;
       setPanelMode((m) => (m === "comments" && same ? null : "comments"));
@@ -237,8 +232,12 @@ export default function Reels({
       const src = await uploadReelVideo(file);
       await createReel({ title: title.trim(), description: caption.trim(), src });
       if (preview) URL.revokeObjectURL(preview);
-      setFile(null); setPreview(""); setTitle(""); setCaption("");
-      setPanelMode(null); setPanelFor(null);
+      setFile(null);
+      setPreview("");
+      setTitle("");
+      setCaption("");
+      setPanelMode(null);
+      setPanelFor(null);
       setReels(await fetchAllReels());
     } catch (e) {
       console.error(e);
@@ -271,7 +270,9 @@ export default function Reels({
     try {
       await deleteReel(id);
       setReels((prev) => prev.filter((r) => r.id !== id));
-    } catch { alert("Delete failed"); }
+    } catch {
+      alert("Delete failed");
+    }
   };
 
   return (
@@ -324,7 +325,10 @@ export default function Reels({
       {panelMode && (
         <div
           className="fixed inset-0 bg-black/30 z-40"
-          onClick={() => { setPanelMode(null); setPanelFor(null); }}
+          onClick={() => {
+            setPanelMode(null);
+            setPanelFor(null);
+          }}
         />
       )}
 
@@ -337,7 +341,10 @@ export default function Reels({
             </div>
             <button
               className="inline-flex gap-2 items-center justify-center rounded-full h-[32px] w-[32px] p-0 bg-accent text-white cursor-pointer"
-              onClick={() => { setPanelMode(null); setPanelFor(null); }}
+              onClick={() => {
+                setPanelMode(null);
+                setPanelFor(null);
+              }}
               aria-label="Close"
             >
               <X size={16} />
@@ -359,14 +366,25 @@ export default function Reels({
                 onChange={(e) => setCaption(e.target.value)}
               />
               {preview && (
-                <video className="rounded-xl w-full" src={preview} muted controls playsInline preload="metadata" />
+                <video
+                  className="rounded-xl w-full"
+                  src={preview}
+                  muted
+                  controls
+                  playsInline
+                  preload="metadata"
+                />
               )}
               <div className="flex items-center gap-2">
                 <label className="inline-flex gap-2 items-center justify-center h-9 px-3 rounded-xl bg-transparent hover:bg-muted dark:hover:bg-muted-dark cursor-pointer">
                   <Upload size={16} /> Upload video
                   <input type="file" accept="video/*" onChange={onPickVideo} className="hidden" />
                 </label>
-                <GenericButton className="inline-flex gap-2 items-center justify-center h-9 px-3 bg-accent text-white cursor-pointer" onClick={addReel} disabled={!file || uploading}>
+                <GenericButton
+                  className="inline-flex gap-2 items-center justify-center h-9 px-3 bg-accent text-white cursor-pointer"
+                  onClick={addReel}
+                  disabled={!file || uploading}
+                >
                   <PlusCircle size={16} /> {uploading ? "Posting…" : "Add Reel"}
                 </GenericButton>
               </div>
@@ -376,9 +394,14 @@ export default function Reels({
               {panelFor ? (
                 <>
                   <div className="mb-2 font-medium">@{panelFor.authorInfo?.handle}</div>
-                  <div className="bg-muted dark:bg-muted-dark rounded-lg p-3">
-                    Comments API not implemented yet.
-                  </div>
+                  {/* ✅ Comments panel */}
+                  <ReelComments
+                    reel={panelFor}
+                    onAdd={async () => {
+                      // Refresh list so the parent feed reflects the new comment count + authorInfo
+                      setReels(await fetchAllReels());
+                    }}
+                  />
                 </>
               ) : (
                 <div className="opacity-70">No reel selected.</div>
