@@ -2,7 +2,7 @@
 
 /** Delete a post by ID on the backend */
 export async function deletePost(id: string): Promise<{ message: string }> {
-   const res = await fetch("/posts/delete", {
+   const res = await fetch("https://api.laamly.com/posts/delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -33,8 +33,8 @@ type BackendPost = {
 };
 
 const UPLOAD_API = "https://pictshare.hnasheralneam.dev/api/upload.php";
-const CREATE_POST_URL = "/posts/create";
-const GET_ALL_URL = "/posts/get-all";
+const CREATE_POST_URL = "https://api.laamly.com/posts/create";
+const GET_ALL_URL = "https://api.laamly.com/posts/get-all";
 
 /** Fetch posts and KEEP the full urls[] array for multi-media posts */
 export async function fetchAllPosts(): Promise<Post[]> {

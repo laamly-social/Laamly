@@ -8,7 +8,7 @@ export default function LoggedOut() {
     fetchGithubClientId().then(setGithubClientId).catch(() => setGithubClientId(null));
   }, []);
 
-  const redirectUri = encodeURIComponent("http://localhost:8080/auth/github");
+  const redirectUri = encodeURIComponent("https://api.laamly.com/auth/github");
   const githubAuthUrl = githubClientId
     ? `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${redirectUri}`
     : undefined;

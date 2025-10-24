@@ -38,7 +38,7 @@ export default function Profile(props: {
         setLoading(true);
         // For now, we only support viewing the logged-in user's profile
         // In the future, we can add an endpoint like /api/users/:userId
-        const res = await fetch('/api/me', { credentials: 'include' });
+        const res = await fetch('https://api.laamly.com/api/me', { credentials: 'include' });
         const data = await res.json();
         if (data.user) {
           setUser({

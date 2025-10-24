@@ -15,12 +15,35 @@ const PORT = 8080; // hardcoded
 app.set("trust proxy", 1);
 
 // --- Core middleware ---
-app.use(
-  cors({
-    origin: FRONTEND_ORIGIN,
-    credentials: true,
-  })
-);
+const allowedOrigins = [
+	"https://laamly.com",
+	"https://laamly.hnasheralneam.dev",
+	"localhost:5177",
+	"localhost:5175"
+];
+
+const corsOptions =  {
+	origin: (origin, callback) => {
+		if (allowedOrigins.includes(origin) || !origin) {
+			callback(null, true);
+		} else {
+			callback(new Error("CORS- REJECTED! Nobody loves you"));
+		}
+	},
+	credentials: true
+}
+
+app.use(cors(corsOptions));
+
+//app.use(
+//  cors({
+//    origin: FRONTEND_ORIGIN,
+//    credentials: true,
+//  })
+//);
+
+
+
 app.use(express.json());
 app.use(express.static("public"));
 

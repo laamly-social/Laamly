@@ -30,7 +30,7 @@ function getInitialDataFromURL(): { githubClientId: string | null; user: User | 
 // Fetch initial data from API if not in URL
 async function fetchInitialData(): Promise<{ githubClientId: string | null; user: User | null }> {
   try {
-    const response = await fetch("http://localhost:8080/api/initial-data", {
+    const response = await fetch("https://api.laamly.com/api/initial-data", {
       credentials: "include"
     });
     const data = await response.json();

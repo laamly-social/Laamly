@@ -1,4 +1,4 @@
-const CREATE_COMMENT_URL = "/posts/comments/create";
+const CREATE_COMMENT_URL = "https://api.laamly.com/posts/comments/create";
 export async function createComment(postId: string, text: string) {
   const res = await fetch(CREATE_COMMENT_URL, {
     method: "POST",
