@@ -45,8 +45,16 @@ export async function fetchAllReels() {
     saved: !!r.saved,
     likes: Number(r.likes || 0),
     authorInfo: r.authorInfo || undefined,
+
+    // ✅ NEW: include comments (already decorated by backend)
+    comments: Array.isArray(r.comments) ? r.comments.map((c: any) => ({
+      ...c,
+      text: c.content || c.text,
+      ts: c.datePosted ? new Date(c.datePosted).getTime() : c.ts
+    })) : []
   }));
 }
+
 
 export async function toggleReelLike(id: string) {
   const res = await fetch(apiEndpoint("/reels/toggle-like"), {
@@ -83,3 +91,16 @@ export async function deleteReel(id: string) {
   if (!res.ok) throw new Error(data?.message || "Failed");
   return data;
 }
+
+export async function createReelComment(reelId: string, text: string) {
+  const res = await fetch(apiEndpoint("/reels/comments/create"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ reelId, text }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Failed to add comment");
+  return data as { message: string; currentUser?: { id: string; handle: string; name: string; avatar: string } };
+}
+

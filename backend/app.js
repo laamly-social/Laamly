@@ -4,7 +4,19 @@ const axios = require("axios");
 const mongoose = require("mongoose");
 const session = require("express-session");
 const cors = require("cors");
+const dns = require("dns");               // ✅ DNS workaround
 require("dotenv").config();
+
+// ---------- DNS workaround for SRV on restrictive networks ----------
+try {
+  // Prefer IPv4 first (avoids some resolver edge cases)
+  dns.setDefaultResultOrder?.("ipv4first");
+  // Use public resolvers so SRV lookups to Atlas don't get blocked by campus DNS
+  dns.setServers(["1.1.1.1", "8.8.8.8"]);
+  console.info("[DNS] Using resolvers:", dns.getServers());
+} catch (e) {
+  console.warn("[DNS] Could not set custom DNS servers:", e?.message || e);
+}
 
 const app = express();
 
@@ -16,33 +28,25 @@ app.set("trust proxy", 1);
 
 // --- Core middleware ---
 const allowedOrigins = [
-	"https://laamly.com",
-	"https://laamly.hnasheralneam.dev",
-	"http://localhost:5177",
-	"http://localhost:5175"
+  "https://laamly.com",
+  "https://laamly.hnasheralneam.dev",
+  "http://localhost:5177",
+  "http://localhost:5175"
 ];
 
 const corsOptions =  {
-	origin: (origin, callback) => {
-		if (allowedOrigins.includes(origin) || !origin) {
-			callback(null, true);
-		} else {
-			callback(new Error("CORS- REJECTED! Nobody loves you"));
-		}
-	},
-	credentials: true
-}
+  origin: (origin, callback) => {
+    if (allowedOrigins.includes(origin) || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS- REJECTED! Nobody loves you"));
+    }
+  },
+  credentials: true
+};
 
 app.use(cors(corsOptions));
-
-//app.use(
-//  cors({
-//    origin: FRONTEND_ORIGIN,
-//    credentials: true,
-//  })
-//);
-
-
+// app.use(cors({ origin: FRONTEND_ORIGIN, credentials: true }));
 
 app.use(express.json());
 app.use(express.static("public"));
@@ -61,10 +65,11 @@ app.use(
   })
 );
 
-// --- Mongo ---
-mongoose.connect(
-  `mongodb+srv://vaylu:${process.env.MONGODB_PASSWORD}@cluster0.e1en0n4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
-);
+// ---------- Mongo connection (robust) ----------
+const MONGODB_URI =
+  process.env.MONGODB_URI ||
+  `mongodb+srv://vaylu:${encodeURIComponent(process.env.MONGODB_PASSWORD || "")}` +
+  `@cluster0.e1en0n4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // --- Schemas/Models ---
 const userSchema = new mongoose.Schema({
@@ -106,20 +111,25 @@ const reelSchema = new mongoose.Schema({
   datePosted: { type: Date, default: Date.now },
   likedBy: [String],            // githubId list
   savedBy: [String],            // githubId list
-  deleted: { type: Boolean, default: false }
+  deleted: { type: Boolean, default: false },
+  comments: [{
+    author: String,             // githubId
+    content: String,
+    datePosted: Date,
+    stats: Object
+  }]
 });
 
 let User, Post, Reel;
 try { User = mongoose.model("VeyluUser"); } catch { User = mongoose.model("VeyluUser", userSchema); }
 try { Post = mongoose.model("VeyluPost"); } catch { Post = mongoose.model("VeyluPost", postSchema); }
 try { Reel = mongoose.model("VeyluReel"); } catch { Reel = mongoose.model("VeyluReel", reelSchema); }
+
 // --- Public helpers ---
 app.get("/", async (req, res) => {
-  // Embed initial data in the HTML response
   let user = null;
 
   if (req.session.user) {
-    // Fetch user data from MongoDB
     const dbUser = await User.findOne({ githubId: req.session.user.id }).lean();
     if (dbUser) {
       user = {
@@ -135,12 +145,10 @@ app.get("/", async (req, res) => {
     user
   };
 
-  // If this is an API request, redirect to frontend
   if (req.headers.accept?.includes('application/json')) {
     return res.redirect(`${FRONTEND_ORIGIN}/`);
   }
 
-  // Otherwise, serve with initial data
   res.redirect(`${FRONTEND_ORIGIN}/?data=${encodeURIComponent(JSON.stringify(initialData))}`);
 });
 
@@ -161,7 +169,6 @@ app.get("/api/initial-data", async (req, res) => {
   let user = null;
 
   if (req.session.user) {
-    // Fetch user data from MongoDB
     const dbUser = await User.findOne({ githubId: req.session.user.id }).lean();
     if (dbUser) {
       user = {
@@ -186,7 +193,6 @@ app.get("/api/github-client-id", (_req, res) => {
 app.get("/api/me", async (req, res) => {
   if (!req.session.user) return res.status(200).json({ user: null });
 
-  // Fetch user data from MongoDB
   const dbUser = await User.findOne({ githubId: req.session.user.id }).lean();
   if (!dbUser) return res.status(200).json({ user: null });
 
@@ -234,7 +240,6 @@ app.get("/github/login", (req, res) => {
         await new User({
           githubId: data.id,
           handle: data.login,
-
           profile: {
             description: data.bio,
             name: data.name,
@@ -252,7 +257,6 @@ app.get("/github/login", (req, res) => {
 });
 
 // --- Posts ---
-// Toggle post like
 app.post("/posts/toggle-like", async (req, res) => {
   try {
     if (!req.session.user) {
@@ -270,50 +274,29 @@ app.post("/posts/toggle-like", async (req, res) => {
     }
 
     const userId = String(req.session.user.id);
-
-    // Initialize likedBy array if it doesn't exist
-    if (!post.likedBy) {
-      post.likedBy = [];
-    }
+    if (!post.likedBy) post.likedBy = [];
 
     const likedBySet = new Set(post.likedBy.map(String));
     const wasLiked = likedBySet.has(userId);
 
     if (wasLiked) {
-      // Unlike: remove from post
       likedBySet.delete(userId);
       post.likedBy = Array.from(likedBySet);
-
-      // Remove from user's liked posts
-      await User.updateOne(
-        { githubId: userId },
-        { $pull: { likedPostIds: post._id } }
-      );
+      await User.updateOne({ githubId: userId }, { $pull: { likedPostIds: post._id } });
     } else {
-      // Like: add to post
       likedBySet.add(userId);
       post.likedBy = Array.from(likedBySet);
-
-      // Add to user's liked posts
-      await User.updateOne(
-        { githubId: userId },
-        { $addToSet: { likedPostIds: post._id } }
-      );
+      await User.updateOne({ githubId: userId }, { $addToSet: { likedPostIds: post._id } });
     }
 
     await post.save();
-
-    res.json({
-      liked: !wasLiked,
-      likes: post.likedBy.length
-    });
+    res.json({ liked: !wasLiked, likes: post.likedBy.length });
   } catch (err) {
     console.error("POST /posts/toggle-like failed:", err);
     return res.status(500).json({ message: "Failed to toggle like" });
   }
 });
 
-// Get all media from posts by the logged-in user
 app.post("/posts/comments/create", async (req, res) => {
   try {
     if (!req.session.user) return res.status(401).json({ message: "You need to be logged in" });
@@ -323,7 +306,6 @@ app.post("/posts/comments/create", async (req, res) => {
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    console.log(post)
     post.comments.push({
       author: String(req.session.user.id),
       content: String(text),
@@ -348,35 +330,28 @@ app.post("/posts/comments/create", async (req, res) => {
   }
 });
 
-
 app.get("/posts/getMedia", async (req, res) => {
   try {
     if (!req.session.user) {
       return res.status(401).json({ message: "You need to be logged in" });
     }
     const user = await User.findOne({ githubId: req.session.user.id });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
+
     const postIds = user.postIds || [];
-    if (!postIds.length) {
-      return res.json({ media: [] });
-    }
+    if (!postIds.length) return res.json({ media: [] });
+
     const posts = await Post.find({ _id: { $in: postIds }, deleted: { $ne: true } }).lean();
-    // Collect all media items from posts
     const media = [];
     for (const post of posts) {
       if (Array.isArray(post.urls)) {
         for (const url of post.urls) {
-          // Guess kind by extension
           const ext = url.split('.').pop()?.toLowerCase();
           const kind = ["mp4", "webm", "ogg", "mov"].includes(ext) ? "video" : "image";
           media.push({ kind, url });
         }
       }
-      if (post.image) {
-        media.push({ kind: "image", url: post.image });
-      }
+      if (post.image) media.push({ kind: "image", url: post.image });
     }
     return res.json({ media });
   } catch (err) {
@@ -385,31 +360,25 @@ app.get("/posts/getMedia", async (req, res) => {
   }
 });
 
-
 app.post("/posts/delete", async (req, res) => {
   try {
-    if (!req.session.user) {
-      return res.status(401).json({ message: "You need to be logged in to delete posts" });
-    }
+    if (!req.session.user) return res.status(401).json({ message: "You need to be logged in to delete posts" });
     const postId = req.body.id || req.body.content?.id;
-    if (!postId) {
-      return res.status(400).json({ message: "Missing post id" });
-    }
+    if (!postId) return res.status(400).json({ message: "Missing post id" });
+
     const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).json({ message: "Post not found" });
-    }
+    if (!post) return res.status(404).json({ message: "Post not found" });
     if (String(post.author) !== String(req.session.user.id)) {
       return res.status(403).json({ message: "You can only delete your own posts" });
     }
-  await Post.updateOne({ _id: postId }, { $set: { deleted: true } });
-  return res.json({ message: "Post deleted successfully", postId });
+
+    await Post.updateOne({ _id: postId }, { $set: { deleted: true } });
+    return res.json({ message: "Post deleted successfully", postId });
   } catch (err) {
     console.error("POST /posts/delete failed:", err);
     return res.status(500).json({ message: "Failed to delete post" });
   }
 });
-
 
 app.post("/posts/create", async (req, res) => {
   try {
@@ -421,11 +390,10 @@ app.post("/posts/create", async (req, res) => {
       content: req.body.content,
       urls: Array.isArray(req.body.urls) ? req.body.urls : [],
       datePosted: req.body.datePosted ? new Date(req.body.datePosted) : new Date(),
-      author: String(req.session.user.id), // store githubId
+      author: String(req.session.user.id),
     });
 
     await User.updateOne({ githubId: String(req.session.user.id) }, { $push: { postIds: post._id } });
-
     return res.status(201).json({ message: "Post created successfully!", postId: post._id });
   } catch (err) {
     console.error("POST /posts/create failed:", err);
@@ -435,7 +403,7 @@ app.post("/posts/create", async (req, res) => {
 
 app.get("/posts/get-all", async (req, res) => {
   try {
-  const posts = await Post.find({ deleted: { $ne: true } }).lean();
+    const posts = await Post.find({ deleted: { $ne: true } }).lean();
     for (const p of posts) {
       try {
         const author = await User.findOne({ githubId: p.author }).lean();
@@ -443,15 +411,14 @@ app.get("/posts/get-all", async (req, res) => {
           p.authorInfo = {
             profile: author.profile,
             handle: author.handle,
-            avatar: author.profile.avatar,
-            name: author.profile.name,
+            avatar: author.profile?.avatar,
+            name: author.profile?.name,
             isCurrentUser: req.session.user ? (p.author === String(req.session.user.id)) : false
-          }
+          };
         }
         p.authorId = p.author;
         p.createdAt = new Date(p.datePosted).getTime();
 
-        // Add like information
         p.likes = (p.likedBy || []).length;
         p.liked = !!(req.session.user && p.likedBy?.includes(String(req.session.user.id)));
 
@@ -470,10 +437,7 @@ app.get("/posts/get-all", async (req, res) => {
                 }
               };
             } else {
-              return {
-                ...c,
-                authorInfo: { deleted: true }
-              };
+              return { ...c, authorInfo: { deleted: true } };
             }
           }));
         } else {
@@ -483,7 +447,6 @@ app.get("/posts/get-all", async (req, res) => {
         console.error(`Author fetch error for ${p._id}:`, e);
       }
     }
-    console.log(JSON.stringify(req.session))
     return res.json({ posts });
   } catch (err) {
     console.error("Error fetching posts:", err);
@@ -491,10 +454,7 @@ app.get("/posts/get-all", async (req, res) => {
   }
 });
 
-
-
 // --- Reels ---
-// Create a reel (expects a PictShare URL already uploaded from frontend)
 app.post("/reels/create", async (req, res) => {
   try {
     if (!req.session.user) return res.status(401).json({ message: "You need to be logged in" });
@@ -516,7 +476,6 @@ app.post("/reels/create", async (req, res) => {
   }
 });
 
-// All reels (decorate with author info)
 app.get("/reels/get-all", async (req, res) => {
   try {
     const reels = await Reel.find({ deleted: { $ne: true } }).sort({ datePosted: -1 }).lean();
@@ -528,10 +487,32 @@ app.get("/reels/get-all", async (req, res) => {
         avatar: author.profile?.avatar || "",
         isCurrentUser: req.session.user ? (r.author === String(req.session.user.id)) : false
       } : { handle: "unknown", name: "Unknown", avatar: "", isCurrentUser: false };
+
       r.likes = (r.likedBy || []).length;
       r.saved = !!(req.session.user && r.savedBy?.includes(String(req.session.user.id)));
       r.liked = !!(req.session.user && r.likedBy?.includes(String(req.session.user.id)));
       r.createdAt = new Date(r.datePosted).getTime();
+
+      if (Array.isArray(r.comments)) {
+        r.comments = await Promise.all(r.comments.map(async (c) => {
+          const commenter = await User.findOne({ githubId: c.author }).lean();
+          if (commenter) {
+            return {
+              ...c,
+              authorInfo: {
+                profile: commenter.profile,
+                handle: commenter.handle,
+                avatar: commenter.profile?.avatar || "",
+                name: commenter.profile?.name || commenter.handle,
+                isCurrentUser: req.session.user ? (c.author === String(req.session.user.id)) : false
+              }
+            };
+          }
+          return { ...c, authorInfo: { deleted: true } };
+        }));
+      } else {
+        r.comments = [];
+      }
     }
     res.json({ reels });
   } catch (e) {
@@ -540,7 +521,6 @@ app.get("/reels/get-all", async (req, res) => {
   }
 });
 
-// Toggle like
 app.post("/reels/toggle-like", async (req, res) => {
   try {
     if (!req.session.user) return res.status(401).json({ message: "Login required" });
@@ -560,7 +540,6 @@ app.post("/reels/toggle-like", async (req, res) => {
   }
 });
 
-// Toggle save
 app.post("/reels/toggle-save", async (req, res) => {
   try {
     if (!req.session.user) return res.status(401).json({ message: "Login required" });
@@ -580,7 +559,6 @@ app.post("/reels/toggle-save", async (req, res) => {
   }
 });
 
-// Delete reel (owner only)
 app.post("/reels/delete", async (req, res) => {
   try {
     if (!req.session.user) return res.status(401).json({ message: "Login required" });
@@ -596,11 +574,57 @@ app.post("/reels/delete", async (req, res) => {
   }
 });
 
+app.post("/reels/comments/create", async (req, res) => {
+  try {
+    if (!req.session.user) return res.status(401).json({ message: "You need to be logged in" });
+    const { reelId, text } = req.body || {};
+    if (!reelId || !text?.trim()) return res.status(400).json({ message: "Missing reelId or text" });
 
-// --- Start ---
-app.listen(PORT, () => {
-  console.info("Server is running on port " + PORT + ", started " + new Date().toLocaleTimeString());
+    const reel = await Reel.findById(reelId);
+    if (!reel) return res.status(404).json({ message: "Reel not found" });
+
+    reel.comments = reel.comments || [];
+    reel.comments.push({
+      author: String(req.session.user.id),
+      content: String(text),
+      datePosted: new Date(),
+      stats: {}
+    });
+    await reel.save();
+
+    const user = await User.findOne({ githubId: req.session.user.id }).lean();
+    const currentUserInfo = user ? {
+      id: req.session.user.id,
+      handle: user.handle,
+      name: user.profile?.name || user.handle,
+      avatar: user.profile?.avatar || "",
+      profile: user.profile
+    } : null;
+
+    return res.json({ message: "Comment added", currentUser: currentUserInfo });
+  } catch (e) {
+    console.error("POST /reels/comments/create failed:", e);
+    return res.status(500).json({ message: "Failed to add comment" });
+  }
 });
+
+// ---------- Start server AFTER DB is reachable ----------
+(async () => {
+  console.info("Connecting to MongoDB...");
+  try {
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 15000,
+    });
+    console.info("✅ MongoDB connected");
+    app.listen(PORT, () => {
+      console.info("Server is running on port " + PORT + ", started " + new Date().toLocaleTimeString());
+    });
+  } catch (err) {
+    console.error("❌ MongoDB connect failed:", err?.message || err);
+    console.error("Tip: set MONGODB_URI to the non-SRV 'mongodb://' string if your network blocks SRV lookups.");
+    process.exit(1);
+  }
+})();
 
 // User.updateMany(
 //   { stats: { $exists: true } },
