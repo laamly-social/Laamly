@@ -69,7 +69,7 @@ export default function App({ initialData }: AppProps) {
          </div>
 
          <div className={`w-full flex flex-col ${isReelsPage ? 'h-screen overflow-hidden' : 'min-h-screen pb-20 md:pb-0'}`}>
-            <main className={`mx-auto w-full ${isReelsPage ? 'h-full p-0' : 'max-w-full px-0 md:px-4'}`}>
+            <main className={`mx-auto w-full ${isReelsPage ? 'h-full p-0' : 'max-w-full px-0'}`}>
                <Routes>
                   <Route path="/" element={<Navigate to="/home" replace />} />
                   <Route path="/home" element={

@@ -2,7 +2,7 @@
 import { useLocation } from "react-router-dom";
 import type { User } from "../types";
 import TabBtn from "./nav/TabBtn";
-import { Image as ImageIcon, Home, PlayCircle as PlayTab, Github, Podcast } from "lucide-react";
+import { Image as ImageIcon, Home, PlayCircle as PlayTab, Github, Podcast, MessageSquare } from "lucide-react";
 import Avatar from "./ui/Avatar";
 import { API_URL } from "../config";
 
@@ -43,7 +43,7 @@ export function Header({ openProfile, githubClientId, user }: HeaderProps) {
                {/* MIDDLE: Navigation Tabs */}
                <div className="flex flex-col items-stretch w-full px-4 space-y-2">
                   <TabBtn icon={Home} label="Posts" active={location.pathname === "/home"} to="/home" />
-                  {/* <TabBtn icon={MessageSquare} label="Messages" active={location.pathname === "/messages"} to="/messages" /> */}
+                  <TabBtn icon={MessageSquare} label="Messages" active={location.pathname === "/messages"} to="/messages" />
                   <TabBtn icon={PlayTab} label="Reels" active={location.pathname === "/reels"} to="/reels" />
                   <TabBtn icon={Podcast} label="Podcasts" active={location.pathname === "/podcasts"} to="/podcasts" />
                </div>
@@ -58,7 +58,7 @@ export function Header({ openProfile, githubClientId, user }: HeaderProps) {
 
                   {user && user.name ? (
                      <div className="w-full px-4 text-center flex flex-col items-center space-y-3">
-                        <button 
+                        <button
                            onClick={() => openProfile(user.id)}
                            className="cursor-pointer bg-transparent border-none p-0 transition-opacity hover:opacity-80"
                         >
@@ -115,7 +115,7 @@ export function Header({ openProfile, githubClientId, user }: HeaderProps) {
                >
                   <Home size={24} />
                </a>
-               
+
                <a
                   href="/reels"
                   className={`flex flex-col items-center justify-center p-2 rounded-lg transition ${

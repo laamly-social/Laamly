@@ -32,24 +32,18 @@ function getInitialDataFromURL(): { githubClientId: string | null; user: User | 
 async function fetchInitialData(): Promise<{ githubClientId: string | null; user: User | null }> {
   try {
     const url = apiEndpoint("/api/initial-data");
-    console.log('[FETCH] Fetching from URL:', url);
-    console.log('[FETCH] Full URL will be:', window.location.origin + url);
-    
+
     const response = await fetch(url, {
       credentials: "include"
     });
-    
-    console.log('[FETCH] Response status:', response.status);
-    console.log('[FETCH] Response URL:', response.url);
-    
+
     if (!response.ok) {
       console.error("Failed to fetch initial data: HTTP", response.status);
       return { githubClientId: null, user: null };
     }
-    
+
     const text = await response.text();
-    console.log('[FETCH] Response text (first 200 chars):', text.substring(0, 200));
-    
+
     try {
       const data = JSON.parse(text);
       return {

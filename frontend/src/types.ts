@@ -52,14 +52,28 @@ export type Post = {
   repostedByMe?: boolean; // did the logged-in user repost this original?
 };
 
-export type DM = { id: string; from: "me" | string; text: string; ts: number };
+export type DM = { 
+  id: string; 
+  from: "me" | string; 
+  text: string; 
+  ts: number;
+  attachments?: string[]; // URLs to uploaded files (images, videos, etc.)
+  read?: boolean; // Whether message has been read
+  edited?: boolean; // Whether message has been edited
+  reactions?: Array<{ userId: string; emoji: string }>; // Message reactions
+};
 
 export type Thread = {
   id: string;
-  participantId: string;
+  participantIds: string[]; // Support multiple participants for group chats
+  participants?: User[]; // Full user info for participants
   last: string;
+  lastTs?: number;
   messages: DM[];
   unread?: boolean;
+  isGroup?: boolean;
+  groupName?: string;
+  groupAvatar?: string; // Avatar URL for group chats
 };
 
 export type Reel = {

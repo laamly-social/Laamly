@@ -5,6 +5,8 @@ const mongoose = require("mongoose");
 const session = require("express-session");
 const cors = require("cors");
 const dns = require("dns");               // ✅ DNS workaround
+const http = require("http");             // ✅ Add http for Socket.IO
+const { Server } = require("socket.io");  // ✅ Add Socket.IO
 require("dotenv").config();
 
 // ---------- DNS workaround for SRV on restrictive networks ----------
@@ -19,6 +21,7 @@ try {
 }
 
 const app = express();
+const server = http.createServer(app); // ✅ Create HTTP server
 
 // --- Hardcode local ports/origins for dev ---
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
@@ -48,22 +51,46 @@ const corsOptions =  {
 app.use(cors(corsOptions));
 // app.use(cors({ origin: FRONTEND_ORIGIN, credentials: true }));
 
+// ✅ Initialize Socket.IO with CORS
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true
+  }
+});
+
 app.use(express.json());
 app.use(express.static("public"));
 
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "dev-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false,
-      sameSite: "lax",
-      httpOnly: true,
-      maxAge: 1000 * 60 * 60, // 1h
-    },
-  })
-);
+const sessionMiddleware = session({
+  secret: process.env.SESSION_SECRET || "dev-secret",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false,
+    sameSite: "lax",
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60, // 1h
+  },
+});
+
+app.use(sessionMiddleware);
+
+// ✅ Share session with Socket.IO - Wrap middleware for Socket.IO compatibility
+const wrap = middleware => (socket, next) => middleware(socket.request, {}, next);
+io.use(wrap(sessionMiddleware));
+
+// Add logging for Socket.IO connections
+io.use((socket, next) => {
+  const session = socket.request.session;
+  console.log("Socket.IO connection attempt - Session data:", {
+    hasSession: !!session,
+    hasUser: !!session?.user,
+    userId: session?.user?.id,
+    socketId: socket.id
+  });
+  next();
+});
 
 // ---------- Mongo connection (robust) ----------
 const MONGODB_URI =
@@ -97,9 +124,32 @@ const postSchema = new mongoose.Schema({
   }]
 });
 
-const messageSchema = new mongoose.Schema({
-  members: [String], // userid
-  messages: [String]
+const chatSchema = new mongoose.Schema({
+  members: [String], // githubId array
+  messages: [{
+    from: String,     // githubId of sender
+    text: String,
+    attachments: [String], // URLs to uploaded files
+    ts: { type: Date, default: Date.now },
+    read: { type: Boolean, default: false },
+    edited: { type: Boolean, default: false },
+    reactions: [{
+      userId: String,
+      emoji: String
+    }]
+  }],
+  lastMessage: String,
+  lastMessageTs: Date,
+  isGroup: { type: Boolean, default: false },
+  groupName: String,
+  groupAvatar: String,
+  unreadCount: {
+    type: Map,
+    of: Number,
+    default: {}
+  }, // Map of userId -> unread count
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
 
 // --- Reels Schema/Model ---
@@ -120,10 +170,115 @@ const reelSchema = new mongoose.Schema({
   }]
 });
 
-let User, Post, Reel;
+let User, Post, Reel, Chat;
 try { User = mongoose.model("VeyluUser"); } catch { User = mongoose.model("VeyluUser", userSchema); }
 try { Post = mongoose.model("VeyluPost"); } catch { Post = mongoose.model("VeyluPost", postSchema); }
 try { Reel = mongoose.model("VeyluReel"); } catch { Reel = mongoose.model("VeyluReel", reelSchema); }
+try { Chat = mongoose.model("LaamlyChat"); } catch { Chat = mongoose.model("LaamlyChat", chatSchema); }
+
+// ✅ Track user socket connections
+const userSockets = new Map(); // userId -> Set of socketIds
+
+// ✅ Socket.IO connection handling
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  // ✅ Store user session info in socket
+  const session = socket.request.session;
+  if (session?.user?.id) {
+    socket.userId = String(session.user.id);
+
+    // Track this socket for this user
+    if (!userSockets.has(socket.userId)) {
+      userSockets.set(socket.userId, new Set());
+    }
+    userSockets.get(socket.userId).add(socket.id);
+
+    console.log(`Socket ${socket.id} authenticated as user ${socket.userId}`);
+  } else {
+    console.warn(`Socket ${socket.id} connected without authentication`);
+  }
+
+  // Join thread room
+  socket.on("join-thread", (threadId) => {
+    socket.join(threadId);
+    console.log(`Socket ${socket.id} joined thread ${threadId}`);
+  });
+
+  // Leave thread room
+  socket.on("leave-thread", (threadId) => {
+    socket.leave(threadId);
+    console.log(`Socket ${socket.id} left thread ${threadId}`);
+  });
+
+  // Handle typing indicators
+  socket.on("typing-start", async (data) => {
+    try {
+      const { threadId } = data;
+      console.log(`typing-start received - socketId: ${socket.id}, threadId: ${threadId}, userId: ${socket.userId}`);
+
+      if (!socket.userId) {
+        console.warn("typing-start: No userId on socket");
+        return;
+      }
+
+      // Get user info for display
+      const user = await User.findOne({ githubId: socket.userId }).lean();
+      const userName = user?.profile?.name || user?.handle || "Someone";
+
+      console.log(`Broadcasting typing-start from user ${userName} (${socket.userId}) to thread ${threadId}`);
+
+      // Broadcast to others in the room (excluding sender)
+      socket.to(threadId).emit("user-typing", {
+        threadId,
+        userId: socket.userId,
+        userName: userName,
+        isTyping: true
+      });
+    } catch (err) {
+      console.error("Error handling typing start:", err);
+    }
+  });
+
+  socket.on("typing-stop", async (data) => {
+    try {
+      const { threadId } = data;
+      console.log(`typing-stop received - socketId: ${socket.id}, threadId: ${threadId}, userId: ${socket.userId}`);
+
+      if (!socket.userId) {
+        console.warn("typing-stop: No userId on socket");
+        return;
+      }
+
+      // Get user info for display
+      const user = await User.findOne({ githubId: socket.userId }).lean();
+      const userName = user?.profile?.name || user?.handle || "Someone";
+
+      console.log(`Broadcasting typing-stop from user ${userName} (${socket.userId}) to thread ${threadId}`);
+
+      socket.to(threadId).emit("user-typing", {
+        threadId,
+        userId: socket.userId,
+        userName: userName,
+        isTyping: false
+      });
+    } catch (err) {
+      console.error("Error handling typing stop:", err);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+
+    // ✅ Remove socket from user tracking
+    if (socket.userId && userSockets.has(socket.userId)) {
+      userSockets.get(socket.userId).delete(socket.id);
+      if (userSockets.get(socket.userId).size === 0) {
+        userSockets.delete(socket.userId);
+      }
+    }
+  });
+});
 
 // --- Public helpers ---
 app.get("/", async (req, res) => {
@@ -608,6 +763,467 @@ app.post("/reels/comments/create", async (req, res) => {
   }
 });
 
+// --- User search for messages ---
+app.get("/api/users/search", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "You need to be logged in" });
+    }
+
+    const query = req.query.q;
+    if (!query || query.trim().length < 2) {
+      return res.json({ users: [] });
+    }
+
+    const searchRegex = new RegExp(query.trim(), "i");
+    const users = await User.find({
+      $or: [
+        { handle: searchRegex },
+        { "profile.name": searchRegex }
+      ]
+    }).limit(20).lean();
+
+    const results = users.map(u => ({
+      id: u.githubId,
+      githubId: u.githubId,
+      name: u.profile?.name || u.handle,
+      handle: u.handle,
+      avatar: u.profile?.avatar || ""
+    }));
+
+    res.json({ users: results });
+  } catch (err) {
+    console.error("Error searching users:", err);
+    return res.status(500).json({ message: "Error searching users" });
+  }
+});
+
+// --- Messages/Threads endpoints ---
+app.get("/api/messages/threads", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "You need to be logged in" });
+    }
+
+    const userId = String(req.session.user.id);
+
+    // Find all chats where user is a member
+    const chats = await Chat.find({
+      members: userId
+    }).sort({ lastMessageTs: -1 }).lean();
+
+    // Get participant details for each chat
+    const threadsWithParticipants = await Promise.all(chats.map(async (chat) => {
+      const otherMemberIds = chat.members.filter(m => m !== userId);
+      const participants = await User.find({
+        githubId: { $in: otherMemberIds }
+      }).lean();
+
+      const participantData = participants.map(u => ({
+        id: u.githubId,
+        githubId: u.githubId,
+        name: u.profile?.name || u.handle,
+        handle: u.handle,
+        avatar: u.profile?.avatar || ""
+      }));
+
+      // Get unread count for this user
+      const unreadCount = chat.unreadCount?.get?.(userId) || 0;
+
+      console.log("userid:" + userId)
+      return {
+        id: chat._id.toString(),
+        participantIds: otherMemberIds,
+        participants: participantData,
+        last: chat.lastMessage || "",
+        lastTs: chat.lastMessageTs ? new Date(chat.lastMessageTs).getTime() : Date.now(),
+        messages: chat.messages.map(m => ({
+          id: m._id.toString(),
+          from: m.from === userId ? "me" : m.from,
+          text: m.text || "",
+          ts: new Date(m.ts).getTime(),
+          attachments: m.attachments || [],
+          read: m.read || false,
+          edited: m.edited || false,
+          reactions: m.reactions || []
+        })),
+        unread: unreadCount > 0,
+        isGroup: chat.isGroup || false,
+        groupName: chat.groupName,
+        groupAvatar: chat.groupAvatar
+      };
+    }));
+
+    res.json({ threads: threadsWithParticipants });
+  } catch (err) {
+    console.error("Error fetching threads:", err);
+    return res.status(500).json({ message: "Error fetching threads" });
+  }
+});
+
+app.get("/api/messages/threads/:threadId", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "You need to be logged in" });
+    }
+
+    const { threadId } = req.params;
+    const userId = String(req.session.user.id);
+
+    const chat = await Chat.findById(threadId).lean();
+    if (!chat) {
+      return res.status(404).json({ message: "Thread not found" });
+    }
+
+    // Verify user is a member
+    if (!chat.members.includes(userId)) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    // Mark messages as read for this user
+    await Chat.updateOne(
+      { _id: threadId },
+      {
+        $set: {
+          "messages.$[].read": true,
+          [`unreadCount.${userId}`]: 0
+        }
+      }
+    );
+
+    const messages = chat.messages.map(m => ({
+      id: m._id.toString(),
+      from: m.from === userId ? "me" : m.from,
+      text: m.text || "",
+      ts: new Date(m.ts).getTime(),
+      attachments: m.attachments || [],
+      read: true,
+      edited: m.edited || false,
+      reactions: m.reactions || []
+    }));
+
+    res.json({ messages });
+  } catch (err) {
+    console.error("Error fetching thread messages:", err);
+    return res.status(500).json({ message: "Error fetching messages" });
+  }
+});
+
+app.post("/api/messages/send", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "You need to be logged in" });
+    }
+
+    const { threadId, text, attachments } = req.body;
+    const userId = String(req.session.user.id);
+
+    const chat = await Chat.findById(threadId);
+    if (!chat) {
+      return res.status(404).json({ message: "Thread not found" });
+    }
+
+    // Verify user is a member
+    if (!chat.members.includes(userId)) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    // Create new message
+    const newMessage = {
+      from: userId,
+      text: text || "",
+      attachments: attachments || [],
+      ts: new Date(),
+      read: false,
+      edited: false,
+      reactions: []
+    };
+
+    chat.messages.push(newMessage);
+    chat.lastMessage = text || `${(attachments || []).length} file${(attachments || []).length === 1 ? "" : "s"}`;
+    chat.lastMessageTs = new Date();
+    chat.updatedAt = new Date();
+
+    // Increment unread count for other members
+    chat.members.forEach(memberId => {
+      if (memberId !== userId) {
+        const currentCount = chat.unreadCount?.get(memberId) || 0;
+        chat.unreadCount.set(memberId, currentCount + 1);
+      }
+    });
+
+    await chat.save();
+
+    // ✅ Get the saved message with its _id
+    const savedMessage = chat.messages[chat.messages.length - 1];
+
+    // ✅ Get sender info
+    const sender = await User.findOne({ githubId: userId }).lean();
+
+    // ✅ Emit real-time message to all OTHER clients in the thread (not sender)
+    const messageData = {
+      threadId,
+      message: {
+        id: savedMessage._id.toString(),
+        from: userId,
+        text: text || "",
+        ts: new Date(savedMessage.ts).getTime(),
+        attachments: attachments || [],
+        read: false,
+        edited: false,
+        reactions: [],
+        sender: {
+          id: userId,
+          name: sender?.profile?.name || sender?.handle || "Unknown",
+          handle: sender?.handle || "unknown",
+          avatar: sender?.profile?.avatar || ""
+        }
+      }
+    };
+
+    // Get all sockets in the room
+    const socketsInRoom = await io.in(threadId).fetchSockets();
+
+    // Emit to all sockets EXCEPT the sender's
+    const senderSocketIds = userSockets.get(userId) || new Set();
+    for (const socket of socketsInRoom) {
+      if (!senderSocketIds.has(socket.id)) {
+        socket.emit("new-message", messageData);
+      }
+    }
+
+    res.json({
+      message: "Message sent",
+      messageId: savedMessage._id,
+      attachments: attachments || []
+    });
+  } catch (err) {
+    console.error("Error sending message:", err);
+    return res.status(500).json({ message: "Error sending message" });
+  }
+});
+
+app.post("/api/messages/threads/create", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "You need to be logged in" });
+    }
+
+    const { participantIds, isGroup, groupName, groupAvatar } = req.body;
+    const userId = String(req.session.user.id);
+
+    // Include current user in members
+    const allMembers = [userId, ...participantIds];
+
+    // Check if a chat already exists with these exact members (for non-group chats)
+    if (!isGroup && participantIds.length === 1) {
+      const existingChat = await Chat.findOne({
+        members: { $all: allMembers, $size: allMembers.length },
+        isGroup: false
+      });
+
+      if (existingChat) {
+        // Return existing chat
+        const participants = await User.find({
+          githubId: { $in: participantIds }
+        }).lean();
+
+        const participantData = participants.map(u => ({
+          id: u.githubId,
+          githubId: u.githubId,
+          name: u.profile?.name || u.handle,
+          handle: u.handle,
+          avatar: u.profile?.avatar || ""
+        }));
+
+        return res.json({
+          threadId: existingChat._id.toString(),
+          participants: participantData,
+          existing: true
+        });
+      }
+    }
+
+    // Create new chat
+    const newChat = new Chat({
+      members: allMembers,
+      messages: [],
+      lastMessage: "",
+      lastMessageTs: new Date(),
+      isGroup: isGroup || false,
+      groupName: groupName || null,
+      groupAvatar: groupAvatar || null,
+      unreadCount: new Map(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    await newChat.save();
+
+    // Fetch participant info
+    const participants = await User.find({
+      githubId: { $in: participantIds }
+    }).lean();
+
+    const participantData = participants.map(u => ({
+      id: u.githubId,
+      githubId: u.githubId,
+      name: u.profile?.name || u.handle,
+      handle: u.handle,
+      avatar: u.profile?.avatar || ""
+    }));
+
+    res.json({
+      threadId: newChat._id.toString(),
+      participants: participantData,
+      isGroup: newChat.isGroup,
+      groupName: newChat.groupName,
+      groupAvatar: newChat.groupAvatar
+    });
+  } catch (err) {
+    console.error("Error creating thread:", err);
+    return res.status(500).json({ message: "Error creating thread" });
+  }
+});
+
+// Add reaction to a message
+app.post("/api/messages/react", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "You need to be logged in" });
+    }
+
+    const { threadId, messageId, emoji } = req.body;
+    const userId = String(req.session.user.id);
+
+    const chat = await Chat.findById(threadId);
+    if (!chat) {
+      return res.status(404).json({ message: "Thread not found" });
+    }
+
+    if (!chat.members.includes(userId)) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    const message = chat.messages.id(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    // Check if user already reacted with this emoji
+    const existingReaction = message.reactions.find(
+      r => r.userId === userId && r.emoji === emoji
+    );
+
+    if (existingReaction) {
+      // Remove reaction
+      message.reactions = message.reactions.filter(
+        r => !(r.userId === userId && r.emoji === emoji)
+      );
+    } else {
+      // Add reaction
+      message.reactions.push({ userId, emoji });
+    }
+
+    await chat.save();
+
+    // ✅ Emit real-time reaction update
+    io.to(threadId).emit("message-reaction", {
+      threadId,
+      messageId,
+      reactions: message.reactions
+    });
+
+    res.json({ message: "Reaction updated", reactions: message.reactions });
+  } catch (err) {
+    console.error("Error reacting to message:", err);
+    return res.status(500).json({ message: "Error reacting to message" });
+  }
+});
+
+// Edit a message
+app.post("/api/messages/edit", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "You need to be logged in" });
+    }
+
+    const { threadId, messageId, text } = req.body;
+    const userId = String(req.session.user.id);
+
+    const chat = await Chat.findById(threadId);
+    if (!chat) {
+      return res.status(404).json({ message: "Thread not found" });
+    }
+
+    const message = chat.messages.id(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    // Only allow editing own messages
+    if (message.from !== userId) {
+      return res.status(403).json({ message: "Can only edit your own messages" });
+    }
+
+    message.text = text;
+    message.edited = true;
+    chat.updatedAt = new Date();
+
+    await chat.save();
+    res.json({ message: "Message edited" });
+  } catch (err) {
+    console.error("Error editing message:", err);
+    return res.status(500).json({ message: "Error editing message" });
+  }
+});
+
+// Delete a message
+app.post("/api/messages/delete", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "You need to be logged in" });
+    }
+
+    const { threadId, messageId } = req.body;
+    const userId = String(req.session.user.id);
+
+    const chat = await Chat.findById(threadId);
+    if (!chat) {
+      return res.status(404).json({ message: "Thread not found" });
+    }
+
+    const message = chat.messages.id(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    // Only allow deleting own messages
+    if (message.from !== userId) {
+      return res.status(403).json({ message: "Can only delete your own messages" });
+    }
+
+    message.remove();
+    chat.updatedAt = new Date();
+
+    // Update last message if this was the last one
+    if (chat.messages.length > 0) {
+      const lastMsg = chat.messages[chat.messages.length - 1];
+      chat.lastMessage = lastMsg.text || `${(lastMsg.attachments || []).length} file${(lastMsg.attachments.length !== 1 ? "s" : "")}`;
+      chat.lastMessageTs = lastMsg.ts;
+    } else {
+      chat.lastMessage = "";
+      chat.lastMessageTs = new Date();
+    }
+
+    await chat.save();
+    res.json({ message: "Message deleted" });
+  } catch (err) {
+    console.error("Error deleting message:", err);
+    return res.status(500).json({ message: "Error deleting message" });
+  }
+});
+
 // ---------- Start server AFTER DB is reachable ----------
 (async () => {
   console.info("Connecting to MongoDB...");
@@ -616,7 +1232,7 @@ app.post("/reels/comments/create", async (req, res) => {
       serverSelectionTimeoutMS: 15000,
     });
     console.info("✅ MongoDB connected");
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.info("Server is running on port " + PORT + ", started " + new Date().toLocaleTimeString());
     });
   } catch (err) {
