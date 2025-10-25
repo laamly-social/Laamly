@@ -217,7 +217,7 @@ export default function Podcasts() {
             <div
               key={podcast.id}
               onClick={() => loadPodcast(podcast)}
-              className="bg-panel dark:bg-panel-dark border border-border dark:border-border-dark rounded-xl p-6 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 hover:border-accent dark:hover:border-accent-dark"
+              className="bg-panel dark:bg-panel-dark border border-border dark:border-border-dark rounded-xl p-6 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 hover:border-accent dark:hover:border-accent-dark text-center"
             >
               <div className="flex flex-col h-full">
                 {podcast.category && (
@@ -276,7 +276,7 @@ export default function Podcasts() {
                 className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${
                   activeEpisodeIndex === index
                     ? 'bg-accent dark:bg-accent-dark text-white'
-                    : 'bg-panel dark:bg-panel-dark hover:bg-accent/70 dark:hover:bg-accent-dark/70'
+                    : 'bg-panel dark:bg-panel-dark hover:bg-accent dark:hover:bg-accent-dark'
                 }`}
                 onClick={() => playEpisode(index)}
               >
@@ -338,32 +338,6 @@ export default function Podcasts() {
           </div>
         </div>
       </main>
-
-      {/* Custom scrollbar styles */}
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: var(--color-muted);
-        }
-        .dark .custom-scrollbar::-webkit-scrollbar-track {
-          background: var(--color-muted-dark);
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: var(--color-border);
-          border-radius: 10px;
-        }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: var(--color-border-dark);
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: var(--color-sub);
-        }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: var(--color-sub-dark);
-        }
-      `}</style>
     </div>
   );
 }

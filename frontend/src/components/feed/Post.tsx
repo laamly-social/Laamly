@@ -16,168 +16,168 @@ import { div } from "framer-motion/client";
 import CommentsList from "./CommentsList";
 
 interface PostProps {
-  post: PostType;
-  meId: string;
-  posts: PostType[];
-  setPosts: React.Dispatch<React.SetStateAction<PostType[]>>;
-  openProfile: (uid: string) => void;
-  addComment: (postId: string, body: string) => void;
-  deletePost: (id: string) => void;
-  user: User | null;
-  /*
+   post: PostType;
+   meId: string;
+   posts: PostType[];
+   setPosts: React.Dispatch<React.SetStateAction<PostType[]>>;
+   openProfile: (uid: string) => void;
+   addComment: (postId: string, body: string) => void;
+   deletePost: (id: string) => void;
+   user: User | null;
+   /*
 
-const res = await fetch("/posts/delete", {
-       method: "POST",
-       headers: { "Content-Type": "application/json" },
-       credentials: "include",
-       body: JSON.stringify({
-         content: {
-          id: id
-         }
-       })
-     });
-  */
-  toggleLike: (id: string) => void;
-  toggleRepost: (id: string) => void;
+ const res = await fetch("/posts/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          content: {
+           id: id
+          }
+        })
+      });
+   */
+   toggleLike: (id: string) => void;
+   toggleRepost: (id: string) => void;
 }
 
 /** Treat common video extensions as video */
 function isVideo(url?: string): boolean {
-  if (!url) return false;
-  return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
+   if (!url) return false;
+   return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
 }
 
 function mediaUrlsFrom(post: any): string[] {
-  if (!post) return [];
-  if (Array.isArray(post.urls) && post.urls.length) return post.urls as string[];
-  if (post.image) return [post.image as string];
-  return [];
+   if (!post) return [];
+   if (Array.isArray(post.urls) && post.urls.length) return post.urls as string[];
+   if (post.image) return [post.image as string];
+   return [];
 }
 
 // ...existing code...
 
 export default function Post({
-  post: p,
-  meId,
-  posts,
-  setPosts,
-  openProfile,
-  addComment,
-  deletePost,
-  toggleLike,
-  toggleRepost,
-  user,
+   post: p,
+   meId,
+   posts,
+   setPosts,
+   openProfile,
+   addComment,
+   deletePost,
+   toggleLike,
+   toggleRepost,
+   user,
 }: PostProps) {
 
-  const original = p.originalId ? posts.find(x => x.id === p.originalId) : undefined;
-  const isRepost = !!original;
+   const original = p.originalId ? posts.find(x => x.id === p.originalId) : undefined;
+   const isRepost = !!original;
 
-  const source = original ?? p;
+   const source = original ?? p;
 
-  const postText = p.content || (isRepost ? original?.content || "" : "");
+   const postText = p.content || (isRepost ? original?.content || "" : "");
 
-  // YouTube embed logic moved here so postText is in scope
-  const hasYoutubeLinks = postText.match(/(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=)?[A-Za-z0-9_-]{11}/g);
-  const videoImbeds = hasYoutubeLinks ? (
-    <div className="mb-3">
-      {hasYoutubeLinks.map((link: string, index: number) => {
-        // Extract video ID from various YouTube URL formats
-        let videoId = "";
-        const ytMatch = link.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
-        if (ytMatch && ytMatch[1]) {
-          videoId = ytMatch[1];
-        }
+   // YouTube embed logic moved here so postText is in scope
+   const hasYoutubeLinks = postText.match(/(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=)?[A-Za-z0-9_-]{11}/g);
+   const videoImbeds = hasYoutubeLinks ? (
+      <div className="mb-3">
+         {hasYoutubeLinks.map((link: string, index: number) => {
+            // Extract video ID from various YouTube URL formats
+            let videoId = "";
+            const ytMatch = link.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+            if (ytMatch && ytMatch[1]) {
+               videoId = ytMatch[1];
+            }
 
-        if (!videoId) return null;
+            if (!videoId) return null;
 
-        return (
-          <div key={index} className="mb-3 aspect-w-16 aspect-h-9">
-            <iframe
-              className="w-full mx-auto min-h-[20rem] rounded-lg"
-              src={`https://www.youtube.com/embed/${videoId}`}
-              title="YouTube video player"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
-          </div>
-        );
-      })}
-    </div>
-  ) : null;
+            return (
+               <div key={index} className="mb-3 aspect-w-16 aspect-h-9">
+                  <iframe
+                     className="w-full mx-auto min-h-[20rem] rounded-lg"
+                     src={`https://www.youtube.com/embed/${videoId}`}
+                     title="YouTube video player"
+                     frameBorder="0"
+                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                     allowFullScreen
+                  ></iframe>
+               </div>
+            );
+         })}
+      </div>
+   ) : null;
 
-  // Prefer the current post's media; fallback to original (for reposts)
-  const media = useMemo(() => {
-    const here = mediaUrlsFrom(p);
-    return here.length ? here : mediaUrlsFrom(source);
-  }, [p, source]);
-  const toShow = media;
+   // Prefer the current post's media; fallback to original (for reposts)
+   const media = useMemo(() => {
+      const here = mediaUrlsFrom(p);
+      return here.length ? here : mediaUrlsFrom(source);
+   }, [p, source]);
+   const toShow = media;
 
-  return (
-    <motion.div key={p.id} id={"id-"+p._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-      <Card className="post">
-        <div className="p-3 border-b border-border dark:border-border-dark flex items-center gap-2.5 justify-between">
-          <div>
-              <UserChip
-               avatar={p.authorInfo.avatar}
-                handle={p.authorInfo.handle}
-                fullName={p.authorInfo.name}
-                onClickName={() => openProfile(p.authorHandle)} />
+   return (
+      <motion.div key={p.id} id={"id-" + p._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+         <Card className="post">
+            <div className="p-3 border-b border-border dark:border-border-dark flex items-center gap-2.5 justify-between">
+               <div>
+                  <UserChip
+                     avatar={p.authorInfo.avatar}
+                     handle={p.authorInfo.handle}
+                     fullName={p.authorInfo.name}
+                     onClickName={() => openProfile(p.authorHandle)} />
 
-            {isRepost && original && (
-              <div className="mt-1.5 ml-11 text-sub dark:text-sub-dark text-xs">
-                reposted from{" "}
-                <button
-                  className="bg-none border-none cursor-pointer p-0 text-linklike dark:text-linklike-dark hover:text-white hover:underline"
-                  onClick={() => openProfile(original.authorId)}
-                >
-                  {USERS.find(u => u.id === original.authorId)?.name ?? original.authorId}
-                </button>
-              </div>
-            )}
-          </div>
+                  {isRepost && original && (
+                     <div className="mt-1.5 ml-11 text-sub dark:text-sub-dark text-xs">
+                        reposted from{" "}
+                        <button
+                           className="bg-none border-none cursor-pointer p-0 text-linklike dark:text-linklike-dark hover:text-white hover:underline"
+                           onClick={() => openProfile(original.authorId)}
+                        >
+                           {USERS.find(u => u.id === original.authorId)?.name ?? original.authorId}
+                        </button>
+                     </div>
+                  )}
+               </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-sub dark:text-sub-dark">{formatTime(p.createdAt)}</span>
-            {/* <IconBtn
+               <div className="flex items-center gap-2">
+                  <span className="text-sm text-sub dark:text-sub-dark">{formatTime(p.createdAt)}</span>
+                  {/* <IconBtn
               icon={p.bookmarked ? BookmarkCheck : Bookmark}
               label="Bookmark"
               active={!!p.bookmarked}
               onClick={() => setPosts(prev => prev.map(x => (x.id === p.id ? { ...x, bookmarked: !x.bookmarked } : x)))}
             /> */}
-            {p.authorInfo.isCurrentUser && (
-              <IconBtn icon={Trash2} danger label="Delete" onClick={() => deletePost(p._id)} />
-            )}
-          </div>
-        </div>
+                  {p.authorInfo.isCurrentUser && (
+                     <IconBtn icon={Trash2} danger label="Delete" onClick={() => deletePost(p._id)} />
+                  )}
+               </div>
+            </div>
 
-        <div className="p-3">
-          {postText && <p className="text-lg whitespace-pre-wrap mb-3">{postText}</p>}
-          {videoImbeds}
+            <div className="p-3">
+               {postText && <p className="text-lg whitespace-pre-wrap mb-3">{postText}</p>}
+               {videoImbeds}
 
-          <Carousel urls={toShow} />
+               <Carousel urls={toShow} />
 
-          <div className="inline-flex items-center gap-3 rounded-full flex-wrap bg-muted dark:bg-muted-dark border border-border dark:border-border-dark mb-3">
-            <IconBtn
-              icon={Heart}
-              label="Like"
-              count={source.likes}
-              onClick={() => toggleLike(source._id!)}
-              active={!!source.liked}
-            />
-            {/* <IconBtn icon={Repeat} label="Repost" count={source.reposts} onClick={() => toggleRepost(source.id)} active={!!source.repostedByMe} /> */}
-            {/* <IconBtn
+               <div className="inline-flex items-center gap-3 rounded-full flex-wrap bg-muted dark:bg-muted-dark border border-border dark:border-border-dark mb-3">
+                  <IconBtn
+                     icon={Heart}
+                     label="Like"
+                     count={source.likes}
+                     onClick={() => toggleLike(source._id!)}
+                     active={!!source.liked}
+                  />
+                  {/* <IconBtn icon={Repeat} label="Repost" count={source.reposts} onClick={() => toggleRepost(source.id)} active={!!source.repostedByMe} /> */}
+                  {/* <IconBtn
               icon={MessageSquare}
               label="Comments"
               count={source.comments.length}
               onClick={() => document.getElementById(`cbox-${source._id}`)?.focus()}
             /> */}
-            {/* <IconBtn icon={Share2} label="Share" /> */}
-          </div>
+                  {/* <IconBtn icon={Share2} label="Share" /> */}
+               </div>
 
-          {user && <CommentsList post={source} onAdd={addComment} />}
-        </div>
-      </Card>
-    </motion.div>
-  );
+               {user && <CommentsList post={source} onAdd={addComment} />}
+            </div>
+         </Card>
+      </motion.div>
+   );
 }
