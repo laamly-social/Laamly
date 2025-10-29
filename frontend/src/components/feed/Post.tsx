@@ -7,7 +7,7 @@ import GenericButton from "../ui/GenericButton";
 import Carousel from "../ui/Carousel";
 import InputField from "../ui/InputField";
 import Avatar from "../ui/Avatar";
-import { Heart, Repeat, Share2, Bookmark, BookmarkCheck, Trash2, MessageSquare } from "lucide-react";
+import { Heart, Repeat, Share2, Bookmark, BookmarkCheck, Trash2, MessageSquare, Edit2, Check, X } from "lucide-react";
 import { formatTime } from "../../utils";
 import type { Post as PostType, User } from "../../types";
 import { motion } from "framer-motion";
@@ -23,6 +23,7 @@ interface PostProps {
    openProfile: (uid: string) => void;
    addComment: (postId: string, body: string) => void;
    deletePost: (id: string) => void;
+   editPost: (id: string, content: string) => void;
    user: User | null;
    /*
 
@@ -64,6 +65,7 @@ export default function Post({
    openProfile,
    addComment,
    deletePost,
+   editPost,
    toggleLike,
    toggleRepost,
    user,
@@ -75,6 +77,29 @@ export default function Post({
    const source = original ?? p;
 
    const postText = p.content || (isRepost ? original?.content || "" : "");
+
+   // State for toggling comments
+   const [showComments, setShowComments] = useState(true);
+
+   // State for editing post
+   const [isEditing, setIsEditing] = useState(false);
+   const [editedContent, setEditedContent] = useState(postText);
+
+   const handleSaveEdit = () => {
+      if (editedContent.trim() !== postText) {
+         editPost(p._id, editedContent.trim());
+         // Update local state immediately
+         setPosts(prev => prev.map(post =>
+            post._id === p._id ? { ...post, content: editedContent.trim() } : post
+         ));
+      }
+      setIsEditing(false);
+   };
+
+   const handleCancelEdit = () => {
+      setEditedContent(postText);
+      setIsEditing(false);
+   };
 
    // YouTube embed logic moved here so postText is in scope
    const hasYoutubeLinks = postText.match(/(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=)?[A-Za-z0-9_-]{11}/g);
@@ -114,9 +139,6 @@ export default function Post({
    }, [p, source]);
    const toShow = media;
 
-   // State for toggling comments
-   const [showComments, setShowComments] = useState(true);
-
    return (
       <motion.div key={p.id} id={"id-" + p._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
          <Card className="post">
@@ -149,14 +171,33 @@ export default function Post({
               active={!!p.bookmarked}
               onClick={() => setPosts(prev => prev.map(x => (x.id === p.id ? { ...x, bookmarked: !x.bookmarked } : x)))}
             /> */}
-                  {p.authorInfo.isCurrentUser && (
-                     <IconBtn icon={Trash2} className="hover:bg-red-600 hover:text-white hover:!text-red-600" danger label="Delete" onClick={() => deletePost(p._id)} />
+                  {p.authorInfo.isCurrentUser && !isEditing && (
+                     <>
+                        <IconBtn icon={Edit2} label="Edit" onClick={() => setIsEditing(true)} />
+                        <IconBtn icon={Trash2} className="hover:bg-red-600" danger label="Delete" onClick={() => deletePost(p._id)} />
+                     </>
+                  )}
+                  {p.authorInfo.isCurrentUser && isEditing && (
+                     <>
+                        <IconBtn icon={Check} label="Save" onClick={handleSaveEdit} />
+                        <IconBtn icon={X} label="Cancel" onClick={handleCancelEdit} />
+                     </>
                   )}
                </div>
             </div>
 
             <div className="p-3">
-               {postText && <p className="text-lg whitespace-pre-wrap mb-3">{postText}</p>}
+               {isEditing ? (
+                  <textarea
+                     className="w-full text-lg p-2 rounded border border-border dark:border-border-dark bg-bg dark:bg-bg-dark text-fg dark:text-fg-dark mb-3"
+                     value={editedContent}
+                     onChange={(e) => setEditedContent(e.target.value)}
+                     rows={Math.max(3, editedContent.split('\n').length)}
+                     autoFocus
+                  />
+               ) : (
+                  postText && <p className="text-lg whitespace-pre-wrap mb-3">{postText}</p>
+               )}
                {videoImbeds}
 
                <Carousel urls={toShow} />

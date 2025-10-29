@@ -139,6 +139,31 @@ router.get('/getMedia', async (req, res) => {
    }
 });
 
+// Edit post
+router.post('/edit', async (req, res) => {
+   try {
+      if (!req.session.user) return res.status(401).json({ message: 'You need to be logged in to edit posts' });
+      const postId = req.body.id || req.body.postId;
+      const newContent = req.body.content;
+      
+      if (!postId) return res.status(400).json({ message: 'Missing post id' });
+      if (newContent === undefined) return res.status(400).json({ message: 'Missing content' });
+
+      const post = await Post.findById(postId);
+      if (!post) return res.status(404).json({ message: 'Post not found' });
+      if (String(post.author) !== String(req.session.user.id)) {
+         return res.status(403).json({ message: 'You can only edit your own posts' });
+      }
+
+      post.content = newContent;
+      await post.save();
+      return res.json({ message: 'Post edited successfully', postId, content: newContent });
+   } catch (err) {
+      console.error('POST /posts/edit failed:', err);
+      return res.status(500).json({ message: 'Failed to edit post' });
+   }
+});
+
 // Delete post
 router.post('/delete', async (req, res) => {
    try {

@@ -116,3 +116,20 @@ export async function togglePostLike(postId: string): Promise<{ liked: boolean; 
   if (!res.ok) throw new Error((data as any)?.message || `Failed to toggle like: ${res.status}`);
   return data;
 }
+
+/** Edit a post by ID on the backend */
+export async function editPost(postId: string, content: string): Promise<{ message: string; postId: string; content: string }> {
+   const res = await fetch(apiEndpoint("/posts/edit"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+         id: postId,
+         content: content
+      })
+   });
+   const ct = res.headers.get("content-type") || "";
+   const data = ct.includes("application/json") ? await res.json() : { message: await res.text() };
+   if (!res.ok) throw new Error((data as any)?.message || `Edit failed: ${res.status}`);
+   return data;
+}

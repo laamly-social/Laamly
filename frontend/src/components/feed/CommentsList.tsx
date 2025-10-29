@@ -58,9 +58,10 @@ export default function CommentsList({ post, user, onAdd, showList = true }: { p
       }
    };
 
-   if (comments.length === 0 && !onAdd) return "<div></div>";
    return (
-      <div className="grid gap-2.5">
+      <>
+      {comments.length > 0 ?
+         <div className="grid gap-2.5">
          {showList && (
            <div className="bg-muted dark:bg-muted-dark rounded-xl border border-border dark:border-border-dark">
               {comments.map((c, idx) => {
@@ -89,30 +90,43 @@ export default function CommentsList({ post, user, onAdd, showList = true }: { p
               })}
            </div>
          )}
-         {user && (
-            <div className="flex gap-2">
-               <InputField
-                  id={`cbox-${post._id}`}
-                  className="input bg-muted dark:bg-muted-dark"
-                  placeholder="Write a comment…"
-                  value={draft}
-                  onChange={e => setDraft(e.target.value)}
-                  onKeyDown={e => {
-                     if (e.key === "Enter") {
-                        e.preventDefault();
-                        addComment();
-                     }
-                  }}
-               />
-               <GenericButton
-                  className="inline-flex gap-2 items-center justify-center h-9 px-3 bg-accent text-white cursor-pointer disabled:bg-muted disabled:dark:bg-muted-dark disabled:text-sub dark:disabled:text-sub-dark"
-                  disabled={!draft.trim()}
-                  onClick={addComment}
-               >
-                  Post
-               </GenericButton>
-            </div>
-         )}
+         <CreateComment onAdd={(body) => onAdd?.(post._id!, body)} postId={post._id} draft={draft} addComment={addComment} user={user} />
       </div>
+      :
+      <CreateComment onAdd={(body) => onAdd?.(post._id!, body)} postId={post._id} draft={draft} addComment={addComment} user={user} />
+
+}
+      </>
+   );
+}
+
+function CreateComment({ onAdd, postId, draft, addComment, user }: { onAdd?: (body: string) => void }) {
+   return (
+      <>
+      {user && (
+         <div className="flex gap-2">
+            <InputField
+               id={`cbox-${postId}`}
+               className="input bg-muted dark:bg-muted-dark"
+               placeholder="Write a comment…"
+               value={draft}
+               onChange={e => setDraft(e.target.value)}
+               onKeyDown={e => {
+                  if (e.key === "Enter") {
+                     e.preventDefault();
+                     addComment();
+                  }
+               }}
+            />
+            <GenericButton
+               className="inline-flex gap-2 items-center justify-center h-9 px-3 bg-accent text-white cursor-pointer disabled:bg-muted disabled:dark:bg-muted-dark disabled:text-sub dark:disabled:text-sub-dark"
+               disabled={!draft.trim()}
+               onClick={addComment}
+            >
+               Post
+            </GenericButton>
+         </div>
+      )}
+      </>
    );
 }

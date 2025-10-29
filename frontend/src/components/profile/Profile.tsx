@@ -206,8 +206,10 @@ export default function Profile(props: {
                      openProfile={openProfile}
                      addComment={() => { }}
                      deletePost={() => { }}
+                     editPost={() => { }}
                      toggleLike={() => { }}
                      toggleRepost={() => { }}
+                     user={user}
                   />
                ))}
 
@@ -230,8 +232,10 @@ export default function Profile(props: {
                      openProfile={openProfile}
                      addComment={() => { }}
                      deletePost={() => { }}
+                     editPost={() => { }}
                      toggleLike={() => { }}
                      toggleRepost={() => { }}
+                     user={user}
                   />
                ))}
 
@@ -254,8 +258,10 @@ export default function Profile(props: {
                      openProfile={openProfile}
                      addComment={() => { }}
                      deletePost={() => { }}
+                     editPost={() => { }}
                      toggleLike={() => { }}
                      toggleRepost={() => { }}
+                     user={user}
                   />
                ))}
 
@@ -278,8 +284,10 @@ export default function Profile(props: {
                      openProfile={openProfile}
                      addComment={() => { }}
                      deletePost={() => { }}
+                     editPost={() => { }}
                      toggleLike={() => { }}
                      toggleRepost={() => { }}
+                     user={user}
                   />
                ))}
 

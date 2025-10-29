@@ -9,7 +9,7 @@ import PostComponent from "./Post";
 import CreatePost from "./CreatePost";
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchAllPosts, deletePost as deletePostApi, togglePostLike } from "../../utils/posts";
+import { fetchAllPosts, deletePost as deletePostApi, togglePostLike, editPost as editPostApi } from "../../utils/posts";
 
 export default function HomeFeed({
    meId,
@@ -97,6 +97,17 @@ export default function HomeFeed({
       }
    };
 
+   const editPost = async (id: string, content: string) => {
+      try {
+         await editPostApi(id, content);
+         // The local state is already updated in Post component
+      } catch (e) {
+         alert("Failed to edit post: " + (e instanceof Error ? e.message : e));
+         // Revert changes by refetching
+         setPosts(await fetchAllPosts());
+      }
+   };
+
    const sortedPosts = useMemo(() => {
       return [...posts].sort((a, b) =>
          sort === "latest"
@@ -128,6 +139,7 @@ export default function HomeFeed({
                      openProfile={openProfile}
                      addComment={addComment}
                      deletePost={deletePost}
+                     editPost={editPost}
                      toggleLike={toggleLike}
                      toggleRepost={toggleRepost}
                      user={user}
