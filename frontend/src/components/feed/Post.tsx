@@ -177,7 +177,7 @@ export default function Post({
                   />
                </div>
 
-               {user && showComments && <CommentsList post={source} onAdd={addComment} />}
+               {showComments && <CommentsList post={source} user={user} onAdd={addComment} />}
             </div>
          </Card>
       </motion.div>

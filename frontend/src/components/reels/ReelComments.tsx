@@ -6,7 +6,7 @@ import InputField from "../ui/InputField";
 import GenericButton from "../ui/GenericButton";
 import UserChip from "../ui/UserChip";
 
-export default function ReelComments({ reel, onAdd }: { reel: any; onAdd?: (reelId: string, body: string) => void }) {
+export default function ReelComments({ reel, user, onAdd }: { reel: any; user: Any; onAdd?: (reelId: string, body: string) => void }) {
   const [draft, setDraft] = useState("");
   const [comments, setComments] = useState(() => {
     return (reel.comments || []).map((c: any) => ({
@@ -77,7 +77,7 @@ export default function ReelComments({ reel, onAdd }: { reel: any; onAdd?: (reel
         })}
       </div>
 
-      <div className="flex gap-2">
+      {user && (<div className="flex gap-2">
         <InputField
           id={`rcbox-${reel.id}`}
           className="input bg-muted dark:bg-muted-dark"
@@ -98,7 +98,7 @@ export default function ReelComments({ reel, onAdd }: { reel: any; onAdd?: (reel
         >
           Post
         </GenericButton>
-      </div>
+      </div>)}
     </div>
   );
 }

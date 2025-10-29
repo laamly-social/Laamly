@@ -20,9 +20,11 @@ type PanelMode = "composer" | "comments" | null;
 export default function Reels({
   reels,
   setReels,
+  user,
 }: {
   reels: ReelType[];
   setReels: React.Dispatch<React.SetStateAction<ReelType[]>>;
+  user: any;
 }) {
   // Floating panel (composer / comments)
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
@@ -214,8 +216,13 @@ export default function Reels({
   const toggleComments = (r: ReelType) => {
     setPanelFor((prev) => {
       const same = prev?.id === r.id;
-      setPanelMode((m) => (m === "comments" && same ? null : "comments"));
-      return same ? null : r;
+      if (panelMode === "comments" && same) {
+        setPanelMode(null);
+        return null;
+      } else {
+        setPanelMode("comments");
+        return r;
+      }
     });
   };
 
@@ -308,6 +315,7 @@ export default function Reels({
             onSave={onSave}
             toggleComments={toggleComments}
             onDelete={onDelete}
+            user={user}
           />
         ))}
       </div>
@@ -377,6 +385,7 @@ export default function Reels({
                   {/* ✅ Comments panel */}
                   <ReelComments
                     reel={panelFor}
+                    user={user}
                     onAdd={async () => {
                       // Refresh list so the parent feed reflects the new comment count + authorInfo
                       setReels(await fetchAllReels());

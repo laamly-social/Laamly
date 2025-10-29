@@ -99,6 +99,7 @@ export default function App({ initialData }: AppProps) {
                         setReels={setReels}
                         toggleReelLike={toggleReelLike}
                         toggleReelSave={toggleReelSave}
+                        user={initialData.user}
                      />
                   } />
                   <Route path="/media" element={<MediaGallery items={mediaItems} />} />

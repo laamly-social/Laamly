@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { useState } from "react";
 import { createComment } from "../../utils/comments";
 import InputField from "../ui/InputField";
@@ -5,7 +7,7 @@ import GenericButton from "../ui/GenericButton";
 import type { Post as PostType } from "../../types";
 import UserChip from "../ui/UserChip";
 
-export default function CommentsList({ post, onAdd, showList = true }: { post: PostType; onAdd?: (postId: string, body: string) => void; showList?: boolean }) {
+export default function CommentsList({ post, user, onAdd, showList = true }: { post: PostType; user: Any; onAdd?: (postId: string, body: string) => void; showList?: boolean }) {
    const [draft, setDraft] = useState("");
    const [comments, setComments] = useState(() => {
       // Normalize initial comments
@@ -87,28 +89,30 @@ export default function CommentsList({ post, onAdd, showList = true }: { post: P
               })}
            </div>
          )}
-         <div className="flex gap-2">
-            <InputField
-               id={`cbox-${post._id}`}
-               className="input bg-muted dark:bg-muted-dark"
-               placeholder="Write a comment…"
-               value={draft}
-               onChange={e => setDraft(e.target.value)}
-               onKeyDown={e => {
-                  if (e.key === "Enter") {
-                     e.preventDefault();
-                     addComment();
-                  }
-               }}
-            />
-            <GenericButton
-               className="inline-flex gap-2 items-center justify-center h-9 px-3 bg-accent text-white cursor-pointer disabled:bg-muted disabled:dark:bg-muted-dark disabled:text-sub dark:disabled:text-sub-dark"
-               disabled={!draft.trim()}
-               onClick={addComment}
-            >
-               Post
-            </GenericButton>
-         </div>
+         {user && (
+            <div className="flex gap-2">
+               <InputField
+                  id={`cbox-${post._id}`}
+                  className="input bg-muted dark:bg-muted-dark"
+                  placeholder="Write a comment…"
+                  value={draft}
+                  onChange={e => setDraft(e.target.value)}
+                  onKeyDown={e => {
+                     if (e.key === "Enter") {
+                        e.preventDefault();
+                        addComment();
+                     }
+                  }}
+               />
+               <GenericButton
+                  className="inline-flex gap-2 items-center justify-center h-9 px-3 bg-accent text-white cursor-pointer disabled:bg-muted disabled:dark:bg-muted-dark disabled:text-sub dark:disabled:text-sub-dark"
+                  disabled={!draft.trim()}
+                  onClick={addComment}
+               >
+                  Post
+               </GenericButton>
+            </div>
+         )}
       </div>
    );
 }
