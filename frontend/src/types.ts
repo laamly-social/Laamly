@@ -85,4 +85,17 @@ export type Reel = {
   saved?: boolean;
 };
 
+export type Notification = {
+  id: string;
+  type: 'like' | 'comment' | 'message' | 'reply';
+  from: string; // githubId of the person who triggered the notification
+  fromName: string;
+  fromAvatar: string;
+  contentId: string; // postId, reelId, or threadId
+  contentType: 'post' | 'reel' | 'message' | 'comment';
+  message: string;
+  read: boolean;
+  createdAt: number;
+};
+
 export type Tab = "home" | "messages" | "reels" | "media" | "profile";

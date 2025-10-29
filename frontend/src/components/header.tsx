@@ -1,10 +1,14 @@
 
 import { useLocation } from "react-router-dom";
+import { useState } from "react";
 import type { User } from "../types";
 import TabBtn from "./nav/TabBtn";
-import { Image as ImageIcon, Home, PlayCircle as PlayTab, Github, Podcast, MessageSquare } from "lucide-react";
+import { Image as ImageIcon, Home, PlayCircle as PlayTab, Github, Podcast, MessageSquare, Bell } from "lucide-react";
 import Avatar from "./ui/Avatar";
 import { API_URL } from "../config";
+import NotificationBell from "./notifications/NotificationBell";
+import NotificationBadge from "./notifications/NotificationBadge";
+import { NotificationsList } from "./notifications/NotificationsList";
 
 interface HeaderProps {
    openProfile: (uid: string) => void;
@@ -15,6 +19,7 @@ interface HeaderProps {
 
 export function Header({ openProfile, githubClientId, user }: HeaderProps) {
    const location = useLocation();
+   const [showNotifications, setShowNotifications] = useState(false);
 
    const redirectUri = encodeURIComponent(`${API_URL}/auth/github`);
    const githubAuthUrl = githubClientId
@@ -49,11 +54,26 @@ export function Header({ openProfile, githubClientId, user }: HeaderProps) {
                </div>
                {/* BOTTOM: User Profile */}
                <div className="flex flex-col items-center space-y-4">
-                  {user && (
-                     <div className="w-full px-4">
-                        <TabBtn icon={ImageIcon} label="Media" active={location.pathname === "/media"} to="/media" />
-                     </div>
-                  )}
+                  <div className="flex">
+                     {user && (
+                        <div className="w-full px-1">
+                           <TabBtn icon={ImageIcon} label="Media" active={location.pathname === "/media"} to="/media" />
+                        </div>
+                     )}
+                     {user && (
+                        <span
+                           onClick={() => setShowNotifications(!showNotifications)}
+                           className={`relative flex items-center gap-1 px-2 py-2 rounded-xl transition-colors ${showNotifications
+                              ? "bg-accent text-white"
+                              : "hover:bg-gray-200 dark:hover:bg-gray-700 text-text dark:text-text-dark"
+                              }`}
+                        >
+                           <Bell size={20} />
+                           <span className="absolute -right-1.5 -top-1"><NotificationBadge /></span>
+                        </span>
+                     )}
+                  </div>
+
 
 
                   {user && user.name ? (
@@ -98,7 +118,28 @@ export function Header({ openProfile, githubClientId, user }: HeaderProps) {
                   )}
                </div>
             </div>
+            {/* Notifications Popup Panel */}
+            {showNotifications && user && (
+               <>
+                  <div className="absolute bottom-0 left-[105%] h-full w-[25rem] bg-bg dark:bg-bg-dark py-4 border border-border dark:border-border-dark rounded-xl z-[100] flex flex-col">
+                     <div className="mx-4">
+                        <button
+                           onClick={() => setShowNotifications(false)}
+                           className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl float-right"
+                        >
+                           ×
+                        </button>
+                     </div>
+
+                     <div className="flex-1 overflow-hidden">
+                        <NotificationsList />
+                     </div>
+                  </div>
+               </>
+            )}
          </header>
+
+
 
          {/* Mobile Bottom Navigation - Visible only on mobile */}
          <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#eeeeee] dark:bg-[#111111] border-t border-border dark:border-border-dark"
@@ -137,6 +178,19 @@ export function Header({ openProfile, githubClientId, user }: HeaderProps) {
                >
                   <Podcast size={24} />
                </a>
+
+               {user && (
+                  <a
+                     href="/notifications"
+                     className={`flex items-center justify-center p-2 rounded-lg transition ${
+                        location.pathname === "/notifications"
+                           ? "text-accent"
+                           : "text-text dark:text-text-dark"
+                     }`}
+                  >
+                     <NotificationBell />
+                  </a>
+               )}
 
                {user && (
                   <a

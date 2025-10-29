@@ -3,6 +3,7 @@ const router = express.Router();
 
 const User = require('../models/User');
 const Chat = require('../models/Chat');
+const { sendNotification } = require('../utils/notifications');
 
 module.exports = function createMessagesRouter(io, userSockets) {
 
@@ -169,6 +170,21 @@ module.exports = function createMessagesRouter(io, userSockets) {
             if (!senderSocketIds.has(socket.id)) {
                socket.emit('new-message', messageData);
             }
+         }
+
+         // Send notifications to other members
+         const otherMembers = chat.members.filter(memberId => memberId !== userId);
+         for (const memberId of otherMembers) {
+            await sendNotification(io, userSockets, {
+               to: memberId,
+               type: 'message',
+               from: userId,
+               fromName: sender?.profile?.name || sender?.handle || 'Someone',
+               fromAvatar: sender?.profile?.avatar || '',
+               contentId: threadId,
+               contentType: 'message',
+               message: `${sender?.profile?.name || sender?.handle || 'Someone'} sent you a message`
+            });
          }
 
          res.json({ message: 'Message sent', messageId: savedMessage._id, attachments: attachments || [] });

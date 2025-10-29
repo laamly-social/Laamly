@@ -3,6 +3,9 @@ const router = express.Router();
 
 const User = require('../models/User');
 const Reel = require('../models/Reel');
+const { sendNotification } = require('../utils/notifications');
+
+module.exports = function createReelsRouter(io, userSockets) {
 
 // Create reel
 router.post('/create', async (req, res) => {
@@ -82,9 +85,26 @@ router.post('/toggle-like', async (req, res) => {
       if (!reel) return res.status(404).json({ message: 'Reel not found' });
 
       const set = new Set(reel.likedBy?.map(String) || []);
-      set.has(uid) ? set.delete(uid) : set.add(uid);
+      const wasLiked = set.has(uid);
+      wasLiked ? set.delete(uid) : set.add(uid);
       reel.likedBy = Array.from(set);
       await reel.save();
+
+      // Send notification if liked (not unliked)
+      if (!wasLiked) {
+         const currentUser = await User.findOne({ githubId: uid }).lean();
+         await sendNotification(io, userSockets, {
+            to: String(reel.author),
+            type: 'like',
+            from: uid,
+            fromName: currentUser?.profile?.name || currentUser?.handle || 'Someone',
+            fromAvatar: currentUser?.profile?.avatar || '',
+            contentId: id,
+            contentType: 'reel',
+            message: `${currentUser?.profile?.name || currentUser?.handle || 'Someone'} liked your reel`
+         });
+      }
+
       res.json({ liked: set.has(uid), likes: reel.likedBy.length });
    } catch (e) {
       console.error('POST /reels/toggle-like error:', e);
@@ -156,6 +176,18 @@ router.post('/comments/create', async (req, res) => {
          profile: user.profile
       } : null;
 
+      // Send notification to reel author
+      await sendNotification(io, userSockets, {
+         to: String(reel.author),
+         type: 'comment',
+         from: String(req.session.user.id),
+         fromName: user?.profile?.name || user?.handle || 'Someone',
+         fromAvatar: user?.profile?.avatar || '',
+         contentId: reelId,
+         contentType: 'reel',
+         message: `${user?.profile?.name || user?.handle || 'Someone'} commented on your reel`
+      });
+
       return res.json({ message: 'Comment added', currentUser: currentUserInfo });
    } catch (e) {
       console.error('POST /reels/comments/create failed:', e);
@@ -163,4 +195,5 @@ router.post('/comments/create', async (req, res) => {
    }
 });
 
-module.exports = router;
+return router;
+};

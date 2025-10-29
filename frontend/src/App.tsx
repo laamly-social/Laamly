@@ -9,6 +9,7 @@ import Reels from "./components/reels/Reels";
 import MediaGallery from "./components/media/MediaGallery";
 import Profile from "./components/profile/Profile";
 import Podcasts from "./components/podcasts/Podcasts";
+import NotificationsPage from "./components/notifications/NotificationsPage";
 import { Header } from "./components/header";
 
 interface AppProps {
@@ -51,7 +52,7 @@ export default function App({ initialData }: AppProps) {
 
    return (
       <div className="min-h-screen bg-bg dark:bg-bg-dark md:grid md:grid-cols-[12rem_auto]">
-         <div className="hidden md:block h-[100vh] sticky top-0 p-2 w-full">
+         <div className="hidden md:block h-[100vh] sticky top-0 p-2 w-full z-1">
             <Header
                openProfile={openProfile}
                githubClientId={initialData.githubClientId}
@@ -68,7 +69,7 @@ export default function App({ initialData }: AppProps) {
             />
          </div>
 
-         <div className={`w-full flex flex-col ${isReelsPage ? 'h-screen overflow-hidden' : 'min-h-screen pb-20 md:pb-0'}`}>
+         <div className={`w-full flex flex-col relative z-0 ${isReelsPage ? 'h-screen overflow-hidden' : 'min-h-screen pb-20 md:pb-0'}`}>
             <main className={`mx-auto w-full ${isReelsPage ? 'h-full p-0' : 'max-w-full px-0'}`}>
                <Routes>
                   <Route path="/" element={<Navigate to="/home" replace />} />
@@ -98,6 +99,7 @@ export default function App({ initialData }: AppProps) {
                   } />
                   <Route path="/media" element={<MediaGallery items={mediaItems} />} />
                   <Route path="/podcasts" element={<Podcasts />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
                   <Route path="/profile/:userId" element={
                      <Profile
                         userId={initialData.user?.id || profileUserId || ""}

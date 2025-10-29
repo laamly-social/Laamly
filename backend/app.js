@@ -292,12 +292,12 @@ app.get("/github/login", (req, res) => {
 });
 
 // Mount posts routes
-const postsRouter = require('./routes/posts');
+const postsRouter = require('./routes/posts')(io, userSockets);
 app.use('/posts', postsRouter);
 
 // --- Reels ---
 // Mount reels routes
-const reelsRouter = require('./routes/reels');
+const reelsRouter = require('./routes/reels')(io, userSockets);
 app.use('/reels', reelsRouter);
 
 // --- User search for messages ---
@@ -338,6 +338,10 @@ app.get("/api/users/search", async (req, res) => {
 // Mount messages routes (moved to separate file)
 const messagesRouter = require('./routes/messages')(io, userSockets);
 app.use('/api/messages', messagesRouter);
+
+// Mount notifications routes
+const notificationsRouter = require('./routes/notifications');
+app.use('/api/notifications', notificationsRouter);
 
 // ---------- Start server AFTER DB is reachable ----------
 (async () => {

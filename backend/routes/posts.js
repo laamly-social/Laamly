@@ -4,6 +4,9 @@ const router = express.Router();
 // Models (expect the app to have these in node's resolution path)
 const User = require('../models/User');
 const Post = require('../models/Post');
+const { sendNotification } = require('../utils/notifications');
+
+module.exports = function createPostsRouter(io, userSockets) {
 
 // Toggle like
 router.post('/toggle-like', async (req, res) => {
@@ -36,6 +39,19 @@ router.post('/toggle-like', async (req, res) => {
          likedBySet.add(userId);
          post.likedBy = Array.from(likedBySet);
          await User.updateOne({ githubId: userId }, { $addToSet: { likedPostIds: post._id } });
+
+         // Send notification to post author
+         const currentUser = await User.findOne({ githubId: userId }).lean();
+         await sendNotification(io, userSockets, {
+            to: String(post.author),
+            type: 'like',
+            from: userId,
+            fromName: currentUser?.profile?.name || currentUser?.handle || 'Someone',
+            fromAvatar: currentUser?.profile?.avatar || '',
+            contentId: postId,
+            contentType: 'post',
+            message: `${currentUser?.profile?.name || currentUser?.handle || 'Someone'} liked your post`
+         });
       }
 
       await post.save();
@@ -72,6 +88,18 @@ router.post('/comments/create', async (req, res) => {
          avatar: user.profile?.avatar || '',
          profile: user.profile
       } : null;
+
+      // Send notification to post author
+      await sendNotification(io, userSockets, {
+         to: String(post.author),
+         type: 'comment',
+         from: String(req.session.user.id),
+         fromName: user?.profile?.name || user?.handle || 'Someone',
+         fromAvatar: user?.profile?.avatar || '',
+         contentId: postId,
+         contentType: 'post',
+         message: `${user?.profile?.name || user?.handle || 'Someone'} commented on your post`
+      });
 
       return res.json({ message: 'Comment added', currentUser: currentUserInfo });
    } catch (e) {
@@ -208,4 +236,5 @@ router.get('/get-all', async (req, res) => {
    }
 });
 
-module.exports = router;
+return router;
+};
