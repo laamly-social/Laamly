@@ -11,6 +11,7 @@ import Profile from "./components/profile/Profile";
 import Podcasts from "./components/podcasts/Podcasts";
 import NotificationsPage from "./components/notifications/NotificationsPage";
 import { Header } from "./components/header";
+import { useAuthCheck } from "./hooks/useAuthCheck";
 
 interface AppProps {
    initialData: {
@@ -22,6 +23,9 @@ interface AppProps {
 export default function App({ initialData }: AppProps) {
    const location = useLocation();
    const navigate = useNavigate();
+
+   // Periodically check if user is still authenticated
+   useAuthCheck(initialData.user?.id, 15000);
 
    const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
