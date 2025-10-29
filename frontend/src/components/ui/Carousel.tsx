@@ -46,14 +46,14 @@ const Carousel = ({ urls }) => {
          return (
             <>
                <img className="absolute inset-0 w-full h-full object-cover filter blur-lg scale-110 z-0 opacity-75 dark:opacity-25" src={url} alt="blurred background" />
-               <img className="relative max-w-full max-h-full z-10 shadow" src={url} alt="media content" />
+               <img className="relative max-w-full h-full max-h-full z-10 shadow" src={url} alt="media content" />
             </>
          );
       }
    };
 
    return (
-      <div className="my-2 bg-farther-light dark:bg-farther-dark rounded-xl overflow-hidden relative">
+      <div className="my-2 rounded-xl overflow-hidden relative">
          {/* This div holds all the slides and moves left/right based on the `current` state */}
          <div
             className="flex transition-transform duration-300 ease-in-out"
