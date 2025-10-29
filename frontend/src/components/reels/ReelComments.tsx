@@ -67,7 +67,7 @@ export default function ReelComments({ reel, onAdd }: { reel: any; onAdd?: (reel
                     fullName={u?.name ?? c.author}
                   />
                   <span className="opacity-[.75]">
-                    {c.ts ? new Date(c.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+                    {timeBetween(new Date(c.ts)) + " ago"}
                   </span>
                 </div>
                 <div className="mt-1 ml-13 mb-1 whitespace-pre-wrap">{c.text}</div>

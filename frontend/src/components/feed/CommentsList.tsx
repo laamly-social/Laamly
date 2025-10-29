@@ -5,7 +5,7 @@ import GenericButton from "../ui/GenericButton";
 import type { Post as PostType } from "../../types";
 import UserChip from "../ui/UserChip";
 
-export default function CommentsList({ post, onAdd }: { post: PostType; onAdd?: (postId: string, body: string) => void }) {
+export default function CommentsList({ post, onAdd, showList = true }: { post: PostType; onAdd?: (postId: string, body: string) => void; showList?: boolean }) {
    const [draft, setDraft] = useState("");
    const [comments, setComments] = useState(() => {
       // Normalize initial comments
@@ -59,33 +59,34 @@ export default function CommentsList({ post, onAdd }: { post: PostType; onAdd?: 
    if (comments.length === 0 && !onAdd) return "<div></div>";
    return (
       <div className="grid gap-2.5">
-         <div className="bg-muted dark:bg-muted-dark rounded-xl border border-border dark:border-border-dark">
-            {comments.map((c, idx) => {
-               const u = (c as any).authorInfo;
-               if (u?.deleted) { return (<div key={c._id || idx}></div>); }
-               const isLast = idx === comments.length - 1;
-               return (
-                  <div key={c._id || idx} className="flex gap-2">
-                     <div className={`comment ${isLast ? '' : 'border-b'} border-border dark:border-border-dark flex-1 px-6 py-4`}>
-                        <div className="flex justify-between text-text dark:text-text-dark text-xs mb-1">
-                           <div>
-                              <UserChip
-                                 avatar={u?.avatar}
-                                 handle={u?.handle ?? c.author}
-                                 fullName={u?.name ?? c.author}
-                              />
-                           </div>
-                           <span className="opacity-[.75]">
-                              {c.ts ? new Date(c.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
-                           </span>
-                        </div>
-                        <div className="mt-1 ml-13 mb-1 whitespace-pre-wrap">{c.text}</div>
-                     </div>
-                  </div>
-               );
-            })}
-         </div>
-
+         {showList && (
+           <div className="bg-muted dark:bg-muted-dark rounded-xl border border-border dark:border-border-dark">
+              {comments.map((c, idx) => {
+                 const u = (c as any).authorInfo;
+                 if (u?.deleted) { return (<div key={c._id || idx}></div>); }
+                 const isLast = idx === comments.length - 1;
+                 return (
+                    <div key={c._id || idx} className="flex gap-2">
+                       <div className={`comment ${isLast ? '' : 'border-b'} border-border dark:border-border-dark flex-1 px-6 py-4`}>
+                          <div className="flex justify-between text-text dark:text-text-dark text-xs mb-1">
+                             <div>
+                                <UserChip
+                                   avatar={u?.avatar}
+                                   handle={u?.handle ?? c.author}
+                                   fullName={u?.name ?? c.author}
+                                />
+                             </div>
+                             <span className="opacity-[.75]">
+                                {timeBetween(new Date(c.ts)) + " ago"}
+                             </span>
+                          </div>
+                          <div className="mt-1 ml-13 mb-1 whitespace-pre-wrap">{c.text}</div>
+                       </div>
+                    </div>
+                 );
+              })}
+           </div>
+         )}
          <div className="flex gap-2">
             <InputField
                id={`cbox-${post._id}`}

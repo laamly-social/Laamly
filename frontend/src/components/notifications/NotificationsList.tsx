@@ -131,7 +131,7 @@ export function NotificationsList() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-muted dark:border-mted-dark flex items-center justify-between">
+      <div className="p-4 border-b border-muted dark:border-muted-dark flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-bold">Notifications</h2>
           {unreadCount > 0 && (
@@ -193,7 +193,7 @@ export function NotificationsList() {
                     e.stopPropagation();
                     handleMarkAsRead(notification.id);
                   }}
-                  className="text-xs bg-blue-400 dark:bg-blue-800 text-white h-[1rem] w-[1rem] rounded-full flex justify-center items-center"
+                  className="text-xs bg-blue-400 dark:bg-blue-800 text-white h-[1rem] w-[1rem] rounded-full flex justify-center items-center hover:scale-125 transition"
                   title="Mark as read"
                 >
                   ✓
@@ -205,7 +205,7 @@ export function NotificationsList() {
                   e.stopPropagation();
                   handleDelete(notification.id);
                 }}
-                className="text-xs bg-red-400 dark:bg-red-800 text-white h-[1rem] w-[1rem] rounded-full flex justify-center items-center"
+                className="text-xs bg-red-400 dark:bg-red-800 text-white h-[1rem] w-[1rem] rounded-full flex justify-center items-center hover:scale-125 transition"
                 title="Delete"
               >
                 ×

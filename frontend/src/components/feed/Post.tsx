@@ -107,11 +107,15 @@ export default function Post({
    ) : null;
 
    // Prefer the current post's media; fallback to original (for reposts)
+
    const media = useMemo(() => {
       const here = mediaUrlsFrom(p);
       return here.length ? here : mediaUrlsFrom(source);
    }, [p, source]);
    const toShow = media;
+
+   // State for toggling comments
+   const [showComments, setShowComments] = useState(true);
 
    return (
       <motion.div key={p.id} id={"id-" + p._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
@@ -138,7 +142,7 @@ export default function Post({
                </div>
 
                <div className="flex items-center gap-2">
-                  <span className="text-sm text-sub dark:text-sub-dark">{formatTime(p.createdAt)}</span>
+                  <span className="text-sm text-sub dark:text-sub-dark">{timeBetween(p.createdAt) + " ago"}</span>
                   {/* <IconBtn
               icon={p.bookmarked ? BookmarkCheck : Bookmark}
               label="Bookmark"
@@ -146,7 +150,7 @@ export default function Post({
               onClick={() => setPosts(prev => prev.map(x => (x.id === p.id ? { ...x, bookmarked: !x.bookmarked } : x)))}
             /> */}
                   {p.authorInfo.isCurrentUser && (
-                     <IconBtn icon={Trash2} danger label="Delete" onClick={() => deletePost(p._id)} />
+                     <IconBtn icon={Trash2} className="hover:bg-red-600 hover:text-white hover:!text-red-600" danger label="Delete" onClick={() => deletePost(p._id)} />
                   )}
                </div>
             </div>
@@ -157,7 +161,7 @@ export default function Post({
 
                <Carousel urls={toShow} />
 
-               <div className="inline-flex items-center gap-3 rounded-full flex-wrap bg-muted dark:bg-muted-dark border border-border dark:border-border-dark mb-3">
+               <div className="inline-flex items-center gap-1 rounded-full flex-wrap bg-muted dark:bg-muted-dark border border-border dark:border-border-dark mb-3">
                   <IconBtn
                      icon={Heart}
                      label="Like"
@@ -165,17 +169,15 @@ export default function Post({
                      onClick={() => toggleLike(source._id!)}
                      active={!!source.liked}
                   />
-                  {/* <IconBtn icon={Repeat} label="Repost" count={source.reposts} onClick={() => toggleRepost(source.id)} active={!!source.repostedByMe} /> */}
-                  {/* <IconBtn
-              icon={MessageSquare}
-              label="Comments"
-              count={source.comments.length}
-              onClick={() => document.getElementById(`cbox-${source._id}`)?.focus()}
-            /> */}
-                  {/* <IconBtn icon={Share2} label="Share" /> */}
+                  <IconBtn
+                     icon={MessageSquare}
+                     label="Comments"
+                     count={source.comments.length}
+                     onClick={() => setShowComments(v => !v)}
+                  />
                </div>
 
-               {user && <CommentsList post={source} onAdd={addComment} />}
+               {user && showComments && <CommentsList post={source} onAdd={addComment} />}
             </div>
          </Card>
       </motion.div>
