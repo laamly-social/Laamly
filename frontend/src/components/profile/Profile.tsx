@@ -5,6 +5,7 @@ import GenericButton from "../ui/GenericButton";
 import Chip from "../ui/Chip";
 import Card from "../ui/Card";
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { ChevronLeft, Calendar, Link as LinkIcon, MapPin } from "lucide-react";
 import { clsx } from "../../utils";
 import UserChip from "../ui/UserChip";
@@ -13,7 +14,6 @@ import PostComponent from "../feed/Post";
 import { apiEndpoint } from "../../config";
 
 export default function Profile(props: {
-   userId: string;
    meId: string;
    posts: Post[];
    setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
@@ -23,7 +23,8 @@ export default function Profile(props: {
    openProfile: (uid: string) => void;
    onBack: () => void;
 }) {
-   const { userId, meId, posts, followMap, followToggle, reels, openProfile, onBack } = props;
+   const { userId } = useParams<{ userId: string }>();
+   const { meId, posts, followMap, followToggle, reels, openProfile, onBack } = props;
    const [user, setUser] = useState<User | null>(null);
    const [loading, setLoading] = useState(true);
    const [view, setView] = useState<
@@ -37,28 +38,41 @@ export default function Profile(props: {
       async function fetchUserProfile() {
          try {
             setLoading(true);
-            // For now, we only support viewing the logged-in user's profile
-            // In the future, we can add an endpoint like /api/users/:userId
-            const res = await fetch(apiEndpoint('/api/me'), { credentials: 'include' });
+            
+            // If no userId is provided in the URL, show the logged-in user's profile
+            const profileUserId = userId || meId;
+            
+            if (!profileUserId) {
+               setUser(null);
+               setLoading(false);
+               return;
+            }
+            
+            // Fetch the user profile using the public endpoint
+            const res = await fetch(apiEndpoint(`/api/users/${profileUserId}`));
             const data = await res.json();
+            
             if (data.user) {
                setUser({
                   id: data.user.id,
                   githubId: data.user.id,
                   name: data.user.name,
-                  handle: data.user.name,
+                  handle: data.user.handle || data.user.name,
                   avatar: data.user.avatar
                });
+            } else {
+               setUser(null);
             }
          } catch (error) {
             console.error('Failed to fetch user profile:', error);
+            setUser(null);
          } finally {
             setLoading(false);
          }
       }
 
       fetchUserProfile();
-   }, [userId]);
+   }, [userId, meId]);
 
    if (loading) {
       return (

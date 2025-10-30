@@ -240,6 +240,30 @@ app.get("/api/me", async (req, res) => {
    });
 });
 
+// Public endpoint to fetch any user's profile by their githubId
+app.get("/api/users/:userId", async (req, res) => {
+   try {
+      const { userId } = req.params;
+
+      const dbUser = await User.findOne({ githubId: userId }).lean();
+      if (!dbUser) {
+         return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({
+         user: {
+            id: String(dbUser.githubId),
+            name: dbUser.profile?.name || dbUser.handle,
+            handle: dbUser.handle,
+            avatar: dbUser.profile?.avatar || ""
+         }
+      });
+   } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ error: "Failed to fetch user profile" });
+   }
+});
+
 app.get("/is-logged-in", (req, res) => {
    res.json({ loggedIn: !!req.session.user });
 });

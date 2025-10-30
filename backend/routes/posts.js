@@ -218,9 +218,18 @@ router.get('/get-all', async (req, res) => {
                p.authorInfo = {
                   profile: author.profile,
                   handle: author.handle,
-                  avatar: author.profile?.avatar,
-                  name: author.profile?.name,
+                  avatar: author.profile?.avatar || '',
+                  name: author.profile?.name || author.handle || 'Unknown User',
                   isCurrentUser: req.session.user ? (p.author === String(req.session.user.id)) : false
+               };
+            } else {
+               // Fallback for when user is not found
+               p.authorInfo = {
+                  profile: null,
+                  handle: 'deleted_user',
+                  avatar: '',
+                  name: 'Deleted User',
+                  isCurrentUser: false
                };
             }
             p.authorId = p.author;

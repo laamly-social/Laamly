@@ -107,7 +107,6 @@ export default function App({ initialData }: AppProps) {
                   <Route path="/notifications" element={<NotificationsPage />} />
                   <Route path="/profile/:userId" element={
                      <Profile
-                        userId={initialData.user?.id || profileUserId || ""}
                         meId={initialData.user?.id || ""}
                         posts={posts}
                         setPosts={setPosts}

@@ -139,6 +139,7 @@ export default function Post({
    }, [p, source]);
    const toShow = media;
 
+   console.error(JSON.stringify(p));
    return (
       <motion.div key={p.id} id={"id-" + p._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
          <Card className="post">
@@ -148,7 +149,7 @@ export default function Post({
                      avatar={p.authorInfo.avatar}
                      handle={p.authorInfo.handle}
                      fullName={p.authorInfo.name}
-                     onClickName={() => openProfile(p.authorHandle)} />
+                     onClickName={() => openProfile(p.authorId)} />
 
                   {isRepost && original && (
                      <div className="mt-1.5 ml-11 text-sub dark:text-sub-dark text-xs">
