@@ -102,7 +102,7 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
                 >
                   <span className="fa fa-github"></span>GitHub login
                 </a>
-                <br />
+                {/* <br />
                 <a
                   href={googleAuthUrl}
                   aria-disabled={!googleAuthUrl}
@@ -111,7 +111,7 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
                   }`}
                 >
                   <span className="fa fa-google"></span>Google login
-                </a>
+                </a> */}
               </div>
             ) : (
               <div className="w-full px-4">
