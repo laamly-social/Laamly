@@ -1,7 +1,7 @@
 import { getSocket } from './socket';
 import type { Notification } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const BACKEND_URL = import.meta.env.BACKEND_URL || 'http://localhost:8080';
 
 // Event emitter for notification count updates
 type NotificationUpdateListener = () => void;
@@ -29,7 +29,7 @@ function triggerNotificationUpdate() {
  */
 export async function getNotifications(): Promise<Notification[]> {
   try {
-    const response = await fetch(`${API_URL}/api/notifications`, {
+    const response = await fetch(`${BACKEND_URL}/api/notifications`, {
       credentials: 'include',
     });
 
@@ -50,7 +50,7 @@ export async function getNotifications(): Promise<Notification[]> {
  */
 export async function markNotificationAsRead(notificationId?: string): Promise<boolean> {
   try {
-    const response = await fetch(`${API_URL}/api/notifications/mark-read`, {
+    const response = await fetch(`${BACKEND_URL}/api/notifications/mark-read`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -72,7 +72,7 @@ export async function markNotificationAsRead(notificationId?: string): Promise<b
  */
 export async function deleteNotification(notificationId: string): Promise<boolean> {
   try {
-    const response = await fetch(`${API_URL}/api/notifications/${notificationId}`, {
+    const response = await fetch(`${BACKEND_URL}/api/notifications/${notificationId}`, {
       method: 'DELETE',
       credentials: 'include',
     });

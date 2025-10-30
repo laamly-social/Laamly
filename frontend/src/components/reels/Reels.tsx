@@ -1,4 +1,3 @@
-// src/components/reels/Reels.tsx
 // @ts-nocheck
 import ReelComments from "./ReelComments";
 import { useEffect, useRef, useState } from "react";
@@ -9,8 +8,8 @@ import {
   uploadReelVideo,
   createReel,
   fetchAllReels,
-  toggleReelLike,
-  toggleReelSave,
+  toggleReelLike as apiToggleReelLike,
+  toggleReelSave as apiToggleReelSave,
   deleteReel,
 } from "../../utils/reels";
 import Reel from "./Reel";
@@ -38,13 +37,13 @@ export default function Reels({
   const [uploading, setUploading] = useState(false);
 
   // Playback + navigation
-  const wrapRef = useRef<HTMLDivElement | null>(null); // scroll viewport
-  const itemRefs = useRef<HTMLDivElement[]>([]); // page nodes
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<HTMLDivElement[]>([]);
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
 
   // Paging control flags
-  const isPagingRef = useRef(false); // throttle while animating
+  const isPagingRef = useRef(false);
   const wheelAccumRef = useRef(0);
   const wheelTimerRef = useRef<number | null>(null);
 
@@ -75,16 +74,14 @@ export default function Reels({
     const top = el.offsetTop - root.offsetTop;
     root.scrollTo({ top, behavior: "smooth" });
 
-    // simple settle timer; browsers differ on scrollend support
     window.setTimeout(() => {
       isPagingRef.current = false;
-      // ensure we're aligned (snap helps too)
       const fix = el.offsetTop - root.offsetTop;
       if (Math.abs(root.scrollTop - fix) > 2) root.scrollTop = fix;
     }, 420);
   };
 
-  // IntersectionObserver to catch manual drags (e.g., scrollbar or touch)
+  // IntersectionObserver to catch manual drags
   useEffect(() => {
     const root = wrapRef.current;
     if (!root || !itemRefs.current.length) return;
@@ -108,7 +105,7 @@ export default function Reels({
 
     itemRefs.current.forEach((el) => el && obs.observe(el));
     return () => obs.disconnect();
-  }, [reels.length]); // rerun when count changes
+  }, [reels.length]);
 
   // Play only the active video
   useEffect(() => {
@@ -122,24 +119,22 @@ export default function Reels({
     });
   }, [active, muted, reels.length]);
 
-  // Wheel: convert continuous deltas into discrete page steps
+  // Wheel -> discrete page
   useEffect(() => {
     const root = wrapRef.current;
     if (!root) return;
 
     const onWheel = (e: WheelEvent) => {
-      if (panelMode) return; // don't steal scroll when panel open
+      if (panelMode) return;
       e.preventDefault();
-
-      if (isPagingRef.current) return; // still snapping to previous command
+      if (isPagingRef.current) return;
 
       wheelAccumRef.current += e.deltaY;
-      // debounce accumulation just a hair; trackpads emit many tiny deltas
       if (wheelTimerRef.current) window.clearTimeout(wheelTimerRef.current);
       wheelTimerRef.current = window.setTimeout(() => {
         const amount = wheelAccumRef.current;
         wheelAccumRef.current = 0;
-        if (Math.abs(amount) < 30) return; // ignore micro scroll
+        if (Math.abs(amount) < 30) return;
 
         const dir = amount > 0 ? 1 : -1;
         const next = clamp(active + dir);
@@ -166,7 +161,6 @@ export default function Reels({
       if (touchStartY.current == null) return;
       const y = e.touches[0].clientY;
       touchDeltaY.current = y - touchStartY.current;
-      // prevent native scroll to keep lock feeling
       if (Math.abs(touchDeltaY.current) > 10) e.preventDefault();
     };
     const end = () => {
@@ -177,7 +171,7 @@ export default function Reels({
       if (isPagingRef.current) return;
 
       if (Math.abs(dy) > 40) {
-        const dir = dy < 0 ? 1 : -1; // swipe up => next
+        const dir = dy < 0 ? 1 : -1;
         const next = clamp(active + dir);
         if (next !== active) goToIndex(next);
       }
@@ -193,7 +187,7 @@ export default function Reels({
     };
   }, [active, panelMode, reels.length]);
 
-  // Arrow keys: discrete page
+  // Arrow keys
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (panelMode) return;
@@ -260,18 +254,39 @@ export default function Reels({
     else v.pause();
   };
 
+  // ---- ALWAYS call API (no parent overrides) ----
   const onLike = async (id: string) => {
+    // optimistic
+    setReels((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, liked: !r.liked, likes: (r.likes || 0) + (r.liked ? -1 : 1) } : r
+      )
+    );
     try {
-      const { liked, likes } = await toggleReelLike(id);
+      const { liked, likes } = await apiToggleReelLike(id);
       setReels((prev) => prev.map((r) => (r.id === id ? { ...r, liked, likes } : r)));
-    } catch {}
+    } catch (e) {
+      // revert on failure
+      setReels((prev) =>
+        prev.map((r) =>
+          r.id === id ? { ...r, liked: !r.liked, likes: (r.likes || 0) + (r.liked ? -1 : 1) } : r
+        )
+      );
+    }
   };
+
   const onSave = async (id: string) => {
+    // optimistic
+    setReels((prev) => prev.map((r) => (r.id === id ? { ...r, saved: !r.saved } : r)));
     try {
-      const { saved } = await toggleReelSave(id);
+      const { saved } = await apiToggleReelSave(id);
       setReels((prev) => prev.map((r) => (r.id === id ? { ...r, saved } : r)));
-    } catch {}
+    } catch (e) {
+      // revert on failure
+      setReels((prev) => prev.map((r) => (r.id === id ? { ...r, saved: !r.saved } : r)));
+    }
   };
+
   const onDelete = async (id: string) => {
     if (!confirm("Delete this reel?")) return;
     try {
@@ -290,17 +305,13 @@ export default function Reels({
         .reelSnapViewport::-webkit-scrollbar { display: none; }
       `}</style>
 
-      {/* Snapping viewport (we also programmatically lock to pages) */}
+      {/* Snapping viewport */}
       <div
         ref={wrapRef}
         className={`reelSnapViewport mx-auto h-full px-2 md:px-0 transition-all duration-300 ${
           panelMode ? "w-1/2" : "w-full"
         }`}
-        style={{
-          overflowY: "auto",
-          scrollSnapType: "y mandatory",
-          scrollBehavior: "smooth",
-        }}
+        style={{ overflowY: "auto", scrollSnapType: "y mandatory", scrollBehavior: "smooth" }}
       >
         {reels.map((r, i) => (
           <Reel
@@ -324,9 +335,7 @@ export default function Reels({
       {panelMode && (
         <aside className="w-1/2 h-full bg-bg dark:bg-bg-dark border-l border-border dark:border-border-dark flex flex-col overflow-hidden">
           <div className="flex items-center justify-between p-3 border-b border-border dark:border-border-dark">
-            <div className="font-semibold">
-              {panelMode === "composer" ? "Add Reel" : "Comments"}
-            </div>
+            <div className="font-semibold">{panelMode === "composer" ? "Add Reel" : "Comments"}</div>
             <button
               className="inline-flex gap-2 items-center justify-center rounded-full h-[32px] w-[32px] p-0 bg-accent text-white cursor-pointer"
               onClick={() => {
@@ -354,14 +363,7 @@ export default function Reels({
                 onChange={(e) => setCaption(e.target.value)}
               />
               {preview && (
-                <video
-                  className="rounded-xl w-full"
-                  src={preview}
-                  muted
-                  controls
-                  playsInline
-                  preload="metadata"
-                />
+                <video className="rounded-xl w-full" src={preview} muted controls playsInline preload="metadata" />
               )}
               <div className="flex items-center gap-2">
                 <label className="inline-flex gap-2 items-center justify-center h-9 px-3 rounded-xl bg-transparent hover:bg-muted dark:hover:bg-muted-dark cursor-pointer">
@@ -382,14 +384,10 @@ export default function Reels({
               {panelFor ? (
                 <>
                   <div className="mb-2 font-medium">@{panelFor.authorInfo?.handle}</div>
-                  {/* ✅ Comments panel */}
                   <ReelComments
                     reel={panelFor}
                     user={user}
-                    onAdd={async () => {
-                      // Refresh list so the parent feed reflects the new comment count + authorInfo
-                      setReels(await fetchAllReels());
-                    }}
+                    onAdd={async () => setReels(await fetchAllReels())}
                   />
                 </>
               ) : (

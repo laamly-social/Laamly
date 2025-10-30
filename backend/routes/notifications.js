@@ -1,93 +1,107 @@
+// backend/routes/notifications.js
 const express = require('express');
 const router = express.Router();
-
+const mongoose = require('mongoose');
 const User = require('../models/User');
 
-// GET /api/notifications - Get all notifications for the current user
+function sessionUserId(req) {
+  return String(req.session?.user?.id || '');
+}
+
+async function findUserBySession(req) {
+  const id = sessionUserId(req);
+  if (!id) return null;
+  return await User.findOne({ $or: [{ githubId: id }, { googleId: id }] });
+}
+
+// GET /api/notifications
 router.get('/', async (req, res) => {
-   try {
-      if (!req.session.user) {
-         return res.status(401).json({ message: 'You need to be logged in' });
-      }
+  try {
+    if (!req.session?.user) return res.status(401).json({ message: 'You need to be logged in' });
 
-      const userId = String(req.session.user.id);
-      const user = await User.findOne({ githubId: userId }).lean();
+    const user = await findUserBySession(req);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-      if (!user) {
-         return res.status(404).json({ message: 'User not found' });
-      }
+    const notifications = (user.notifications || []).map((n) => ({
+      id: String(n._id),
+      type: n.type,
+      from: n.from,
+      fromName: n.fromName,
+      fromAvatar: n.fromAvatar,
+      contentId: n.contentId,
+      contentType: n.contentType,
+      message: n.message,
+      read: !!n.read,
+      createdAt: new Date(n.createdAt).getTime(),
+    }));
 
-      const notifications = (user.notifications || []).map(n => ({
-         id: n._id.toString(),
-         type: n.type,
-         from: n.from,
-         fromName: n.fromName,
-         fromAvatar: n.fromAvatar,
-         contentId: n.contentId,
-         contentType: n.contentType,
-         message: n.message,
-         read: n.read,
-         createdAt: new Date(n.createdAt).getTime()
-      }));
+    // newest first (if needed)
+    notifications.sort((a, b) => b.createdAt - a.createdAt);
 
-      res.json({ notifications });
-   } catch (err) {
-      console.error('Error fetching notifications:', err);
-      return res.status(500).json({ message: 'Error fetching notifications' });
-   }
+    res.json({ notifications });
+  } catch (err) {
+    console.error('Error fetching notifications:', err);
+    res.status(500).json({ message: 'Error fetching notifications' });
+  }
 });
 
-// POST /api/notifications/mark-read - Mark one or all notifications as read
+// GET /api/notifications/unread-count  (optional but useful)
+router.get('/unread-count', async (req, res) => {
+  try {
+    if (!req.session?.user) return res.json({ count: 0 });
+    const user = await findUserBySession(req);
+    const count = user ? (user.notifications || []).filter((n) => !n.read).length : 0;
+    res.json({ count });
+  } catch (err) {
+    console.error('Error unread-count:', err);
+    res.status(500).json({ count: 0 });
+  }
+});
+
+// POST /api/notifications/mark-read
 router.post('/mark-read', async (req, res) => {
-   try {
-      if (!req.session.user) {
-         return res.status(401).json({ message: 'You need to be logged in' });
-      }
+  try {
+    if (!req.session?.user) return res.status(401).json({ message: 'You need to be logged in' });
 
-      const userId = String(req.session.user.id);
-      const { notificationId } = req.body;
+    const id = sessionUserId(req);
+    const { notificationId } = req.body;
 
-      if (notificationId) {
-         // Mark specific notification as read
-         await User.updateOne(
-            { githubId: userId, 'notifications._id': notificationId },
-            { $set: { 'notifications.$.read': true } }
-         );
-      } else {
-         // Mark all notifications as read
-         await User.updateOne(
-            { githubId: userId },
-            { $set: { 'notifications.$[].read': true } }
-         );
-      }
-
-      res.json({ message: 'Notifications marked as read' });
-   } catch (err) {
-      console.error('Error marking notifications as read:', err);
-      return res.status(500).json({ message: 'Error marking notifications as read' });
-   }
+    if (notificationId) {
+      await User.updateOne(
+        { $or: [{ githubId: id }, { googleId: id }], 'notifications._id': notificationId },
+        { $set: { 'notifications.$.read': true } }
+      );
+    } else {
+      await User.updateOne(
+        { $or: [{ githubId: id }, { googleId: id }] },
+        { $set: { 'notifications.$[].read': true } }
+      );
+    }
+    res.json({ message: 'Notifications marked as read' });
+  } catch (err) {
+    console.error('Error marking notifications as read:', err);
+    res.status(500).json({ message: 'Error marking notifications as read' });
+  }
 });
 
-// DELETE /api/notifications/:notificationId - Delete a specific notification
+// DELETE /api/notifications/:notificationId
 router.delete('/:notificationId', async (req, res) => {
-   try {
-      if (!req.session.user) {
-         return res.status(401).json({ message: 'You need to be logged in' });
-      }
+  try {
+    if (!req.session?.user) return res.status(401).json({ message: 'You need to be logged in' });
 
-      const userId = String(req.session.user.id);
-      const { notificationId } = req.params;
+    const id = sessionUserId(req);
+    const { notificationId } = req.params;
 
-      await User.updateOne(
-         { githubId: userId },
-         { $pull: { notifications: { _id: notificationId } } }
-      );
+    await User.updateOne(
+      { $or: [{ githubId: id }, { googleId: id }] },
+      { $pull: { notifications: { _id: notificationId } } }
+    );
 
-      res.json({ message: 'Notification deleted' });
-   } catch (err) {
-      console.error('Error deleting notification:', err);
-      return res.status(500).json({ message: 'Error deleting notification' });
-   }
+    res.json({ message: 'Notification deleted' });
+  } catch (err) {
+    console.error('Error deleting notification:', err);
+    res.status(500).json({ message: 'Error deleting notification' });
+  }
 });
 
 module.exports = router;

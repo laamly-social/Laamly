@@ -2,7 +2,12 @@ const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
    githubId: String,
-   profile: Object,
+   googleId: String,
+   profile: {
+      name: String,
+      email: String,
+      avatar: String
+   },
    handle: String,
    stats: Object,
    postIds: [mongoose.Schema.Types.ObjectId],

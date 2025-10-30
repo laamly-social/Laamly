@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
    const env = loadEnv(mode, process.cwd(), '');
-   const apiUrl = env.VITE_API_URL || "http://localhost:8080";
+   const apiUrl = env.BACKEND_URL || "http://localhost:8080";
 
 
    return {
@@ -40,6 +40,11 @@ export default defineConfig(({ mode }) => {
                target: apiUrl,
                changeOrigin: true,
                secure: false,
+            },
+            "/google": {
+                target: apiUrl,
+                changeOrigin: true,
+                secure: false,
             },
             "/is-logged-in": {
                target: apiUrl,

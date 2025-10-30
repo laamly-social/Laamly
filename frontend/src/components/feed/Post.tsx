@@ -1,3 +1,4 @@
+// src/components/feed/Post.tsx
 // @ts-nocheck
 
 import Card from "../ui/Card";
@@ -7,139 +8,143 @@ import GenericButton from "../ui/GenericButton";
 import Carousel from "../ui/Carousel";
 import InputField from "../ui/InputField";
 import Avatar from "../ui/Avatar";
-import { Heart, Repeat, Share2, Bookmark, BookmarkCheck, Trash2, MessageSquare, Edit2, Check, X } from "lucide-react";
-import { formatTime } from "../../utils";
-import type { Post as PostType, User } from "../../types";
+import {
+  Heart,
+  Repeat,
+  Share2,
+  Bookmark,
+  BookmarkCheck,
+  Trash2,
+  MessageSquare,
+  Edit2,
+  Check,
+  X,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
-import { div } from "framer-motion/client";
 import CommentsList from "./CommentsList";
+import type { Post as PostType, User } from "../../types";
 
-interface PostProps {
-   post: PostType;
-   meId: string;
-   posts: PostType[];
-   setPosts: React.Dispatch<React.SetStateAction<PostType[]>>;
-   openProfile: (uid: string) => void;
-   addComment: (postId: string, body: string) => void;
-   deletePost: (id: string) => void;
-   editPost: (id: string, content: string) => void;
-   user: User | null;
-   /*
-
- const res = await fetch("/posts/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          content: {
-           id: id
-          }
-        })
-      });
-   */
-   toggleLike: (id: string) => void;
-   toggleRepost: (id: string) => void;
-}
-
-/** Treat common video extensions as video */
+// ---- Helpers ----
 function isVideo(url?: string): boolean {
-   if (!url) return false;
-   return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
+  if (!url) return false;
+  return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
 }
 
 function mediaUrlsFrom(post: any): string[] {
-   if (!post) return [];
-   if (Array.isArray(post.urls) && post.urls.length) return post.urls as string[];
-   if (post.image) return [post.image as string];
-   return [];
+  if (!post) return [];
+  if (Array.isArray(post.urls) && post.urls.length) return post.urls as string[];
+  if (post.image) return [post.image as string];
+  return [];
 }
 
-// ...existing code...
+function timeAgo(ts: number | string | Date): string {
+  const t = typeof ts === "number" ? ts : new Date(ts as any).getTime();
+  const s = Math.max(1, Math.floor((Date.now() - t) / 1000));
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+  if (d > 0) return `${d}d`;
+  if (h > 0) return `${h}h`;
+  if (m > 0) return `${m}m`;
+  return `${s}s`;
+}
+
+interface PostProps {
+  post: PostType;
+  meId: string;
+  posts: PostType[];
+  setPosts: React.Dispatch<React.SetStateAction<PostType[]>>;
+  openProfile: (uid: string) => void;
+  addComment: (postId: string, body: string) => void;
+  deletePost: (id: string) => void;
+  editPost: (id: string, content: string) => void;
+  user: User | null;
+  toggleLike: (id: string) => void;
+  toggleRepost: (id: string) => void;
+}
 
 export default function Post({
-   post: p,
-   meId,
-   posts,
-   setPosts,
-   openProfile,
-   addComment,
-   deletePost,
-   editPost,
-   toggleLike,
-   toggleRepost,
-   user,
+  post: p,
+  meId,
+  posts,
+  setPosts,
+  openProfile,
+  addComment,
+  deletePost,
+  editPost,
+  toggleLike,
+  toggleRepost,
+  user,
 }: PostProps) {
+  const original = p.originalId ? posts.find((x) => x.id === p.originalId) : undefined;
+  const isRepost = !!original;
+  const source = original ?? p;
 
-   const original = p.originalId ? posts.find(x => x.id === p.originalId) : undefined;
-   const isRepost = !!original;
+  const postText = p.content || (isRepost ? original?.content || "" : "");
 
-   const source = original ?? p;
+  // UI state
+  const [showComments, setShowComments] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(postText);
 
-   const postText = p.content || (isRepost ? original?.content || "" : "");
+  const handleSaveEdit = () => {
+    if (editedContent.trim() !== postText) {
+      editPost(p._id, editedContent.trim());
+      setPosts((prev) =>
+        prev.map((post) => (post._id === p._id ? { ...post, content: editedContent.trim() } : post))
+      );
+    }
+    setIsEditing(false);
+  };
 
-   // State for toggling comments
-   const [showComments, setShowComments] = useState(true);
+  const handleCancelEdit = () => {
+    setEditedContent(postText);
+    setIsEditing(false);
+  };
 
-   // State for editing post
-   const [isEditing, setIsEditing] = useState(false);
-   const [editedContent, setEditedContent] = useState(postText);
+  // YouTube embeds
+  const hasYoutubeLinks = postText.match(
+    /(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=)?[A-Za-z0-9_-]{11}/g
+  );
+  const videoImbeds = hasYoutubeLinks ? (
+    <div className="mb-3">
+      {hasYoutubeLinks.map((link: string, index: number) => {
+        let videoId = "";
+        const ytMatch = link.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+        if (ytMatch?.[1]) videoId = ytMatch[1];
+        if (!videoId) return null;
+        return (
+          <div key={index} className="mb-3 aspect-w-16 aspect-h-9">
+            <iframe
+              className="w-full mx-auto min-h-[20rem] rounded-lg"
+              src={`https://www.youtube.com/embed/${videoId}`}
+              title="YouTube video player"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
+          </div>
+        );
+      })}
+    </div>
+  ) : null;
 
-   const handleSaveEdit = () => {
-      if (editedContent.trim() !== postText) {
-         editPost(p._id, editedContent.trim());
-         // Update local state immediately
-         setPosts(prev => prev.map(post =>
-            post._id === p._id ? { ...post, content: editedContent.trim() } : post
-         ));
-      }
-      setIsEditing(false);
-   };
+  // Prefer current post's media, fallback to original for reposts
+  const media = useMemo(() => {
+    const here = mediaUrlsFrom(p);
+    return here.length ? here : mediaUrlsFrom(source);
+  }, [p, source]);
 
-   const handleCancelEdit = () => {
-      setEditedContent(postText);
-      setIsEditing(false);
-   };
+  // Safe author info for both GitHub + Google users (or missing)
+  const authorId = p.authorId || p.authorHandle || ""; // whatever you store as canonical author identifier
+  const authorName = p.authorInfo?.name || p.authorInfo?.handle || "Unknown";
+  const authorHandle = p.authorInfo?.handle || "unknown";
+  const authorAvatar = p.authorInfo?.avatar || "";
+  const isCurrentUser = !!p.authorInfo?.isCurrentUser;
 
-   // YouTube embed logic moved here so postText is in scope
-   const hasYoutubeLinks = postText.match(/(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=)?[A-Za-z0-9_-]{11}/g);
-   const videoImbeds = hasYoutubeLinks ? (
-      <div className="mb-3">
-         {hasYoutubeLinks.map((link: string, index: number) => {
-            // Extract video ID from various YouTube URL formats
-            let videoId = "";
-            const ytMatch = link.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
-            if (ytMatch && ytMatch[1]) {
-               videoId = ytMatch[1];
-            }
+  const createdAt = p.createdAt || Date.now();
 
-            if (!videoId) return null;
-
-            return (
-               <div key={index} className="mb-3 aspect-w-16 aspect-h-9">
-                  <iframe
-                     className="w-full mx-auto min-h-[20rem] rounded-lg"
-                     src={`https://www.youtube.com/embed/${videoId}`}
-                     title="YouTube video player"
-                     frameBorder="0"
-                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                     allowFullScreen
-                  ></iframe>
-               </div>
-            );
-         })}
-      </div>
-   ) : null;
-
-   // Prefer the current post's media; fallback to original (for reposts)
-
-   const media = useMemo(() => {
-      const here = mediaUrlsFrom(p);
-      return here.length ? here : mediaUrlsFrom(source);
-   }, [p, source]);
-   const toShow = media;
-
-   console.error(JSON.stringify(p));
    return (
       <motion.div key={p.id} id={"id-" + p._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
          <Card className="post">
@@ -151,77 +156,83 @@ export default function Post({
                      fullName={p.authorInfo.name}
                      onClickName={() => openProfile(p.authorId)} />
 
-                  {isRepost && original && (
-                     <div className="mt-1.5 ml-11 text-sub dark:text-sub-dark text-xs">
-                        reposted from{" "}
-                        <button
-                           className="bg-none border-none cursor-pointer p-0 text-linklike dark:text-linklike-dark hover:text-white hover:underline"
-                           onClick={() => openProfile(original.authorId)}
-                        >
-                           {USERS.find(u => u.id === original.authorId)?.name ?? original.authorId}
-                        </button>
-                     </div>
-                  )}
-               </div>
+            {isRepost && original && (
+              <div className="mt-1.5 ml-11 text-sub dark:text-sub-dark text-xs">
+                reposted from{" "}
+                <button
+                  className="bg-none border-none cursor-pointer p-0 text-linklike dark:text-linklike-dark hover:text-white hover:underline"
+                  onClick={() => openProfile(original.authorId || original.authorHandle || "")}
+                >
+                  @{original.authorInfo?.handle || "unknown"}
+                </button>
+              </div>
+            )}
+          </div>
 
-               <div className="flex items-center gap-2">
-                  <span className="text-sm text-sub dark:text-sub-dark">{timeBetween(p.createdAt) + " ago"}</span>
-                  {/* <IconBtn
-              icon={p.bookmarked ? BookmarkCheck : Bookmark}
-              label="Bookmark"
-              active={!!p.bookmarked}
-              onClick={() => setPosts(prev => prev.map(x => (x.id === p.id ? { ...x, bookmarked: !x.bookmarked } : x)))}
-            /> */}
-                  {p.authorInfo.isCurrentUser && !isEditing && (
-                     <>
-                        <IconBtn icon={Edit2} label="Edit" onClick={() => setIsEditing(true)} />
-                        <IconBtn icon={Trash2} className="hover:bg-red-600" danger label="Delete" onClick={() => deletePost(p._id)} />
-                     </>
-                  )}
-                  {p.authorInfo.isCurrentUser && isEditing && (
-                     <>
-                        <IconBtn icon={Check} label="Save" onClick={handleSaveEdit} />
-                        <IconBtn icon={X} label="Cancel" onClick={handleCancelEdit} />
-                     </>
-                  )}
-               </div>
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-sub dark:text-sub-dark">{timeAgo(createdAt)} ago</span>
 
-            <div className="p-3">
-               {isEditing ? (
-                  <textarea
-                     className="w-full text-lg p-2 rounded border border-border dark:border-border-dark bg-bg dark:bg-bg-dark text-fg dark:text-fg-dark mb-3"
-                     value={editedContent}
-                     onChange={(e) => setEditedContent(e.target.value)}
-                     rows={Math.max(3, editedContent.split('\n').length)}
-                     autoFocus
-                  />
-               ) : (
-                  postText && <p className="text-lg whitespace-pre-wrap mb-3">{postText}</p>
-               )}
-               {videoImbeds}
+            {!isEditing && isCurrentUser && (
+              <>
+                <IconBtn icon={Edit2} label="Edit" onClick={() => setIsEditing(true)} />
+                <IconBtn
+                  icon={Trash2}
+                  className="hover:bg-red-600"
+                  danger
+                  label="Delete"
+                  onClick={() => deletePost(p._id)}
+                />
+              </>
+            )}
 
-               <Carousel urls={toShow} />
+            {isEditing && isCurrentUser && (
+              <>
+                <IconBtn icon={Check} label="Save" onClick={handleSaveEdit} />
+                <IconBtn icon={X} label="Cancel" onClick={handleCancelEdit} />
+              </>
+            )}
+          </div>
+        </div>
 
-               <div className="inline-flex items-center gap-1 rounded-full flex-wrap bg-muted dark:bg-muted-dark border border-border dark:border-border-dark mb-3">
-                  <IconBtn
-                     icon={Heart}
-                     label="Like"
-                     count={source.likes}
-                     onClick={() => toggleLike(source._id!)}
-                     active={!!source.liked}
-                  />
-                  <IconBtn
-                     icon={MessageSquare}
-                     label="Comments"
-                     count={source.comments.length}
-                     onClick={() => setShowComments(v => !v)}
-                  />
-               </div>
+        {/* Body */}
+        <div className="p-3">
+          {isEditing ? (
+            <textarea
+              className="w-full text-lg p-2 rounded border border-border dark:border-border-dark bg-bg dark:bg-bg-dark text-fg dark:text-fg-dark mb-3"
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              rows={Math.max(3, editedContent.split("\n").length)}
+              autoFocus
+            />
+          ) : (
+            postText && <p className="text-lg whitespace-pre-wrap mb-3">{postText}</p>
+          )}
 
-               {showComments && <CommentsList post={source} user={user} onAdd={addComment} />}
-            </div>
-         </Card>
-      </motion.div>
-   );
+          {videoImbeds}
+
+          <Carousel urls={media} />
+
+          {/* Actions */}
+          <div className="inline-flex items-center gap-1 rounded-full flex-wrap bg-muted dark:bg-muted-dark border border-border dark:border-border-dark mb-3">
+            <IconBtn
+              icon={Heart}
+              label="Like"
+              count={Number(source.likes) || 0}
+              onClick={() => toggleLike(source._id!)}
+              active={!!source.liked}
+            />
+            <IconBtn
+              icon={MessageSquare}
+              label="Comments"
+              count={source?.comments?.length ?? 0}
+              onClick={() => setShowComments((v) => !v)}
+            />
+            {/* Add other buttons if needed (repost, share, save, etc.) */}
+          </div>
+
+          {showComments && <CommentsList post={source} user={user} onAdd={addComment} />}
+        </div>
+      </Card>
+    </motion.div>
+  );
 }

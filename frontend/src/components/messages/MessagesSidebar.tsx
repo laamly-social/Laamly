@@ -91,9 +91,9 @@ export default function MessagesSidebar({
                      >
                         <div className="relative flex-shrink-0">
                            <Avatar src={getThreadAvatar(t)} alt={getThreadTitle(t)} size="sm" />
-                           {t.unread && (
+                           {/* {t.unread && (
                               <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full border-2 border-panel dark:border-panel-dark" />
-                           )}
+                           )} */}
                         </div>
                         <div className="flex-1 min-w-0">
                            <div className="flex items-center justify-between mb-0.5">

@@ -5,9 +5,9 @@ let socket: Socket | null = null;
 export function initializeSocket() {
   if (socket) return socket;
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-  
-  socket = io(API_URL, {
+  const BACKEND_URL = import.meta.env.BACKEND_URL || 'http://localhost:8080';
+
+  socket = io(BACKEND_URL, {
     withCredentials: true,
     transports: ['websocket', 'polling']
   });

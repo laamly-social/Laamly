@@ -1,5 +1,5 @@
-// API_URL is the full URL to the backend (used for OAuth redirects, etc.)
-export const API_URL = import.meta.env.VITE_API_URL || 'https://api.laamly.com';
+// BACKEND_URL is the full URL to the backend (used for OAuth redirects, etc.)
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://api.laamly.com";
 
 // In development with Vite proxy, use relative paths for API calls
 // In production, use full URL
@@ -13,6 +13,6 @@ export const apiEndpoint = (path: string) => {
     return path;
   }
   // In production, return full URL
-  const fullUrl = `${API_URL}${path}`;
+  const fullUrl = `${BACKEND_URL}${path}`;
   return fullUrl;
 };

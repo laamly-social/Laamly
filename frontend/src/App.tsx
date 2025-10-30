@@ -1,8 +1,8 @@
+// src/App.tsx
 // @ts-nocheck
-
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
-import type { Reel, Post, Tab, User } from "./types";
+import type { Reel, Post, User } from "./types";
 import HomeFeed from "./components/feed/HomeFeed";
 import Messages from "./components/messages/Messages";
 import Reels from "./components/reels/Reels";
@@ -12,114 +12,162 @@ import Podcasts from "./components/podcasts/Podcasts";
 import NotificationsPage from "./components/notifications/NotificationsPage";
 import { Header } from "./components/header";
 import { useAuthCheck } from "./hooks/useAuthCheck";
+import { BACKEND_URL } from "./config";
+
+type InitialData = {
+  githubClientId: string | null;
+  googleClientId: string | null;
+  user: User | null;
+};
 
 interface AppProps {
-   initialData: {
-      githubClientId: string | null;
-      user: User | null;
-   };
+  initialData?: {
+    githubClientId?: string | null;
+    googleClientId?: string | null;
+    user?: User | null;
+  };
 }
 
 export default function App({ initialData }: AppProps) {
-   const location = useLocation();
-   const navigate = useNavigate();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-   // Periodically check if user is still authenticated
-   useAuthCheck(initialData.user?.id, 15000);
+  const [data, setData] = useState<InitialData>({
+    githubClientId: initialData?.githubClientId ?? null,
+    googleClientId: initialData?.googleClientId ?? null,
+    user: initialData?.user ?? null,
+  });
 
-   const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/initial-data`, { credentials: "include" });
+        const j = await res.json();
+        if (cancelled) return;
+        setData({
+          githubClientId: j.githubClientId || null,
+          googleClientId: j.googleClientId || null,
+          user: j.user || null,
+        });
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-   const [followMap, setFollowMap] = useState<{ [id: string]: Set<string> }>({});
-   const followToggle = (uid: string) => {
-      setFollowMap(prev => prev); // No-op until user data is available
-   };
+  useAuthCheck(data.user?.id, 15000);
 
-   const [posts, setPosts] = useState<Post[]>([]);
-   const [reels, setReels] = useState<Reel[]>([]);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [followMap, setFollowMap] = useState<{ [id: string]: Set<string> }>({});
+  const followToggle = (uid: string) =>
+    setFollowMap(prev => {
+      const me = data.user?.id;
+      if (!me) return prev;
+      const next = { ...prev };
+      const current = new Set(next[uid] ? Array.from(next[uid]) : []);
+      current.has(me) ? current.delete(me) : current.add(me);
+      next[uid] = current;
+      return next;
+    });
 
-   const toggleReelLike = (id: string) => setReels(prev => prev.map(r => r.id === id ? { ...r, liked: !r.liked } : r));
-   const toggleReelSave = (id: string) => setReels(prev => prev.map(r => r.id === id ? { ...r, saved: !r.saved } : r));
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [reels, setReels] = useState<Reel[]>([]);
 
-   const openProfile = (uid: string) => {
-      setProfileUserId(uid);
-      navigate(`/profile/${uid}`);
-   };
+  const openProfile = (uid: string) => {
+    setProfileUserId(uid);
+    navigate(`/profile/${uid}`);
+  };
 
-   const mediaItems = useMemo(() => {
-      const images = posts.filter(p => p.image).map(p => ({ kind: "image" as const, url: p.image!, id: p.id }));
-      const videos = reels.map(r => ({ kind: "video" as const, url: r.src, id: r.id }));
-      return [...images, ...videos];
-   }, [posts, reels]);
+  const mediaItems = useMemo(() => {
+    const images = posts.filter(p => p.image).map(p => ({ kind: "image" as const, url: p.image!, id: p.id }));
+    const videos = reels.map(r => ({ kind: "video" as const, url: r.src, id: r.id }));
+    return [...images, ...videos];
+  }, [posts, reels]);
 
-   // Check if current route is reels (needs full viewport)
-   const isReelsPage = location.pathname === '/reels';
+  const isReelsPage = location.pathname === "/reels";
 
-   return (
-      <div className="min-h-screen bg-bg dark:bg-bg-dark md:grid md:grid-cols-[12rem_auto]">
-         <div className="hidden md:block h-[100vh] sticky top-0 p-2 w-full z-1">
-            <Header
-               openProfile={openProfile}
-               githubClientId={initialData.githubClientId}
-               user={initialData.user}
-            />
-         </div>
-
-         {/* Mobile bottom nav (rendered in Header component) */}
-         <div className="md:hidden">
-            <Header
-               openProfile={openProfile}
-               githubClientId={initialData.githubClientId}
-               user={initialData.user}
-            />
-         </div>
-
-         <div className={`w-full flex flex-col relative z-0 ${isReelsPage ? 'h-screen overflow-hidden' : 'min-h-screen pb-20 md:pb-0'}`}>
-            <main className={`mx-auto w-full ${isReelsPage ? 'h-full p-0' : 'max-w-full px-0'}`}>
-               <Routes>
-                  <Route path="/" element={<Navigate to="/home" replace />} />
-                  <Route path="/home" element={
-                     <div>
-                        <HomeFeed
-                           meId={initialData.user?.id || ""}
-                           posts={posts}
-                           setPosts={setPosts}
-                           followMap={followMap}
-                           followToggle={followToggle}
-                           openProfile={openProfile}
-                           user={initialData.user}
-                        />
-                        <br></br>
-                        <footer className="pt-7 pb-10 text-center text-sub dark:text-sub-dark text-xs">Built with ❤️ in Freedom Land.</footer>
-                     </div>
-                  } />
-                  <Route path="/messages" element={<Messages />} />
-                  <Route path="/reels" element={
-                     <Reels
-                        reels={reels}
-                        setReels={setReels}
-                        toggleReelLike={toggleReelLike}
-                        toggleReelSave={toggleReelSave}
-                        user={initialData.user}
-                     />
-                  } />
-                  <Route path="/media" element={<MediaGallery items={mediaItems} />} />
-                  <Route path="/podcasts" element={<Podcasts />} />
-                  <Route path="/notifications" element={<NotificationsPage />} />
-                  <Route path="/profile/:userId" element={
-                     <Profile
-                        meId={initialData.user?.id || ""}
-                        posts={posts}
-                        setPosts={setPosts}
-                        followMap={followMap}
-                        followToggle={followToggle}
-                        reels={reels}
-                        openProfile={openProfile}
-                        onBack={() => { navigate("/home"); setProfileUserId(null); }}
-                     />
-                  } />
-               </Routes>
-            </main>
-         </div>
+  return (
+    <div className="min-h-screen bg-bg dark:bg-bg-dark md:grid md:grid-cols-[12rem_auto]">
+      <div className="hidden md:block h-[100vh] sticky top-0 p-2 w-full z-1">
+        <Header
+          openProfile={openProfile}
+          githubClientId={data.githubClientId}
+          googleClientId={data.googleClientId}
+          user={data.user}
+        />
       </div>
-   );
+
+      <div className="md:hidden">
+        <Header
+          openProfile={openProfile}
+          githubClientId={data.githubClientId}
+          googleClientId={data.googleClientId}
+          user={data.user}
+        />
+      </div>
+
+      <div className={`w-full flex flex-col relative z-0 ${isReelsPage ? "h-screen overflow-hidden" : "min-h-screen pb-20 md:pb-0"}`}>
+        <main className={`mx-auto w-full ${isReelsPage ? "h-full p-0" : "max-w-full px-0"}`}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route
+              path="/home"
+              element={
+                <div>
+                  <HomeFeed
+                    meId={data.user?.id || ""}
+                    posts={posts}
+                    setPosts={setPosts}
+                    followMap={followMap}
+                    followToggle={followToggle}
+                    openProfile={openProfile}
+                    user={data.user}
+                  />
+                  <br />
+                  <footer className="pt-7 pb-10 text-center text-sub dark:text-sub-dark text-xs">
+                    Built with ❤️ in Freedom Land.
+                  </footer>
+                </div>
+              }
+            />
+            <Route path="/messages" element={<Messages />} />
+
+            {/* ✅ FIX: do NOT pass toggleReelLike/toggleReelSave */}
+            <Route
+              path="/reels"
+              element={
+                <Reels
+                  reels={reels}
+                  setReels={setReels}
+                  user={data.user}
+                />
+              }
+            />
+
+            <Route path="/media" element={<MediaGallery items={mediaItems} />} />
+            <Route path="/podcasts" element={<Podcasts />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route
+              path="/profile/:userId"
+              element={
+                <Profile
+                  userId={data.user?.id || profileUserId || ""}
+                  meId={data.user?.id || ""}
+                  posts={posts}
+                  setPosts={setPosts}
+                  followMap={followMap}
+                  followToggle={followToggle}
+                  reels={reels}
+                  openProfile={openProfile}
+                  onBack={() => { navigate("/home"); setProfileUserId(null); }}
+                />
+              }
+            />
+          </Routes>
+        </main>
+      </div>
+    </div>
+  );
 }

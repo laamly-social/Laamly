@@ -1,6 +1,6 @@
 import React from "react";
 import { fetchGithubClientId } from "../utils/github";
-import { API_URL } from "../config";
+import { BACKEND_URL } from "../config";
 
 export default function LoggedOut() {
   const [githubClientId, setGithubClientId] = React.useState<string | null>(null);
@@ -9,7 +9,7 @@ export default function LoggedOut() {
     fetchGithubClientId().then(setGithubClientId).catch(() => setGithubClientId(null));
   }, []);
 
-  const redirectUri = encodeURIComponent(`${API_URL}/auth/github`);
+  const redirectUri = encodeURIComponent(`${BACKEND_URL}/auth/github`);
   const githubAuthUrl = githubClientId
     ? `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${redirectUri}`
     : undefined;
