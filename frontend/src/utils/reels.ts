@@ -1,4 +1,3 @@
-// src/utils/reels.ts
 import { apiEndpoint } from "../config";
 
 const UPLOAD_API = "https://pictshare.hnasheralneam.dev/api/upload.php";
@@ -10,7 +9,9 @@ export async function uploadReelVideo(file: File): Promise<string> {
 
   const r = await fetch(UPLOAD_API, { method: "POST", body: form });
   const ct = r.headers.get("content-type") || "";
-  const data = ct.includes("application/json") ? await r.json() : { status: "error", reason: await r.text() };
+  const data = ct.includes("application/json")
+    ? await r.json()
+    : { status: "error", reason: await r.text() };
 
   if ((data as any).status !== "ok") throw new Error((data as any).reason || "Upload failed");
   const raw = (data as any).url as string;
@@ -24,16 +25,16 @@ export async function createReel(payload: { title?: string; description?: string
     credentials: "include",
     body: JSON.stringify(payload),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.message || "Failed to create reel");
-  return data; // { message, reelId }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as any)?.message || "Failed to create reel");
+  return data as { message: string; reelId: string };
 }
 
 export async function fetchAllReels() {
   const res = await fetch(apiEndpoint("/reels/get-all"), { credentials: "include" });
   if (!res.ok) return [];
-  const data = await res.json();
-  const list = data?.reels ?? [];
+  const data = await res.json().catch(() => ({}));
+  const list = (data as any)?.reels ?? [];
   return list.map((r: any) => ({
     id: String(r._id),
     authorId: String(r.author),
@@ -45,16 +46,15 @@ export async function fetchAllReels() {
     saved: !!r.saved,
     likes: Number(r.likes || 0),
     authorInfo: r.authorInfo || undefined,
-
-    // ✅ NEW: include comments (already decorated by backend)
-    comments: Array.isArray(r.comments) ? r.comments.map((c: any) => ({
-      ...c,
-      text: c.content || c.text,
-      ts: c.datePosted ? new Date(c.datePosted).getTime() : c.ts
-    })) : []
+    comments: Array.isArray(r.comments)
+      ? r.comments.map((c: any) => ({
+          ...c,
+          text: c.content || c.text,
+          ts: c.datePosted ? new Date(c.datePosted).getTime() : c.ts,
+        }))
+      : [],
   }));
 }
-
 
 export async function toggleReelLike(id: string) {
   const res = await fetch(apiEndpoint("/reels/toggle-like"), {
@@ -63,8 +63,11 @@ export async function toggleReelLike(id: string) {
     credentials: "include",
     body: JSON.stringify({ id }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.message || "Failed");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    console.error("toggleReelLike failed:", res.status, data);
+    throw new Error((data as any)?.message || "Failed");
+  }
   return data as { liked: boolean; likes: number };
 }
 
@@ -75,9 +78,13 @@ export async function toggleReelSave(id: string) {
     credentials: "include",
     body: JSON.stringify({ id }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.message || "Failed");
-  return data as { saved: boolean };
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    console.error("toggleReelSave failed:", res.status, data);
+    throw new Error((data as any)?.message || "Failed");
+  }
+  // server returns { saved, savedCount }
+  return data as { saved: boolean; savedCount?: number };
 }
 
 export async function deleteReel(id: string) {
@@ -87,9 +94,9 @@ export async function deleteReel(id: string) {
     credentials: "include",
     body: JSON.stringify({ id }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.message || "Failed");
-  return data;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as any)?.message || "Failed");
+  return data as { message: string; id: string };
 }
 
 export async function createReelComment(reelId: string, text: string) {
@@ -99,8 +106,10 @@ export async function createReelComment(reelId: string, text: string) {
     credentials: "include",
     body: JSON.stringify({ reelId, text }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.message || "Failed to add comment");
-  return data as { message: string; currentUser?: { id: string; handle: string; name: string; avatar: string } };
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as any)?.message || "Failed to add comment");
+  return data as {
+    message: string;
+    currentUser?: { id: string; handle: string; name: string; avatar: string };
+  };
 }
-

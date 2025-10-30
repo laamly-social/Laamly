@@ -41,6 +41,11 @@ export default defineConfig(({ mode }) => {
                changeOrigin: true,
                secure: false,
             },
+            "/google": {
+                target: apiUrl,
+                changeOrigin: true,
+                secure: false,
+            },
             "/is-logged-in": {
                target: apiUrl,
                changeOrigin: true,
