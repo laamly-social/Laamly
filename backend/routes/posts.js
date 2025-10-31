@@ -253,5 +253,60 @@ module.exports = function createPostsRouter(io, userSockets) {
     }
   });
 
+  // Get a single post by ID
+  router.get('/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const post = await Post.findById(id).lean();
+
+      if (!post || post.deleted) {
+        return res.status(404).json({ message: 'Post not found' });
+      }
+
+      const author = await User.findOne(qById(post.author)).lean();
+      post.authorInfo = author
+        ? {
+            profile: author.profile,
+            handle: author.handle,
+            avatar: author.profile?.avatar || '',
+            name: author.profile?.name || author.handle,
+            isCurrentUser: req.session.user ? (post.author === String(req.session.user.id)) : false
+          }
+        : { handle: 'unknown', name: 'Unknown', avatar: '', isCurrentUser: false };
+
+      post.authorId = post.author;
+      post.createdAt = new Date(post.datePosted).getTime();
+      post.likes = (post.likedBy || []).length;
+      post.liked = !!(req.session.user && post.likedBy?.includes(String(req.session.user.id)));
+
+      if (Array.isArray(post.comments)) {
+        post.comments = await Promise.all(post.comments.map(async c => {
+          const commenter = await User.findOne(qById(c.author)).lean();
+          if (commenter) {
+            return {
+              ...c,
+              authorInfo: {
+                profile: commenter.profile,
+                handle: commenter.handle,
+                avatar: commenter.profile?.avatar || '',
+                name: commenter.profile?.name || commenter.handle,
+                isCurrentUser: req.session.user ? (c.author === String(req.session.user.id)) : false
+              }
+            };
+          } else {
+            return { ...c, authorInfo: { deleted: true } };
+          }
+        }));
+      } else {
+        post.comments = [];
+      }
+
+      return res.json({ post });
+    } catch (err) {
+      console.error('Error fetching post:', err);
+      return res.status(500).json({ message: 'Error fetching post' });
+    }
+  });
+
   return router;
 };

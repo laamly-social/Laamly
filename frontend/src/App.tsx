@@ -6,6 +6,8 @@ import type { Reel, Post, User } from "./types";
 import HomeFeed from "./components/feed/HomeFeed";
 import Messages from "./components/messages/Messages";
 import Reels from "./components/reels/Reels";
+import SinglePost from "./components/feed/SinglePost";
+import SingleReel from "./components/reels/SingleReel";
 import MediaGallery from "./components/media/MediaGallery";
 import Profile from "./components/profile/Profile";
 import Podcasts from "./components/podcasts/Podcasts";
@@ -13,6 +15,8 @@ import NotificationsPage from "./components/notifications/NotificationsPage";
 import { Header } from "./components/header";
 import { useAuthCheck } from "./hooks/useAuthCheck";
 import { BACKEND_URL } from "./config";
+import { togglePostLike, deletePost as deletePostApi, editPost as editPostApi } from "./utils/posts";
+import { createComment } from "./utils/comments";
 
 type InitialData = {
   githubClientId: string | null;
@@ -80,13 +84,54 @@ export default function App({ initialData }: AppProps) {
     navigate(`/profile/${uid}`);
   };
 
+  // Helper functions for post actions
+  const handleAddComment = async (postId: string, text: string) => {
+    try {
+      await createComment(postId, text);
+    } catch (error) {
+      console.error("Failed to add comment:", error);
+    }
+  };
+
+  const handleDeletePost = async (id: string) => {
+    try {
+      await deletePostApi(id);
+      setPosts(prev => prev.filter(p => p._id !== id));
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+    }
+  };
+
+  const handleEditPost = async (id: string, content: string) => {
+    try {
+      await editPostApi(id, content);
+      setPosts(prev => prev.map(p => p._id === id ? { ...p, content } : p));
+    } catch (error) {
+      console.error("Failed to edit post:", error);
+    }
+  };
+
+  const handleToggleLike = async (postId: string) => {
+    try {
+      const { liked, likes } = await togglePostLike(postId);
+      setPosts(prev => prev.map(p => p._id === postId ? { ...p, liked, likes } : p));
+    } catch (error) {
+      console.error("Failed to toggle like:", error);
+    }
+  };
+
+  const handleToggleRepost = (originalId: string) => {
+    // Implement repost logic if needed
+    console.log("Repost:", originalId);
+  };
+
   const mediaItems = useMemo(() => {
     const images = posts.filter(p => p.image).map(p => ({ kind: "image" as const, url: p.image!, id: p.id }));
     const videos = reels.map(r => ({ kind: "video" as const, url: r.src, id: r.id }));
     return [...images, ...videos];
   }, [posts, reels]);
 
-  const isReelsPage = location.pathname === "/reels";
+  const isReelsPage = location.pathname === "/reels" || location.pathname.startsWith("/reel/");
 
   return (
     <div className="min-h-screen bg-bg dark:bg-bg-dark md:grid md:grid-cols-[12rem_auto]">
@@ -134,6 +179,23 @@ export default function App({ initialData }: AppProps) {
             />
             <Route path="/messages" element={<Messages />} />
 
+            {/* Individual post route */}
+            <Route
+              path="/post/:id"
+              element={
+                <SinglePost
+                  meId={data.user?.id || ""}
+                  openProfile={openProfile}
+                  addComment={handleAddComment}
+                  deletePost={handleDeletePost}
+                  editPost={handleEditPost}
+                  user={data.user}
+                  toggleLike={handleToggleLike}
+                  toggleRepost={handleToggleRepost}
+                />
+              }
+            />
+
             {/* ✅ FIX: do NOT pass toggleReelLike/toggleReelSave */}
             <Route
               path="/reels"
@@ -143,6 +205,14 @@ export default function App({ initialData }: AppProps) {
                   setReels={setReels}
                   user={data.user}
                 />
+              }
+            />
+
+            {/* Individual reel route */}
+            <Route
+              path="/reel/:id"
+              element={
+                <SingleReel user={data.user} />
               }
             />
 

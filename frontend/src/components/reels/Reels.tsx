@@ -119,6 +119,13 @@ export default function Reels({
     });
   }, [active, muted, reels.length]);
 
+  // Update comments panel when active reel changes
+  useEffect(() => {
+    if (panelMode === "comments" && reels[active]) {
+      setPanelFor(reels[active]);
+    }
+  }, [active, panelMode, reels]);
+
   // Wheel -> discrete page
   useEffect(() => {
     const root = wrapRef.current;
@@ -385,6 +392,7 @@ export default function Reels({
                 <>
                   <div className="mb-2 font-medium">@{panelFor.authorInfo?.handle}</div>
                   <ReelComments
+                    key={panelFor.id}
                     reel={panelFor}
                     user={user}
                     onAdd={async () => setReels(await fetchAllReels())}

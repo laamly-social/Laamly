@@ -79,10 +79,20 @@ export type Thread = {
 export type Reel = {
   id: string;
   title: string;
+  description?: string;
   authorId: string;
   src: string;
   liked?: boolean;
   saved?: boolean;
+  likes?: number;
+  createdAt?: number;
+  authorInfo?: {
+    handle?: string;
+    name?: string;
+    avatar?: string;
+    isCurrentUser?: boolean;
+  };
+  comments?: Comment[];
 };
 
 export type Notification = {

@@ -1,6 +1,7 @@
 // src/components/reels/ReelItem.tsx
 // @ts-nocheck
 import { VolumeX, Volume2, Heart, Bookmark, Share2, MessageSquare, Trash2 } from "lucide-react";
+import { useState } from "react";
 import Card from "../ui/Card";
 import Avatar from "../ui/Avatar";
 import type { Reel } from "../../types";
@@ -31,6 +32,19 @@ export default function ReelItem({
    onDelete,
    user
 }: ReelItemProps) {
+   const [showCopied, setShowCopied] = useState(false);
+
+   const handleShare = () => {
+      const url = `${window.location.origin}/reel/${reel.id}`;
+      navigator.clipboard.writeText(url).then(() => {
+         setShowCopied(true);
+         setTimeout(() => setShowCopied(false), 2000);
+      }).catch((err) => {
+         console.error("Failed to copy:", err);
+         alert("Failed to copy link");
+      });
+   };
+
    return (
       <div
          ref={setItemRef}
@@ -100,10 +114,18 @@ export default function ReelItem({
                   onClick={() => toggleComments(reel)}
                />
 
-               {/* <ActionButton
-                  title="Share"
-                  Icon={Share2}
-               /> */}
+               <div className="relative">
+                  <ActionButton
+                     title="Share"
+                     Icon={Share2}
+                     onClick={handleShare}
+                  />
+                  {showCopied && (
+                     <div className="absolute top-1.5 right-[110%] rounded-full bg-border dark:bg-border-dark border border-muted dark:border-muted-dark whitespace-nowrap py-1 px-3 z-10">
+                        Link copied!
+                     </div>
+                  )}
+               </div>
 
                {reel.authorInfo?.isCurrentUser && (
                   <ActionButton

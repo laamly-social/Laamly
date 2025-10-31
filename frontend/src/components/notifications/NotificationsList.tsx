@@ -68,10 +68,11 @@ export function NotificationsList() {
     // Navigate to the relevant content
     switch (notification.contentType) {
       case 'post':
-        navigate('/home'); // Navigate to home feed where post is
+      case 'comment': // Comments are on posts, so navigate to the post
+        navigate(`/post/${notification.contentId}`);
         break;
       case 'reel':
-        navigate('/reels'); // Navigate to reels
+        navigate(`/reel/${notification.contentId}`);
         break;
       case 'message':
         navigate(`/messages?thread=${notification.contentId}`);

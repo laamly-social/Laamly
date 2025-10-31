@@ -46,7 +46,31 @@ const Carousel = ({ urls }) => {
          return (
             <>
                <img className="absolute inset-0 w-full h-full object-cover filter blur-lg scale-110 z-0 opacity-75 dark:opacity-25" src={url} alt="blurred background" />
-               <img className="relative max-w-full h-full max-h-full z-10 shadow" src={url} alt="media content" />
+               <img
+                  className="relative max-w-full max-h-full z-10 shadow"
+                  src={url}
+                  alt="media content"
+                  style={{ objectFit: 'contain' }}
+                  onLoad={(e) => {
+                     const img = e.target;
+                     const container = img.parentElement;
+                     const containerWidth = container.offsetWidth;
+                     const containerHeight = container.offsetHeight;
+
+                     // Check if image is smaller than container
+                     if (img.naturalHeight < containerHeight || img.naturalWidth < containerWidth) {
+                        if (img.naturalHeight > img.naturalWidth) {
+                           // Portrait: make it fill height
+                           img.style.height = '100%';
+                           img.style.width = 'auto';
+                        } else {
+                           // Landscape: make it fill width
+                           img.style.width = '100%';
+                           img.style.height = 'auto';
+                        }
+                     }
+                  }}
+               />
             </>
          );
       }

@@ -87,6 +87,7 @@ export default function Post({
   const [showComments, setShowComments] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(postText);
+  const [showCopied, setShowCopied] = useState(false);
 
   const handleSaveEdit = () => {
     if (editedContent.trim() !== postText) {
@@ -101,6 +102,17 @@ export default function Post({
   const handleCancelEdit = () => {
     setEditedContent(postText);
     setIsEditing(false);
+  };
+
+  const handleShare = () => {
+    const url = `${window.location.origin}/post/${p._id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2000);
+    }).catch((err) => {
+      console.error("Failed to copy:", err);
+      alert("Failed to copy link");
+    });
   };
 
   // YouTube embeds
@@ -213,7 +225,7 @@ export default function Post({
           <Carousel urls={media} />
 
           {/* Actions */}
-          <div className="inline-flex items-center gap-1 rounded-full flex-wrap bg-muted dark:bg-muted-dark border border-border dark:border-border-dark mb-3">
+          <div className="inline-flex items-center rounded-full flex-wrap bg-muted dark:bg-muted-dark border border-border dark:border-border-dark mb-3 px-1.5">
             <IconBtn
               icon={Heart}
               label="Like"
@@ -227,7 +239,18 @@ export default function Post({
               count={source?.comments?.length ?? 0}
               onClick={() => setShowComments((v) => !v)}
             />
-            {/* Add other buttons if needed (repost, share, save, etc.) */}
+            <div className="relative">
+              <IconBtn
+                icon={Share2}
+                label="Share"
+                onClick={handleShare}
+              />
+              {showCopied && (
+                        <div className="absolute -top-9 left-1/2 -translate-x-1/2 rounded-full bg-border dark:bg-border-dark border border-muted dark:border-muted-dark whitespace-nowrap py-1 px-3 z-10">
+                  Link copied!
+                </div>
+              )}
+            </div>
           </div>
 
           {showComments && <CommentsList post={source} user={user} onAdd={addComment} />}

@@ -52,6 +52,15 @@ export async function fetchAllPosts(): Promise<Post[]> {
       });
 }
 
+/** Fetch a single post by ID */
+export async function fetchPostById(id: string): Promise<Post | null> {
+   const res = await fetch(apiEndpoint(`/posts/${id}`), { credentials: "include" });
+   if (!res.ok) return null;
+
+   const data = await res.json();
+   return data?.post || null;
+}
+
 /** Upload images/videos to PictShare and return absolute URLs (https) */
 export async function uploadImages(files: File[]): Promise<string[]> {
    const urls: string[] = [];

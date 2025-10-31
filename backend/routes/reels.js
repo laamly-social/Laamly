@@ -187,6 +187,62 @@ module.exports = function createReelsRouter(io, userSockets) {
     }
   });
 
+  // Get a single reel by ID
+  router.get('/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const reel = await Reel.findById(id).lean();
+      
+      if (!reel || reel.deleted) {
+        return res.status(404).json({ message: 'Reel not found' });
+      }
+
+      const author = await User.findOne(qById(reel.author)).lean();
+
+      reel.authorInfo = author
+        ? {
+            handle: author.handle,
+            name: author.profile?.name || author.handle,
+            avatar: author.profile?.avatar || '',
+            isCurrentUser: req.session.user ? reel.author === String(req.session.user.id) : false
+          }
+        : { handle: 'unknown', name: 'Unknown', avatar: '', isCurrentUser: false };
+
+      reel.likes = (reel.likedBy || []).length;
+      reel.saved = !!(req.session.user && (reel.savedBy || []).map(String).includes(String(req.session.user.id)));
+      reel.liked = !!(req.session.user && (reel.likedBy || []).map(String).includes(String(req.session.user.id)));
+      reel.createdAt = new Date(reel.datePosted).getTime();
+
+      if (Array.isArray(reel.comments)) {
+        reel.comments = await Promise.all(
+          reel.comments.map(async (c) => {
+            const commenter = await User.findOne(qById(c.author)).lean();
+            if (commenter) {
+              return {
+                ...c,
+                authorInfo: {
+                  profile: commenter.profile,
+                  handle: commenter.handle,
+                  avatar: commenter.profile?.avatar || '',
+                  name: commenter.profile?.name || commenter.handle,
+                  isCurrentUser: req.session.user ? c.author === String(req.session.user.id) : false
+                }
+              };
+            }
+            return { ...c, authorInfo: { deleted: true } };
+          })
+        );
+      } else {
+        reel.comments = [];
+      }
+
+      res.json({ reel });
+    } catch (e) {
+      console.error('GET /reels/:id error:', e);
+      res.status(500).json({ message: 'Error fetching reel' });
+    }
+  });
+
   // Create comment
   router.post('/comments/create', async (req, res) => {
     try {

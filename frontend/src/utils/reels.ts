@@ -56,6 +56,33 @@ export async function fetchAllReels() {
   }));
 }
 
+export async function fetchReelById(id: string) {
+  const res = await fetch(apiEndpoint(`/reels/${id}`), { credentials: "include" });
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => ({}));
+  const r = (data as any)?.reel;
+  if (!r) return null;
+  return {
+    id: String(r._id),
+    authorId: String(r.author),
+    title: r.title || "",
+    description: r.description || "",
+    src: r.src,
+    createdAt: r.createdAt || new Date(r.datePosted).getTime(),
+    liked: !!r.liked,
+    saved: !!r.saved,
+    likes: Number(r.likes || 0),
+    authorInfo: r.authorInfo || undefined,
+    comments: Array.isArray(r.comments)
+      ? r.comments.map((c: any) => ({
+          ...c,
+          text: c.content || c.text,
+          ts: c.datePosted ? new Date(c.datePosted).getTime() : c.ts,
+        }))
+      : [],
+  };
+}
+
 export async function toggleReelLike(id: string) {
   const res = await fetch(apiEndpoint("/reels/toggle-like"), {
     method: "POST",
