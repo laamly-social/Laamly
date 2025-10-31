@@ -285,32 +285,64 @@ app.get("/auth/github", (req, res) => {
     headers: { accept: "application/json" },
   })
     .then(({ data }) => {
+      console.log("GitHub token response:", data);
+
+      if (data.error) {
+        console.error("GitHub OAuth error:", data.error, data.error_description);
+        return res.status(400).send(`GitHub OAuth error: ${data.error_description || data.error}`);
+      }
+
+      if (!data.access_token) {
+        console.error("No access token in response:", data);
+        return res.status(500).send("Failed to get access token from GitHub");
+      }
+
       req.session.github_access_token = data.access_token;
       res.redirect("/github/login");
     })
     .catch((err) => {
-      console.error("GitHub token error:", err);
-      res.status(500).send("OAuth failed");
+      console.error("GitHub token error:", err.message);
+      console.error("Error response:", err.response?.data);
+      res.status(500).send(`OAuth failed: ${err.message}`);
     });
 });
 
 app.get("/github/login", (req, res) => {
   const accessToken = req.session.github_access_token;
 
+  console.log("GitHub login - access token:", accessToken ? "exists" : "missing");
+
+  if (!accessToken) {
+    console.error("No access token in session");
+    return res.status(401).send("No access token. Please try logging in again.");
+  }
+
   // Fetch user data and emails in parallel
   Promise.all([
     axios({
       method: "get",
       url: `https://api.github.com/user`,
-      headers: { Authorization: `token ${accessToken}` },
+      headers: {
+        Authorization: `token ${accessToken}`,
+        "User-Agent": "Laamly-App",
+        Accept: "application/json"
+      },
+      timeout: 10000
     }),
     axios({
       method: "get",
       url: `https://api.github.com/user/emails`,
-      headers: { Authorization: `token ${accessToken}` },
+      headers: {
+        Authorization: `token ${accessToken}`,
+        "User-Agent": "Laamly-App",
+        Accept: "application/json"
+      },
+      timeout: 10000
     })
   ])
     .then(async ([userData, emailsData]) => {
+      console.log("GitHub user data received:", userData.data.login);
+
       const data = userData.data;
       const emails = emailsData.data;
 
@@ -319,6 +351,8 @@ app.get("/github/login", (req, res) => {
                         || emails.find(e => e.verified)?.email
                         || data.email
                         || "";
+
+      console.log("GitHub user email:", primaryEmail);
 
       // Normalize the session
       req.session.user = {
@@ -330,8 +364,10 @@ app.get("/github/login", (req, res) => {
         email: primaryEmail,
       };
 
+      console.log("Checking if user exists in DB...");
       const exists = await User.findOne({ githubId: data.id });
       if (!exists) {
+        console.log("Creating new user in DB...");
         await new User({
           githubId: data.id,
           handle: data.login,
@@ -343,12 +379,18 @@ app.get("/github/login", (req, res) => {
           },
           postIds: [],
         }).save();
+        console.log("User created successfully");
+      } else {
+        console.log("User already exists in DB");
       }
+
+      console.log("Redirecting to frontend:", FRONTEND_ORIGIN);
       res.redirect(FRONTEND_ORIGIN);
     })
     .catch((err) => {
-      console.error("GitHub profile error:", err);
-      res.status(500).send("Login failed");
+      console.error("GitHub profile error:", err.message);
+      console.error("Error details:", err.response?.data || err);
+      res.status(500).send(`Login failed: ${err.message}`);
     });
 });
 

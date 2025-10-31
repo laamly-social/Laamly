@@ -33,7 +33,7 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
   const githubAuthUrl = useMemo(() => {
     if (!githubClientId) return undefined;
     const enc = encodeURIComponent(githubRedirectUri);
-    return `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${enc}`;
+    return `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${enc}&scope=user:email`;
   }, [githubClientId, githubRedirectUri]);
 
   const getFirstName = (fullName: string) => fullName.split(" ")[0];
@@ -102,7 +102,7 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
                 >
                   <span className="fa fa-github"></span>GitHub login
                 </a>
-                {/* <br />
+                <br />
                 <a
                   href={googleAuthUrl}
                   aria-disabled={!googleAuthUrl}
@@ -111,7 +111,7 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
                   }`}
                 >
                   <span className="fa fa-google"></span>Google login
-                </a> */}
+                </a>
               </div>
             ) : (
               <div className="w-full px-4">

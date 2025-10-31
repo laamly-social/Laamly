@@ -1,6 +1,6 @@
 // src/AppShell.tsx
 import { useEffect, useState } from "react";
-import { BACKEND_URL } from "./config";
+import { apiEndpoint } from "./config";
 import { Header } from "./components/header";
 
 type InitialData = {
@@ -14,7 +14,7 @@ export default function AppShell() {
 
   useEffect(() => {
     (async () => {
-      const r = await fetch(`${BACKEND_URL}/api/initial-data`, { credentials: "include" });
+      const r = await fetch(apiEndpoint("/api/initial-data"), { credentials: "include" });
       const j = await r.json();
       setData({
         githubClientId: j.githubClientId || null,
