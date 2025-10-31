@@ -23,13 +23,25 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
    const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
    const endRef = useRef<HTMLDivElement | null>(null);
    const fileInputRef = useRef<HTMLInputElement>(null);
+   const messageInputRef = useRef<HTMLInputElement>(null);
    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+   const shouldFocusRef = useRef(false);
 
    const commonEmojis = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
    useEffect(() => {
       console.log("MessageThread - typingUsers prop updated:", typingUsers);
    }, [typingUsers]);
+
+   // Focus input after uploading completes
+   useEffect(() => {
+      if (!uploading && shouldFocusRef.current) {
+         shouldFocusRef.current = false;
+         requestAnimationFrame(() => {
+            messageInputRef.current?.focus();
+         });
+      }
+   }, [uploading]);
 
    useEffect(() => {
       endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -75,6 +87,7 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
       if ((!draft.trim() && selectedFiles.length === 0)) return;
 
       setUploading(true);
+      shouldFocusRef.current = true;
       try {
          const socket = getSocket();
          if (typingTimeoutRef.current) {
@@ -454,6 +467,8 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
               <Smile size={18} />
             </GenericButton> */}
                   <InputField
+                     ref={messageInputRef}
+                     id={"message-input"}
                      className="input bg-muted dark:bg-muted-dark"
                      placeholder="Message..."
                      value={draft}

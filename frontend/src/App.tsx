@@ -15,8 +15,9 @@ import NotificationsPage from "./components/notifications/NotificationsPage";
 import { Header } from "./components/header";
 import { useAuthCheck } from "./hooks/useAuthCheck";
 import { BACKEND_URL } from "./config";
-import { togglePostLike, deletePost as deletePostApi, editPost as editPostApi } from "./utils/posts";
+import { togglePostLike, deletePost as deletePostApi, editPost as editPostApi, fetchAllPosts } from "./utils/posts";
 import { createComment } from "./utils/comments";
+import { fetchAllReels } from "./utils/reels";
 
 type InitialData = {
   githubClientId: string | null;
@@ -78,6 +79,18 @@ export default function App({ initialData }: AppProps) {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [reels, setReels] = useState<Reel[]>([]);
+
+  // Fetch posts and reels on mount
+  useEffect(() => {
+    (async () => {
+      const [fetchedPosts, fetchedReels] = await Promise.all([
+        fetchAllPosts(),
+        fetchAllReels()
+      ]);
+      setPosts(fetchedPosts);
+      setReels(fetchedReels);
+    })();
+  }, []);
 
   const openProfile = (uid: string) => {
     setProfileUserId(uid);

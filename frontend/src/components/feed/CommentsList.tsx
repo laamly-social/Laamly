@@ -25,9 +25,10 @@ interface Props {
   user: User | null;
   onAdd?: (postId: string, body: string) => void;
   showList?: boolean;
+  openProfile?: (uid: string) => void;
 }
 
-export default function CommentsList({ post, user, onAdd, showList = true }: Props) {
+export default function CommentsList({ post, user, onAdd, showList = true, openProfile }: Props) {
   const [draft, setDraft] = useState("");
   const [comments, setComments] = useState(() =>
     (post.comments || []).map((c: any) => ({
@@ -88,6 +89,7 @@ export default function CommentsList({ post, user, onAdd, showList = true }: Pro
                           avatar={u?.avatar || ""}
                           handle={u?.handle ?? c.author}
                           fullName={u?.name ?? c.author}
+                          onClickName={openProfile ? () => openProfile(c.author) : undefined}
                         />
                       </div>
                       <span className="opacity-[.75]">

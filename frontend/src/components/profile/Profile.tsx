@@ -28,7 +28,7 @@ export default function Profile(props: {
    const [user, setUser] = useState<User | null>(null);
    const [loading, setLoading] = useState(true);
    const [view, setView] = useState<
-      "posts" | "reposts" | "likedPosts" | "likedReels" | "savedPosts" | "savedReels"
+      "posts" | "reels" | "reposts" | "likedPosts" | "likedReels" | "savedPosts" | "savedReels"
    >("posts");
 
    const isMe = userId === meId;
@@ -38,20 +38,20 @@ export default function Profile(props: {
       async function fetchUserProfile() {
          try {
             setLoading(true);
-            
+
             // If no userId is provided in the URL, show the logged-in user's profile
             const profileUserId = userId || meId;
-            
+
             if (!profileUserId) {
                setUser(null);
                setLoading(false);
                return;
             }
-            
+
             // Fetch the user profile using the public endpoint
             const res = await fetch(apiEndpoint(`/api/users/${profileUserId}`));
             const data = await res.json();
-            
+
             if (data.user) {
                setUser({
                   id: data.user.id,
@@ -101,10 +101,12 @@ export default function Profile(props: {
       );
    }
 
-   const userPosts = posts.filter(p => p.authorId === userId);
+   const profileUserId = userId || meId;
+   const userPosts = posts.filter(p => p.authorId === profileUserId);
 
    const originalPosts = userPosts.filter(p => !p.originalId);
    const repostsList = userPosts.filter(p => p.originalId);
+   const userReels = reels.filter(r => r.authorId === profileUserId);
    const likedPosts = posts.filter(p => p.liked);
    const savedPosts = posts.filter(p => p.bookmarked);
    const likedReels = reels.filter(r => r.liked);
@@ -177,6 +179,9 @@ export default function Profile(props: {
                <Chip active={view === "posts"} onClick={() => setView("posts")}>
                   Posts ({originalPosts.length})
                </Chip>
+               <Chip active={view === "reels"} onClick={() => setView("reels")}>
+                  Reels ({userReels.length})
+               </Chip>
                {/* <Chip active={view === "reposts"} onClick={() => setView("reposts")}>
                   Reposts ({repostsList.length})
                </Chip> */}
@@ -226,6 +231,36 @@ export default function Profile(props: {
                      user={user}
                   />
                ))}
+
+            {view === "reels" && userReels.length === 0 && (
+               <Card>
+                  <div className="p-6 sm:p-8 text-center text-sub dark:text-sub-dark text-sm sm:text-base">
+                     No reels yet
+                  </div>
+               </Card>
+            )}
+
+            {view === "reels" && userReels.length > 0 && (
+               <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  {userReels.map(r => (
+                     <a
+                        key={r.id}
+                        href={`/reel/${r.id}`}
+                        className="relative aspect-[9/16] rounded-lg overflow-hidden bg-muted dark:bg-muted-dark hover:opacity-90 transition-opacity cursor-pointer"
+                     >
+                        <video
+                           src={r.src + "/raw"}
+                           className="absolute inset-0 w-full h-full object-cover"
+                           preload="metadata"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50" />
+                        <div className="absolute bottom-2 left-2 right-2">
+                           <p className="text-white text-xs font-medium truncate">{r.title}</p>
+                        </div>
+                     </a>
+                  ))}
+               </div>
+            )}
 
             {view === "reposts" && repostsList.length === 0 && (
                <Card>
