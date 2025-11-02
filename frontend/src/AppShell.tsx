@@ -29,7 +29,7 @@ export default function AppShell() {
   return (
     <Header
       githubClientId={data.githubClientId}
-      googleClientId={data.googleClientId}  {/* <-- pass it */}
+      googleClientId={data.googleClientId}
       user={data.user}
       openProfile={(id) => console.log("openProfile", id)}
     />

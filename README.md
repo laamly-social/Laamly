@@ -8,3 +8,6 @@ There are two parts to the project - the Vite frontend and the NodeJS backend, a
 
 
 To get start, run `yarn install` in both directories, then `npm run dev` in both directories as well. The Vite frontend will tell you which localhost port the site was opened on, you can access it from there.
+
+
+For the mobile app development, run these two additional commands: `npx cap add android` and `npx cap add ios`. Then, run `npx cap sync` to build the frontend. Use `npx cap build android` to build the apk, or `npx cap open android` to open it on a connected device. Further documentation available at https://capacitorjs.com/docs/android and https://capacitorjs.com/docs/ios.
