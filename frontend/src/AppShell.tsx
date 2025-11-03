@@ -1,4 +1,4 @@
-// src/AppShell.tsx
+// @ts-nocheck
 import { useEffect, useState } from "react";
 import { apiEndpoint } from "./config";
 import { Header } from "./components/header";

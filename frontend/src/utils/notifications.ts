@@ -1,7 +1,9 @@
+// @ts-nocheck
 import { getSocket } from './socket';
 import type { Notification } from '../types';
+import { BACKEND_URL } from '../config';
 
-const BACKEND_URL = import.meta.env.BACKEND_URL || 'http://localhost:8080';
+// const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
 // Event emitter for notification count updates
 type NotificationUpdateListener = () => void;

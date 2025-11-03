@@ -6,13 +6,13 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
    const env = loadEnv(mode, process.cwd(), '');
-   const apiUrl = env.BACKEND_URL || "http://localhost:8080";
+   const apiUrl = env.VITE_BACKEND_URL;
 
 
    return {
       plugins: [tailwindcss(), react()],
       server: {
-         allowedHosts: ["localhost", "laamly.com", "laamly.hnasheralneam.dev"],
+         allowedHosts: ["localhost", "laamly.com"],
          port: 5177,
          proxy: {
             "/posts": {
