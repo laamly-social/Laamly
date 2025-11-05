@@ -5,16 +5,26 @@ import {
   deleteNotification,
   subscribeToNotifications
 } from '../../utils/notifications';
+import { getNotificationPermission, isNotificationSupported } from '../../utils/browserNotifications';
 import type { Notification } from '../../types';
 import Avatar from '../ui/Avatar';
 import { useNavigate } from 'react-router-dom';
+import { NotificationWarningBanner } from './NotificationWarningBanner';
 
 export function NotificationsList() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showWarning, setShowWarning] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check if we should show the warning banner
+    const permission = getNotificationPermission();
+    const supported = isNotificationSupported();
+    
+    // Show warning if notifications are supported but not granted
+    setShowWarning(supported && permission !== 'granted');
+
     // Load notifications
     loadNotifications();
 
@@ -131,6 +141,20 @@ export function NotificationsList() {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Warning banner for disabled notifications */}
+      {showWarning && (
+        <NotificationWarningBanner 
+          onDismiss={() => {
+            setShowWarning(false);
+            // Recheck permission in case user enabled it
+            const permission = getNotificationPermission();
+            if (permission === 'granted') {
+              setShowWarning(false);
+            }
+          }}
+        />
+      )}
+
       {/* Header */}
       <div className="p-4 border-b border-muted dark:border-muted-dark flex items-center justify-between">
         <div className="flex items-center gap-2">

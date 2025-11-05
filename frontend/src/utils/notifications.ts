@@ -2,6 +2,10 @@
 import { getSocket } from './socket';
 import type { Notification } from '../types';
 import { BACKEND_URL } from '../config';
+import { 
+  showAppNotification, 
+  getNotificationPermission 
+} from './browserNotifications';
 
 // const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
@@ -100,6 +104,22 @@ export function subscribeToNotifications(
   const handler = (data: Notification) => {
     onNotification(data);
     triggerNotificationUpdate();
+    
+    // Show browser notification if permission is granted
+    if (getNotificationPermission() === 'granted') {
+      const browserNotification = showAppNotification(data);
+      
+      // Handle notification click to focus window
+      if (browserNotification) {
+        browserNotification.onclick = () => {
+          window.focus();
+          browserNotification.close();
+          
+          // Navigate to the content if needed
+          // You can implement navigation logic here based on notification.contentType and contentId
+        };
+      }
+    }
   };
 
   socket.on('notification', handler);

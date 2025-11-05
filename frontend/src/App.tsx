@@ -12,8 +12,10 @@ import SingleReel from "./components/reels/SingleReel";
 import Profile from "./components/profile/Profile";
 import Podcasts from "./components/podcasts/Podcasts";
 import NotificationsPage from "./components/notifications/NotificationsPage";
+import { NotificationPrompt } from "./components/notifications/NotificationPrompt";
 import { Header } from "./components/header";
 import { useAuthCheck } from "./hooks/useAuthCheck";
+import { useNotificationPermission } from "./hooks/useNotificationPermission";
 import { BACKEND_URL } from "./config";
 import { togglePostLike, deletePost as deletePostApi, editPost as editPostApi, fetchAllPosts } from "./utils/posts";
 import { createComment } from "./utils/comments";
@@ -63,6 +65,9 @@ export default function App({ initialData }: AppProps) {
   }, []);
 
   useAuthCheck(data.user?.id, 15000);
+
+  // Notification permission hook
+  const { shouldShowPrompt, hidePrompt, permission } = useNotificationPermission();
 
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [followMap, setFollowMap] = useState<{ [id: string]: Set<string> }>({});
@@ -142,6 +147,16 @@ export default function App({ initialData }: AppProps) {
 
   return (
     <div className="min-h-screen bg-bg dark:bg-bg-dark md:grid md:grid-cols-[12rem_auto]">
+      {/* Notification prompt - only show to logged-in users */}
+      {data.user && shouldShowPrompt && (
+        <NotificationPrompt 
+          onClose={hidePrompt}
+          onEnable={() => {
+            console.log('Notifications enabled successfully');
+          }}
+        />
+      )}
+
       {/* Desktop sidebar - always visible */}
       <div className="hidden md:block h-[100vh] sticky top-0 p-2 w-full z-1">
         <Header
