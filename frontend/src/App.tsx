@@ -149,6 +149,7 @@ export default function App({ initialData }: AppProps) {
 
   return (
     <div className="min-h-screen bg-bg dark:bg-bg-dark md:grid md:grid-cols-[12rem_auto]">
+      {/* Desktop sidebar - always visible */}
       <div className="hidden md:block h-[100vh] sticky top-0 p-2 w-full z-1">
         <Header
           openProfile={openProfile}
@@ -158,14 +159,17 @@ export default function App({ initialData }: AppProps) {
         />
       </div>
 
-      <div className="md:hidden">
-        <Header
-          openProfile={openProfile}
-          githubClientId={data.githubClientId}
-          googleClientId={data.googleClientId}
-          user={data.user}
-        />
-      </div>
+      {/* Hide header on mobile only when on reels page */}
+      {!(isReelsPage) && (
+        <div className="md:hidden">
+          <Header
+            openProfile={openProfile}
+            githubClientId={data.githubClientId}
+            googleClientId={data.googleClientId}
+            user={data.user}
+          />
+        </div>
+      )}
 
       <div className={`w-full flex flex-col relative z-0 ${isReelsPage ? "h-screen overflow-hidden" : "min-h-screen pb-20 md:pb-0"}`}>
         <main className={`mx-auto w-full ${isReelsPage ? "h-full p-0" : "max-w-full px-0"}`}>

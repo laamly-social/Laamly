@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { fetchReelById, toggleReelLike, toggleReelSave, deleteReel } from "../../utils/reels";
 import Reel from "./Reel";
 import type { Reel as ReelType } from "../../types";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import GenericButton from "../ui/GenericButton";
 import ReelComments from "./ReelComments";
 
@@ -108,8 +108,17 @@ export default function SingleReel({ user }: { user: any }) {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-bg dark:bg-bg-dark">
-      <div className="h-full flex items-center justify-center">
+    <div className="relative h-screen overflow-hidden md:bg-bg dark:md:bg-bg-dark bg-black flex">
+      {/* Back button - top left - mobile only */}
+      <button
+        className="md:hidden fixed top-4 left-4 bg-white/20 hover:bg-white/30 dark:bg-black/20 hover:dark:bg-black/30 text-white backdrop-blur-xl rounded-full h-10 w-10 grid place-items-center shadow-lg z-50 transition-transform hover:scale-110"
+        onClick={() => navigate("/reels")}
+        title="Back to reels"
+      >
+        <ArrowLeft size={20} />
+      </button>
+
+      <div className="h-full w-full flex items-center justify-center">
         <Reel
           reel={reel}
           index={0}
@@ -125,21 +134,67 @@ export default function SingleReel({ user }: { user: any }) {
         />
       </div>
 
-      {/* Comments panel */}
+      {/* Comments panel - Desktop: side panel, Mobile: bottom sheet */}
       {panelMode === "comments" && reel && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setPanelMode(null)}
         >
+          {/* Desktop side panel */}
           <div
-            className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-bg dark:bg-bg-dark shadow-xl overflow-y-auto"
+            className="hidden md:block absolute right-0 top-0 bottom-0 w-full max-w-md bg-bg dark:bg-bg-dark shadow-xl overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <ReelComments
-              reel={reel}
-              onClose={() => setPanelMode(null)}
-              onUpdate={(updatedReel) => setReel(updatedReel)}
-            />
+            <div className="flex items-center justify-between p-4 border-b border-border dark:border-border-dark">
+              <div className="font-semibold text-lg">Comments</div>
+              <button
+                className="inline-flex gap-2 items-center justify-center rounded-full h-[32px] w-[32px] p-0 bg-accent text-white cursor-pointer"
+                onClick={() => setPanelMode(null)}
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-4">
+              <ReelComments
+                reel={reel}
+                onClose={() => setPanelMode(null)}
+                onUpdate={(updatedReel) => setReel(updatedReel)}
+                user={user}
+              />
+            </div>
+          </div>
+
+          {/* Mobile bottom sheet */}
+          <div
+            className="md:hidden absolute bottom-0 left-0 right-0 bg-bg dark:bg-bg-dark rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300"
+            style={{ height: "75vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <div className="flex items-center justify-center pt-2 pb-1">
+              <div className="w-12 h-1 bg-border dark:bg-border-dark rounded-full" />
+            </div>
+
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border dark:border-border-dark">
+              <div className="font-semibold text-lg">Comments</div>
+              <button
+                className="inline-flex gap-2 items-center justify-center rounded-full h-[32px] w-[32px] p-0 bg-accent text-white cursor-pointer"
+                onClick={() => setPanelMode(null)}
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-4 text-sm overflow-auto flex-1">
+              <ReelComments
+                reel={reel}
+                onClose={() => setPanelMode(null)}
+                onUpdate={(updatedReel) => setReel(updatedReel)}
+                user={user}
+              />
+            </div>
           </div>
         </div>
       )}

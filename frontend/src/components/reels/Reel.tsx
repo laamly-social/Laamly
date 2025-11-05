@@ -49,23 +49,22 @@ export default function ReelItem({
       <div
          ref={setItemRef}
          data-idx={index}
-         className="relative overflow-hidden p-0 flex items-center justify-center"
+         className="relative overflow-hidden p-0 flex items-center justify-center md:bg-transparent bg-black"
          style={{
             height: "100vh",
             width: "100%",
             scrollSnapAlign: "start",
          }}
       >
-         {/* Stage 9:16; tall but view-safe */}
+         {/* Stage 9:16; maximize screen on mobile, rounded on desktop */}
          <div
-            className="relative overflow-hidden"
+            className="relative overflow-hidden md:rounded-[18px]"
             style={{
                aspectRatio: "9/16",
                height: "100%",
                maxHeight: "100vh",
                width: "auto",
                maxWidth: "100%",
-               borderRadius: 18
             }}
             data-idx={index}
          >

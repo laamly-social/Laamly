@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
          allowedHosts: ["localhost", "laamly.com"],
          port: 5177,
          proxy: {
-            "/posts": {
+            "^/posts/.*": {
                target: apiUrl,
                changeOrigin: true,
                secure: false
@@ -25,8 +25,9 @@ export default defineConfig(({ mode }) => {
                changeOrigin: true,
                secure: false
             },
-            // Proxy all /reels API endpoints (note: plural, not to be confused with /reel/:id frontend route)
-            "/reels": {
+            // Proxy only /reels API endpoints with subpaths (not the bare /reels route)
+            // This allows /reels page navigation to work while proxying API calls like /reels/create
+            "^/reels/.+": {
                target: apiUrl,
                changeOrigin: true,
                secure: false,

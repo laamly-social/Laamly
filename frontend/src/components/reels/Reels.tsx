@@ -2,7 +2,8 @@
 import ReelComments from "./ReelComments";
 import { useEffect, useRef, useState } from "react";
 import GenericButton from "../ui/GenericButton";
-import { Upload, PlusCircle, X } from "lucide-react";
+import { Upload, PlusCircle, X, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type { Reel as ReelType } from "../../types";
 import {
   uploadReelVideo,
@@ -25,6 +26,8 @@ export default function Reels({
   setReels: React.Dispatch<React.SetStateAction<ReelType[]>>;
   user: any;
 }) {
+  const navigate = useNavigate();
+  
   // Floating panel (composer / comments)
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
   const [panelFor, setPanelFor] = useState<ReelType | null>(null);
@@ -312,10 +315,19 @@ export default function Reels({
         .reelSnapViewport::-webkit-scrollbar { display: none; }
       `}</style>
 
+      {/* Back button - top left - mobile only */}
+      <button
+        className="md:hidden fixed top-4 left-4 bg-white/20 hover:bg-white/30 dark:bg-black/20 hover:dark:bg-black/30 text-white backdrop-blur-xl rounded-full h-10 w-10 grid place-items-center shadow-lg z-50 transition-transform hover:scale-110"
+        onClick={() => navigate("/home")}
+        title="Back to home"
+      >
+        <ArrowLeft size={20} />
+      </button>
+
       {/* Snapping viewport */}
       <div
         ref={wrapRef}
-        className={`reelSnapViewport mx-auto h-full px-2 md:px-0 transition-all duration-300 ${
+        className={`reelSnapViewport mx-auto h-full md:px-0 transition-all duration-300 ${
           panelMode ? "w-1/2" : "w-full"
         }`}
         style={{ overflowY: "auto", scrollSnapType: "y mandatory", scrollBehavior: "smooth" }}
@@ -338,9 +350,9 @@ export default function Reels({
         ))}
       </div>
 
-      {/* Side panel (composer / comments) */}
+      {/* Side panel (composer / comments) - Desktop only */}
       {panelMode && (
-        <aside className="w-1/2 h-full bg-bg dark:bg-bg-dark border-l border-border dark:border-border-dark flex flex-col overflow-hidden">
+        <aside className="hidden md:flex w-1/2 h-full bg-bg dark:bg-bg-dark border-l border-border dark:border-border-dark flex-col overflow-hidden">
           <div className="flex items-center justify-between p-3 border-b border-border dark:border-border-dark">
             <div className="font-semibold">{panelMode === "composer" ? "Add Reel" : "Comments"}</div>
             <button
@@ -404,6 +416,91 @@ export default function Reels({
             </div>
           )}
         </aside>
+      )}
+
+      {/* Mobile bottom sheet (composer / comments) */}
+      {panelMode && (
+        <div
+          className="md:hidden fixed inset-0 z-50 bg-black/50 animate-in fade-in duration-200"
+          onClick={() => {
+            setPanelMode(null);
+            setPanelFor(null);
+          }}
+        >
+          <div
+            className="absolute bottom-0 left-0 right-0 bg-bg dark:bg-bg-dark rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300"
+            style={{ height: "75vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <div className="flex items-center justify-center pt-2 pb-1">
+              <div className="w-12 h-1 bg-border dark:bg-border-dark rounded-full" />
+            </div>
+
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border dark:border-border-dark">
+              <div className="font-semibold text-lg">{panelMode === "composer" ? "Add Reel" : "Comments"}</div>
+              <button
+                className="inline-flex gap-2 items-center justify-center rounded-full h-[32px] w-[32px] p-0 bg-accent text-white cursor-pointer"
+                onClick={() => {
+                  setPanelMode(null);
+                  setPanelFor(null);
+                }}
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {panelMode === "composer" ? (
+              <div className="p-4 grid gap-3 overflow-auto flex-1">
+                <input
+                  className="input bg-muted dark:bg-muted-dark"
+                  placeholder="Title (optional)"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+                <textarea
+                  className="input bg-muted dark:bg-muted-dark min-h-[96px]"
+                  placeholder="Write a caption…"
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                />
+                {preview && (
+                  <video className="rounded-xl w-full" src={preview} muted controls playsInline preload="metadata" />
+                )}
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex gap-2 items-center justify-center h-9 px-3 rounded-xl bg-transparent hover:bg-muted dark:hover:bg-muted-dark cursor-pointer">
+                    <Upload size={16} /> Upload video
+                    <input type="file" accept="video/*" onChange={onPickVideo} className="hidden" />
+                  </label>
+                  <GenericButton
+                    className="inline-flex gap-2 items-center justify-center h-9 px-3 bg-accent text-white cursor-pointer"
+                    onClick={addReel}
+                    disabled={!file || uploading}
+                  >
+                    <PlusCircle size={16} /> {uploading ? "Posting…" : "Add Reel"}
+                  </GenericButton>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 text-sm overflow-auto flex-1">
+                {panelFor ? (
+                  <>
+                    <div className="mb-2 font-medium">@{panelFor.authorInfo?.handle}</div>
+                    <ReelComments
+                      key={panelFor.id}
+                      reel={panelFor}
+                      user={user}
+                      onAdd={async () => setReels(await fetchAllReels())}
+                    />
+                  </>
+                ) : (
+                  <div className="opacity-70">No reel selected.</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Fixed floating button - bottom right */}
