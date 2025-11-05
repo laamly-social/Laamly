@@ -5,8 +5,9 @@ const User = require('../models/User');
 const Reel = require('../models/Reel');
 const { sendNotification } = require('../utils/notifications');
 
-// Helper: find by either provider id (github/google)
-const qById = (id) => ({ $or: [{ githubId: id }, { googleId: id }] });
+// Helper: find by uuid
+const qByUuid = (uuid) => ({ uuid });
+const qInUuids = (uuids) => ({ uuid: { $in: uuids } });
 
 module.exports = function createReelsRouter(io, userSockets) {
   // Create reel
@@ -17,7 +18,7 @@ module.exports = function createReelsRouter(io, userSockets) {
       if (!src) return res.status(400).json({ message: 'Missing video src' });
 
       const reel = await Reel.create({
-        author: String(req.session.user.id),
+        author: String(req.session.user.uuid),
         title,
         description,
         src,
@@ -37,26 +38,26 @@ module.exports = function createReelsRouter(io, userSockets) {
       const reels = await Reel.find({ deleted: { $ne: true } }).sort({ datePosted: -1 }).lean();
 
       for (const r of reels) {
-        const author = await User.findOne(qById(r.author)).lean();
+        const author = await User.findOne(qByUuid(r.author)).lean();
 
         r.authorInfo = author
           ? {
               handle: author.handle,
               name: author.profile?.name || author.handle,
               avatar: author.profile?.avatar || '',
-              isCurrentUser: req.session.user ? r.author === String(req.session.user.id) : false
+              isCurrentUser: req.session.user ? r.author === String(req.session.user.uuid) : false
             }
           : { handle: 'unknown', name: 'Unknown', avatar: '', isCurrentUser: false };
 
         r.likes = (r.likedBy || []).length;
-        r.saved = !!(req.session.user && (r.savedBy || []).map(String).includes(String(req.session.user.id)));
-        r.liked = !!(req.session.user && (r.likedBy || []).map(String).includes(String(req.session.user.id)));
+        r.saved = !!(req.session.user && (r.savedBy || []).map(String).includes(String(req.session.user.uuid)));
+        r.liked = !!(req.session.user && (r.likedBy || []).map(String).includes(String(req.session.user.uuid)));
         r.createdAt = new Date(r.datePosted).getTime();
 
         if (Array.isArray(r.comments)) {
           r.comments = await Promise.all(
             r.comments.map(async (c) => {
-              const commenter = await User.findOne(qById(c.author)).lean();
+              const commenter = await User.findOne(qByUuid(c.author)).lean();
               if (commenter) {
                 return {
                   ...c,
@@ -65,7 +66,7 @@ module.exports = function createReelsRouter(io, userSockets) {
                     handle: commenter.handle,
                     avatar: commenter.profile?.avatar || '',
                     name: commenter.profile?.name || commenter.handle,
-                    isCurrentUser: req.session.user ? c.author === String(req.session.user.id) : false
+                    isCurrentUser: req.session.user ? c.author === String(req.session.user.uuid) : false
                   }
                 };
               }
@@ -91,12 +92,12 @@ module.exports = function createReelsRouter(io, userSockets) {
       const { id } = req.body || {};
       if (!id) return res.status(400).json({ message: 'Missing id' });
 
-      const uid = String(req.session.user.id);
+  const uid = String(req.session.user.uuid);
 
       const current = await Reel.findById(id, { likedBy: 1, author: 1 }).lean();
       if (!current) return res.status(404).json({ message: 'Reel not found' });
 
-      const alreadyLiked = (current.likedBy || []).map(String).includes(uid);
+  const alreadyLiked = (current.likedBy || []).map(String).includes(uid);
 
       // Atomic toggle
       if (alreadyLiked) {
@@ -114,7 +115,7 @@ module.exports = function createReelsRouter(io, userSockets) {
       if (liked) {
         (async () => {
           try {
-            const currentUser = await User.findOne(qById(uid)).lean();
+            const currentUser = await User.findOne(qByUuid(uid)).lean();
             await sendNotification(io, userSockets, {
               to: String(updated.author),
               type: 'like',
@@ -145,12 +146,12 @@ module.exports = function createReelsRouter(io, userSockets) {
       const { id } = req.body || {};
       if (!id) return res.status(400).json({ message: 'Missing id' });
 
-      const uid = String(req.session.user.id);
+  const uid = String(req.session.user.uuid);
 
       const current = await Reel.findById(id, { savedBy: 1 }).lean();
       if (!current) return res.status(404).json({ message: 'Reel not found' });
 
-      const alreadySaved = (current.savedBy || []).map(String).includes(uid);
+  const alreadySaved = (current.savedBy || []).map(String).includes(uid);
 
       if (alreadySaved) {
         await Reel.updateOne({ _id: id }, { $pull: { savedBy: uid } });
@@ -175,7 +176,7 @@ module.exports = function createReelsRouter(io, userSockets) {
 
       const reel = await Reel.findById(id);
       if (!reel) return res.status(404).json({ message: 'Reel not found' });
-      if (String(reel.author) !== String(req.session.user.id)) {
+      if (String(reel.author) !== String(req.session.user.uuid)) {
         return res.status(403).json({ message: 'Not your reel' });
       }
 
@@ -197,26 +198,26 @@ module.exports = function createReelsRouter(io, userSockets) {
         return res.status(404).json({ message: 'Reel not found' });
       }
 
-      const author = await User.findOne(qById(reel.author)).lean();
+  const author = await User.findOne(qByUuid(reel.author)).lean();
 
       reel.authorInfo = author
         ? {
             handle: author.handle,
             name: author.profile?.name || author.handle,
             avatar: author.profile?.avatar || '',
-            isCurrentUser: req.session.user ? reel.author === String(req.session.user.id) : false
+            isCurrentUser: req.session.user ? reel.author === String(req.session.user.uuid) : false
           }
         : { handle: 'unknown', name: 'Unknown', avatar: '', isCurrentUser: false };
 
       reel.likes = (reel.likedBy || []).length;
-      reel.saved = !!(req.session.user && (reel.savedBy || []).map(String).includes(String(req.session.user.id)));
-      reel.liked = !!(req.session.user && (reel.likedBy || []).map(String).includes(String(req.session.user.id)));
+  reel.saved = !!(req.session.user && (reel.savedBy || []).map(String).includes(String(req.session.user.uuid)));
+  reel.liked = !!(req.session.user && (reel.likedBy || []).map(String).includes(String(req.session.user.uuid)));
       reel.createdAt = new Date(reel.datePosted).getTime();
 
       if (Array.isArray(reel.comments)) {
         reel.comments = await Promise.all(
           reel.comments.map(async (c) => {
-            const commenter = await User.findOne(qById(c.author)).lean();
+            const commenter = await User.findOne(qByUuid(c.author)).lean();
             if (commenter) {
               return {
                 ...c,
@@ -225,7 +226,7 @@ module.exports = function createReelsRouter(io, userSockets) {
                   handle: commenter.handle,
                   avatar: commenter.profile?.avatar || '',
                   name: commenter.profile?.name || commenter.handle,
-                  isCurrentUser: req.session.user ? c.author === String(req.session.user.id) : false
+                  isCurrentUser: req.session.user ? c.author === String(req.session.user.uuid) : false
                 }
               };
             }
@@ -255,21 +256,20 @@ module.exports = function createReelsRouter(io, userSockets) {
 
       reel.comments = reel.comments || [];
       reel.comments.push({
-        author: String(req.session.user.id),
+        author: String(req.session.user.uuid),
         content: String(text),
         datePosted: new Date(),
         stats: {}
       });
       await reel.save();
 
-      const user = await User.findOne(qById(req.session.user.id)).lean();
+      const user = await User.findOne(qByUuid(req.session.user.uuid)).lean();
       const currentUserInfo = user
         ? {
-            id: req.session.user.id,
+            id: user.uuid,
             handle: user.handle,
             name: user.profile?.name || user.handle,
-            avatar: user.profile?.avatar || '',
-            profile: user.profile
+            avatar: user.profile?.avatar || ''
           }
         : null;
 
@@ -278,7 +278,7 @@ module.exports = function createReelsRouter(io, userSockets) {
         await sendNotification(io, userSockets, {
           to: String(reel.author),
           type: 'comment',
-          from: String(req.session.user.id),
+          from: String(req.session.user.uuid),
           fromName: user?.profile?.name || user?.handle || 'Someone',
           fromAvatar: user?.profile?.avatar || '',
           contentId: reelId,

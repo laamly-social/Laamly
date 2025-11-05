@@ -5,8 +5,8 @@ const User = require('../models/User');
 const Chat = require('../models/Chat');
 const { sendNotification } = require('../utils/notifications');
 
-const qById = (id) => ({ $or: [{ githubId: id }, { googleId: id }] });
-const qInIds = (ids) => ({ $or: [{ githubId: { $in: ids } }, { googleId: { $in: ids } }] });
+const qByUuid = (uuid) => ({ uuid });
+const qInUuids = (uuids) => ({ uuid: { $in: uuids } });
 
 module.exports = function createMessagesRouter(io, userSockets) {
 
@@ -14,19 +14,19 @@ module.exports = function createMessagesRouter(io, userSockets) {
   router.get('/threads', async (req, res) => {
     try {
       if (!req.session.user) return res.status(401).json({ message: 'You need to be logged in' });
-      const userId = String(req.session.user.id);
+      const userUuid = String(req.session.user.uuid);
 
-      const chats = await Chat.find({ members: userId }).sort({ lastMessageTs: -1 }).lean();
+      const chats = await Chat.find({ members: userUuid }).sort({ lastMessageTs: -1 }).lean();
 
       const threadsWithParticipants = await Promise.all(chats.map(async (chat) => {
-        const otherMemberIds = chat.members.filter(m => m !== userId);
-        const participants = otherMemberIds.length
-          ? await User.find(qInIds(otherMemberIds)).lean()
+        const otherMemberUuids = chat.members.filter(m => m !== userUuid);
+        const participants = otherMemberUuids.length
+          ? await User.find(qInUuids(otherMemberUuids)).lean()
           : [];
 
         const participantData = participants.map(u => ({
-          id: u.githubId || u.googleId,
-          githubId: u.githubId,
+          id: u.uuid,
+          uuid: u.uuid,
           name: u.profile?.name || u.handle,
           handle: u.handle,
           avatar: u.profile?.avatar || ''
@@ -34,18 +34,18 @@ module.exports = function createMessagesRouter(io, userSockets) {
 
         const unreadCount =
           (chat.unreadCount && typeof chat.unreadCount.get === 'function'
-            ? chat.unreadCount.get(userId)
-            : chat.unreadCount?.[userId]) || 0;
+            ? chat.unreadCount.get(userUuid)
+            : chat.unreadCount?.[userUuid]) || 0;
 
         return {
           id: chat._id.toString(),
-          participantIds: otherMemberIds,
+          participantIds: otherMemberUuids,
           participants: participantData,
           last: chat.lastMessage || '',
           lastTs: chat.lastMessageTs ? new Date(chat.lastMessageTs).getTime() : Date.now(),
           messages: (chat.messages || []).map(m => ({
             id: m._id.toString(),
-            from: m.from === userId ? 'me' : m.from,
+            from: m.from === userUuid ? 'me' : m.from,
             text: m.text || '',
             ts: new Date(m.ts).getTime(),
             attachments: m.attachments || [],
@@ -108,14 +108,14 @@ module.exports = function createMessagesRouter(io, userSockets) {
       if (!req.session.user) return res.status(401).json({ message: 'You need to be logged in' });
 
       const { threadId, text, attachments } = req.body;
-      const userId = String(req.session.user.id);
+      const userUuid = String(req.session.user.uuid);
 
       const chat = await Chat.findById(threadId);
       if (!chat) return res.status(404).json({ message: 'Thread not found' });
-      if (!chat.members.includes(userId)) return res.status(403).json({ message: 'Not authorized' });
+      if (!chat.members.includes(userUuid)) return res.status(403).json({ message: 'Not authorized' });
 
       const newMessage = {
-        from: userId,
+        from: userUuid,
         text: text || '',
         attachments: attachments || [],
         ts: new Date(),
@@ -130,7 +130,7 @@ module.exports = function createMessagesRouter(io, userSockets) {
       chat.updatedAt = new Date();
 
       chat.members.forEach(memberId => {
-        if (memberId !== userId) {
+        if (memberId !== userUuid) {
           try {
             if (typeof chat.unreadCount.get === 'function') {
               const current = chat.unreadCount.get(memberId) || 0;
@@ -149,13 +149,13 @@ module.exports = function createMessagesRouter(io, userSockets) {
       await chat.save();
 
       const savedMessage = chat.messages[chat.messages.length - 1];
-      const sender = await User.findOne(qById(userId)).lean();
+      const sender = await User.findOne(qByUuid(userUuid)).lean();
 
       const messageData = {
         threadId,
         message: {
           id: savedMessage._id.toString(),
-          from: userId,
+          from: userUuid,
           text: text || '',
           ts: new Date(savedMessage.ts).getTime(),
           attachments: attachments || [],
@@ -163,7 +163,7 @@ module.exports = function createMessagesRouter(io, userSockets) {
           edited: false,
           reactions: [],
           sender: {
-            id: userId,
+            id: userUuid,
             name: sender?.profile?.name || sender?.handle || 'Unknown',
             handle: sender?.handle || 'unknown',
             avatar: sender?.profile?.avatar || ''
@@ -173,7 +173,7 @@ module.exports = function createMessagesRouter(io, userSockets) {
 
       // emit to others in the room
       const socketsInRoom = await io.in(threadId).fetchSockets();
-      const senderSocketIds = userSockets.get(userId) || new Set();
+      const senderSocketIds = userSockets.get(userUuid) || new Set();
       for (const socket of socketsInRoom) {
         if (!senderSocketIds.has(socket.id)) {
           socket.emit('new-message', messageData);
@@ -181,12 +181,12 @@ module.exports = function createMessagesRouter(io, userSockets) {
       }
 
       // notifications
-      const otherMembers = chat.members.filter(memberId => memberId !== userId);
+      const otherMembers = chat.members.filter(memberId => memberId !== userUuid);
       for (const memberId of otherMembers) {
         await sendNotification(io, userSockets, {
           to: memberId,
           type: 'message',
-          from: userId,
+          from: userUuid,
           fromName: sender?.profile?.name || sender?.handle || 'Someone',
           fromAvatar: sender?.profile?.avatar || '',
           contentId: threadId,
@@ -208,17 +208,17 @@ module.exports = function createMessagesRouter(io, userSockets) {
       if (!req.session.user) return res.status(401).json({ message: 'You need to be logged in' });
 
       const { participantIds, isGroup, groupName, groupAvatar } = req.body;
-      const userId = String(req.session.user.id);
+      const userUuid = String(req.session.user.uuid);
 
-      const allMembers = [userId, ...(participantIds || [])];
+      const allMembers = [userUuid, ...(participantIds || [])];
 
       if (!isGroup && participantIds?.length === 1) {
         const existingChat = await Chat.findOne({ members: { $all: allMembers, $size: allMembers.length }, isGroup: false });
         if (existingChat) {
-          const participants = await User.find(qInIds(participantIds)).lean();
+          const participants = await User.find(qInUuids(participantIds)).lean();
           const participantData = participants.map(u => ({
-            id: u.githubId || u.googleId,
-            githubId: u.githubId,
+            id: u.uuid,
+            uuid: u.uuid,
             name: u.profile?.name || u.handle,
             handle: u.handle,
             avatar: u.profile?.avatar || ''
@@ -242,10 +242,10 @@ module.exports = function createMessagesRouter(io, userSockets) {
 
       await newChat.save();
 
-      const participants = await User.find(qInIds(participantIds || [])).lean();
+      const participants = await User.find(qInUuids(participantIds || [])).lean();
       const participantData = participants.map(u => ({
-        id: u.githubId || u.googleId,
-        githubId: u.githubId,
+        id: u.uuid,
+        uuid: u.uuid,
         name: u.profile?.name || u.handle,
         handle: u.handle,
         avatar: u.profile?.avatar || ''

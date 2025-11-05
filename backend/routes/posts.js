@@ -5,8 +5,8 @@ const User = require('../models/User');
 const Post = require('../models/Post');
 const { sendNotification } = require('../utils/notifications');
 
-const qById = (id) => ({ $or: [{ githubId: id }, { googleId: id }] });
-const qInIds = (ids) => ({ $or: [{ githubId: { $in: ids } }, { googleId: { $in: ids } }] });
+const qByUuid = (uuid) => ({ uuid });
+const qInUuids = (uuids) => ({ uuid: { $in: uuids } });
 
 // Fetch image from URL and convert to base64
 async function fetchImageAsBase64(imageUrl) {
@@ -148,26 +148,26 @@ module.exports = function createPostsRouter(io, userSockets) {
       const post = await Post.findById(postId);
       if (!post) return res.status(404).json({ message: 'Post not found' });
 
-      const userId = String(req.session.user.id);
+      const userUuid = String(req.session.user.uuid);
       post.likedBy = post.likedBy || [];
 
       const likedBySet = new Set(post.likedBy.map(String));
-      const wasLiked = likedBySet.has(userId);
+      const wasLiked = likedBySet.has(userUuid);
 
       if (wasLiked) {
-        likedBySet.delete(userId);
+        likedBySet.delete(userUuid);
         post.likedBy = Array.from(likedBySet);
-        await User.updateOne(qById(userId), { $pull: { likedPostIds: post._id } });
+        await User.updateOne(qByUuid(userUuid), { $pull: { likedPostIds: post._id } });
       } else {
-        likedBySet.add(userId);
+        likedBySet.add(userUuid);
         post.likedBy = Array.from(likedBySet);
-        await User.updateOne(qById(userId), { $addToSet: { likedPostIds: post._id } });
+        await User.updateOne(qByUuid(userUuid), { $addToSet: { likedPostIds: post._id } });
 
-        const currentUser = await User.findOne(qById(userId)).lean();
+        const currentUser = await User.findOne(qByUuid(userUuid)).lean();
         await sendNotification(io, userSockets, {
           to: String(post.author),
           type: 'like',
-          from: userId,
+          from: userUuid,
           fromName: currentUser?.profile?.name || currentUser?.handle || 'Someone',
           fromAvatar: currentUser?.profile?.avatar || '',
           contentId: postId,
@@ -195,16 +195,17 @@ module.exports = function createPostsRouter(io, userSockets) {
       if (!post) return res.status(404).json({ message: 'Post not found' });
 
       post.comments.push({
-        author: String(req.session.user.id),
+        author: String(req.session.user.uuid),
         content: String(text),
         datePosted: new Date(),
         stats: {}
       });
       await post.save();
 
-      const user = await User.findOne(qById(req.session.user.id)).lean();
+      const user = await User.findOne(qByUuid(req.session.user.uuid)).lean();
       const currentUserInfo = user ? {
-        id: req.session.user.id,
+        id: user.uuid,
+        uuid: user.uuid,
         handle: user.handle,
         name: user.profile?.name || user.handle,
         avatar: user.profile?.avatar || '',
@@ -214,7 +215,7 @@ module.exports = function createPostsRouter(io, userSockets) {
       await sendNotification(io, userSockets, {
         to: String(post.author),
         type: 'comment',
-        from: String(req.session.user.id),
+        from: String(req.session.user.uuid),
         fromName: user?.profile?.name || user?.handle || 'Someone',
         fromAvatar: user?.profile?.avatar || '',
         contentId: postId,
@@ -373,12 +374,12 @@ module.exports = function createPostsRouter(io, userSockets) {
         content: content,
         urls: Array.isArray(urls) ? urls : [],
         datePosted: datePosted ? new Date(datePosted) : new Date(),
-        author: String(req.session.user.id),
+        author: String(req.session.user.uuid),
         tags: aiAnalysis.tags,
         isHalal: aiAnalysis.isHalal
       });
 
-      await User.updateOne(qById(req.session.user.id), { $push: { postIds: post._id } });
+  await User.updateOne(qByUuid(req.session.user.uuid), { $push: { postIds: post._id } });
 
       return res.status(201).json({
         message: 'Post created successfully!',
@@ -397,7 +398,7 @@ module.exports = function createPostsRouter(io, userSockets) {
       const posts = await Post.find({ deleted: { $ne: true } }).lean();
       for (const p of posts) {
         try {
-          const author = await User.findOne(qById(p.author)).lean();
+          const author = await User.findOne(qByUuid(p.author)).lean();
           p.authorInfo = author
             ? {
                 profile: author.profile,
@@ -416,7 +417,7 @@ module.exports = function createPostsRouter(io, userSockets) {
 
           if (Array.isArray(p.comments)) {
             p.comments = await Promise.all(p.comments.map(async c => {
-              const commenter = await User.findOne(qById(c.author)).lean();
+              const commenter = await User.findOne(qByUuid(c.author)).lean();
               if (commenter) {
                 return {
                   ...c,
@@ -456,7 +457,7 @@ module.exports = function createPostsRouter(io, userSockets) {
         return res.status(404).json({ message: 'Post not found' });
       }
 
-      const author = await User.findOne(qById(post.author)).lean();
+  const author = await User.findOne(qByUuid(post.author)).lean();
       post.authorInfo = author
         ? {
             profile: author.profile,
@@ -474,7 +475,7 @@ module.exports = function createPostsRouter(io, userSockets) {
 
       if (Array.isArray(post.comments)) {
         post.comments = await Promise.all(post.comments.map(async c => {
-          const commenter = await User.findOne(qById(c.author)).lean();
+          const commenter = await User.findOne(qByUuid(c.author)).lean();
           if (commenter) {
             return {
               ...c,

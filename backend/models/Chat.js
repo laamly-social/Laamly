@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
 const chatSchema = new mongoose.Schema({
-   members: [String], // githubId array
+   members: [String], // uuid
    messages: [{
-      from: String,     // githubId of sender
+      from: String,     // uuid
       text: String,
       attachments: [String], // URLs to uploaded files
       ts: { type: Date, default: Date.now },

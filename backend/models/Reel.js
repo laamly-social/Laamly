@@ -1,16 +1,16 @@
 const mongoose = require('mongoose');
 
 const reelSchema = new mongoose.Schema({
-   author: String,               // githubId
+   author: String,               // uuid
    title: String,
    description: String,
    src: String,                  // single video link (PictShare)
    datePosted: { type: Date, default: Date.now },
-   likedBy: [String],            // githubId list
-   savedBy: [String],            // githubId list
+   likedBy: [String],            // uuid list
+   savedBy: [String],            // uuid list
    deleted: { type: Boolean, default: false },
    comments: [{
-      author: String,             // githubId
+   author: String,             // uuid
       content: String,
       datePosted: Date,
       stats: Object

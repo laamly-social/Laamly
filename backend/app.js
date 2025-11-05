@@ -135,20 +135,17 @@ async function uploadImageToPictshare(imageUrl) {
 
 // Helper: find user for current session (supports both providers)
 async function findDbUserBySession(req) {
-  const sid = String(req.session?.user?.id || "");
-  if (!sid) return null;
-  return await User.findOne({
-    $or: [{ githubId: sid }, { googleId: sid }],
-  }).lean();
+  const uuid = String(req.session?.user?.uuid || "");
+  if (!uuid) return null;
+  return await User.findOne({ uuid }).lean();
 }
 
 // ---------- Socket.IO ----------
 const userSockets = new Map(); // userId -> Set of socketIds
 io.on("connection", (socket) => {
   const sess = socket.request.session;
-  if (sess?.user?.id) {
-    socket.userId = String(sess.user.id);
-
+  if (sess?.user?.uuid) {
+    socket.userId = String(sess.user.uuid);
     if (!userSockets.has(socket.userId)) {
       userSockets.set(socket.userId, new Set());
     }
@@ -168,9 +165,7 @@ io.on("connection", (socket) => {
     try {
       if (!socket.userId) return;
 
-      const user = await User.findOne({
-        $or: [{ githubId: socket.userId }, { googleId: socket.userId }],
-      }).lean();
+      const user = await User.findOne({ uuid: socket.userId }).lean();
 
       const userName = user?.profile?.name || user?.handle || "Someone";
 
@@ -189,9 +184,7 @@ io.on("connection", (socket) => {
     try {
       if (!socket.userId) return;
 
-      const user = await User.findOne({
-        $or: [{ githubId: socket.userId }, { googleId: socket.userId }],
-      }).lean();
+      const user = await User.findOne({ uuid: socket.userId }).lean();
 
       const userName = user?.profile?.name || user?.handle || "Someone";
 
@@ -223,7 +216,8 @@ app.get("/", async (req, res) => {
   const dbUser = await findDbUserBySession(req);
   if (dbUser) {
     user = {
-      id: String(req.session.user.id),
+      id: dbUser.uuid,
+      uuid: dbUser.uuid,
       name: dbUser.profile?.name || dbUser.handle,
       avatar: dbUser.profile?.avatar || "",
       email: dbUser.profile?.email || "",
@@ -263,7 +257,8 @@ app.get("/api/initial-data", async (req, res) => {
   const dbUser = await findDbUserBySession(req);
   if (dbUser) {
     user = {
-      id: String(req.session.user.id),
+      id: dbUser.uuid,
+      uuid: dbUser.uuid,
       name: dbUser.profile?.name || dbUser.handle,
       avatar: dbUser.profile?.avatar || "",
       email: dbUser.profile?.email || "",
@@ -290,7 +285,8 @@ app.get("/api/me", async (req, res) => {
 
   res.json({
     user: {
-      id: String(req.session.user.id),
+      id: dbUser.uuid,
+      uuid: dbUser.uuid,
       name: dbUser.profile?.name || dbUser.handle,
       avatar: dbUser.profile?.avatar || "",
       email: dbUser.profile?.email || "",
@@ -319,9 +315,8 @@ app.get("/api/users/search", async (req, res) => {
       .lean();
 
     const results = users.map((u) => ({
-      id: u.githubId || u.googleId, // support both providers
-      githubId: u.githubId,
-      googleId: u.googleId,
+      id: u.uuid,
+      uuid: u.uuid,
       name: u.profile?.name || u.handle,
       handle: u.handle,
       avatar: u.profile?.avatar || "",
@@ -339,24 +334,23 @@ app.get("/api/users/:userId", async (req, res) => {
    try {
       const { userId } = req.params;
 
-      // Support both GitHub and Google users
-      const dbUser = await User.findOne({
-        $or: [{ githubId: userId }, { googleId: userId }]
-      }).lean();
+      // Use uuid as the main identifier
+      const dbUser = await User.findOne({ uuid: userId }).lean();
 
       if (!dbUser) {
          return res.status(404).json({ error: "User not found" });
       }
 
-      res.json({
-         user: {
-            id: String(dbUser.githubId || dbUser.googleId),
-            name: dbUser.profile?.name || dbUser.handle,
-            handle: dbUser.handle,
-            avatar: dbUser.profile?.avatar || "",
-            email: dbUser.profile?.email || "",
-         }
-      });
+    res.json({
+      user: {
+        id: dbUser.uuid,
+        uuid: dbUser.uuid,
+        name: dbUser.profile?.name || dbUser.handle,
+        handle: dbUser.handle,
+        avatar: dbUser.profile?.avatar || "",
+        email: dbUser.profile?.email || "",
+      }
+    });
    } catch (error) {
       console.error("Error fetching user profile:", error);
       res.status(500).json({ error: "Failed to fetch user profile" });
@@ -446,7 +440,23 @@ app.get("/github/login", (req, res) => {
       }
 
       // Normalize the session
+      // Find the user to get their uuid
+      let user = await User.findOne({ githubId: data.id });
+      if (!user) {
+        user = await new User({
+          githubId: data.id,
+          handle: data.login,
+          profile: {
+            description: data.bio,
+            name: data.name,
+            avatar: pictshareAvatarUrl, // Use Pictshare URL instead of GitHub's
+            email: primaryEmail,
+          },
+          postIds: [],
+        }).save();
+      }
       req.session.user = {
+        uuid: user.uuid,
         id: String(data.id),
         provider: "github",
         login: data.login,
@@ -510,7 +520,22 @@ app.get("/google/login", async (req, res) => {
     }
 
     // Normalize the session
+    // Find the user to get their uuid
+    let user = await User.findOne({ googleId: data.id });
+    if (!user) {
+      user = await new User({
+        googleId: data.id,
+        handle: (data.email || "").split("@")[0],
+        profile: {
+          name: data.name,
+          avatar: pictshareAvatarUrl, // Use Pictshare URL instead of Google's
+          email: data.email,
+        },
+        postIds: [],
+      }).save();
+    }
     req.session.user = {
+      uuid: user.uuid,
       id: String(data.id),
       provider: "google",
       login: (data.email || "").split("@")[0],
@@ -605,4 +630,5 @@ app.use("/api/notifications", notificationsRouter);
     console.error("MongoDB connect failed:", err?.message || err);
     process.exit(1);
   }
+
 })();

@@ -4,14 +4,14 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const User = require('../models/User');
 
-function sessionUserId(req) {
-  return String(req.session?.user?.id || '');
+function sessionUserUuid(req) {
+  return String(req.session?.user?.uuid || '');
 }
 
 async function findUserBySession(req) {
-  const id = sessionUserId(req);
-  if (!id) return null;
-  return await User.findOne({ $or: [{ githubId: id }, { googleId: id }] });
+  const uuid = sessionUserUuid(req);
+  if (!uuid) return null;
+  return await User.findOne({ uuid });
 }
 
 // GET /api/notifications
@@ -63,17 +63,17 @@ router.post('/mark-read', async (req, res) => {
   try {
     if (!req.session?.user) return res.status(401).json({ message: 'You need to be logged in' });
 
-    const id = sessionUserId(req);
+  const uuid = sessionUserUuid(req);
     const { notificationId } = req.body;
 
     if (notificationId) {
       await User.updateOne(
-        { $or: [{ githubId: id }, { googleId: id }], 'notifications._id': notificationId },
+        { uuid, 'notifications._id': notificationId },
         { $set: { 'notifications.$.read': true } }
       );
     } else {
       await User.updateOne(
-        { $or: [{ githubId: id }, { googleId: id }] },
+        { uuid },
         { $set: { 'notifications.$[].read': true } }
       );
     }
@@ -89,11 +89,11 @@ router.delete('/:notificationId', async (req, res) => {
   try {
     if (!req.session?.user) return res.status(401).json({ message: 'You need to be logged in' });
 
-    const id = sessionUserId(req);
+  const uuid = sessionUserUuid(req);
     const { notificationId } = req.params;
 
     await User.updateOne(
-      { $or: [{ githubId: id }, { googleId: id }] },
+      { uuid },
       { $pull: { notifications: { _id: notificationId } } }
     );
 
