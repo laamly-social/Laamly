@@ -19,17 +19,9 @@ export default function Messages() {
    const [typingUsers, setTypingUsers] = useState<{ [threadId: string]: string[] }>({});
    const activeThread = threads.find(t => t.id === activeId);
 
-   // Debug helper
-   useEffect(() => {
-      console.log("Messages - typingUsers state:", typingUsers);
-      console.log("Messages - activeId:", activeId);
-      console.log("Messages - typing users for active thread:", typingUsers[activeId]);
-   }, [typingUsers, activeId]);
-
-   // ✅ Initialize Socket.IO
+   // Initialize Socket.IO
    useEffect(() => {
       const socket = getSocket();
-      console.log("Initializing socket listeners, socket ID:", socket.id);
 
       // Listen for new messages
       socket.on("new-message", (data: { threadId: string; message: any }) => {
@@ -67,16 +59,13 @@ export default function Messages() {
 
       // Listen for typing indicators
       socket.on("user-typing", (data: { threadId: string; userId: string; userName?: string; isTyping: boolean }) => {
-         console.log("Received user-typing event:", data);
          setTypingUsers(prev => {
             const threadTyping = prev[data.threadId] || [];
             const displayName = data.userName || data.userId || "Someone";
 
             if (data.isTyping && !threadTyping.includes(displayName)) {
-               console.log("Adding typing user:", displayName, "to thread:", data.threadId);
                return { ...prev, [data.threadId]: [...threadTyping, displayName] };
             } else if (!data.isTyping) {
-               console.log("Removing typing user:", displayName, "from thread:", data.threadId);
                return { ...prev, [data.threadId]: threadTyping.filter(name => name !== displayName) };
             }
             return prev;
@@ -90,14 +79,12 @@ export default function Messages() {
       };
    }, []);
 
-   // ✅ Join/leave thread rooms
+   // Join/leave thread rooms
    useEffect(() => {
       if (activeId) {
          const socket = getSocket();
-         console.log("Joining thread:", activeId);
          socket.emit("join-thread", activeId);
          return () => {
-            console.log("Leaving thread:", activeId);
             socket.emit("leave-thread", activeId);
          };
       }

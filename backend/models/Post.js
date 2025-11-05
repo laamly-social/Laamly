@@ -8,6 +8,8 @@ const postSchema = new mongoose.Schema({
    stats: Object,
    deleted: { type: Boolean, default: false },
    likedBy: [String], // Array of githubIds who liked this post
+   tags: [String], // AI-generated tags
+   isHalal: { type: Boolean, default: true }, // AI-determined halal status
    comments: [{
       author: String,
       content: String,

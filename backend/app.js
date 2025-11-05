@@ -285,8 +285,6 @@ app.get("/auth/github", (req, res) => {
     headers: { accept: "application/json" },
   })
     .then(({ data }) => {
-      console.log("GitHub token response:", data);
-
       if (data.error) {
         console.error("GitHub OAuth error:", data.error, data.error_description);
         return res.status(400).send(`GitHub OAuth error: ${data.error_description || data.error}`);
@@ -309,8 +307,6 @@ app.get("/auth/github", (req, res) => {
 
 app.get("/github/login", (req, res) => {
   const accessToken = req.session.github_access_token;
-
-  console.log("GitHub login - access token:", accessToken ? "exists" : "missing");
 
   if (!accessToken) {
     console.error("No access token in session");
@@ -341,8 +337,6 @@ app.get("/github/login", (req, res) => {
     })
   ])
     .then(async ([userData, emailsData]) => {
-      console.log("GitHub user data received:", userData.data.login);
-
       const data = userData.data;
       const emails = emailsData.data;
 
@@ -351,8 +345,6 @@ app.get("/github/login", (req, res) => {
                         || emails.find(e => e.verified)?.email
                         || data.email
                         || "";
-
-      console.log("GitHub user email:", primaryEmail);
 
       // Normalize the session
       req.session.user = {
@@ -364,10 +356,8 @@ app.get("/github/login", (req, res) => {
         email: primaryEmail,
       };
 
-      console.log("Checking if user exists in DB...");
       const exists = await User.findOne({ githubId: data.id });
       if (!exists) {
-        console.log("Creating new user in DB...");
         await new User({
           githubId: data.id,
           handle: data.login,
@@ -379,12 +369,8 @@ app.get("/github/login", (req, res) => {
           },
           postIds: [],
         }).save();
-        console.log("User created successfully");
-      } else {
-        console.log("User already exists in DB");
       }
 
-      console.log("Redirecting to frontend:", FRONTEND_ORIGIN);
       res.redirect(FRONTEND_ORIGIN);
     })
     .catch((err) => {

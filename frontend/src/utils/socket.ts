@@ -12,14 +12,11 @@ export function initializeSocket() {
     transports: ['websocket', 'polling']
   });
 
-  socket.on('connect', () => {
-    console.log('Socket connected:', socket?.id);
-    console.log('Socket transport:', socket?.io.engine.transport.name);
-  });
+  // socket.on('connect', () => {
+  // });
 
-  socket.on('disconnect', () => {
-    console.log('Socket disconnected');
-  });
+  // socket.on('disconnect', () => {
+  // });
 
   socket.on('connect_error', (error) => {
     console.error('Socket connection error:', error);

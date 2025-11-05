@@ -19,11 +19,13 @@ import {
   Edit2,
   Check,
   X,
+  RefreshCw,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import CommentsList from "./CommentsList";
 import type { Post as PostType, User } from "../../types";
+import { regenerateTags, removeTag } from "../../utils/posts";
 
 // ---- Helpers ----
 function isVideo(url?: string): boolean {
@@ -88,6 +90,8 @@ export default function Post({
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(postText);
   const [showCopied, setShowCopied] = useState(false);
+  const [isRegeneratingTags, setIsRegeneratingTags] = useState(false);
+  const [localTags, setLocalTags] = useState(source.tags || []);
 
   const handleSaveEdit = () => {
     if (editedContent.trim() !== postText) {
@@ -113,6 +117,35 @@ export default function Post({
       console.error("Failed to copy:", err);
       alert("Failed to copy link");
     });
+  };
+
+  const handleRegenerateTags = async () => {
+    setIsRegeneratingTags(true);
+    try {
+      const result = await regenerateTags(source._id);
+      setLocalTags(result.tags);
+      setPosts((prev) =>
+        prev.map((post) => (post._id === source._id ? { ...post, tags: result.tags, isHalal: result.isHalal } : post))
+      );
+    } catch (err) {
+      console.error("Failed to regenerate tags:", err);
+      alert("Failed to regenerate tags. Please try again.");
+    } finally {
+      setIsRegeneratingTags(false);
+    }
+  };
+
+  const handleRemoveTag = async (tag: string) => {
+    try {
+      const result = await removeTag(source._id, tag);
+      setLocalTags(result.tags);
+      setPosts((prev) =>
+        prev.map((post) => (post._id === source._id ? { ...post, tags: result.tags } : post))
+      );
+    } catch (err) {
+      console.error("Failed to remove tag:", err);
+      alert("Failed to remove tag. Please try again.");
+    }
   };
 
   // YouTube embeds
@@ -186,13 +219,22 @@ export default function Post({
 
             {!isEditing && isCurrentUser && (
               <>
-                <IconBtn icon={Edit2} label="Edit" onClick={() => setIsEditing(true)} />
+                <IconBtn icon={Edit2} label="Edit" onClick={() => setIsEditing(true)} title="Edit post text" />
+                <IconBtn
+                  icon={RefreshCw}
+                  label={localTags.length > 0 ? "Regenerate Tags" : "Generate Tags"}
+                  onClick={handleRegenerateTags}
+                  disabled={isRegeneratingTags}
+                  className={isRegeneratingTags ? 'animate-spin' : ''}
+                  title={localTags.length > 0 ? "Regenerate AI-generated tags" : "Generate AI tags"}
+                />
                 <IconBtn
                   icon={Trash2}
                   className="hover:bg-red-600"
                   danger
                   label="Delete"
                   onClick={() => deletePost(p._id)}
+                  title="Delete post"
                 />
               </>
             )}
@@ -218,6 +260,29 @@ export default function Post({
             />
           ) : (
             postText && <p className="text-lg whitespace-pre-wrap mb-3">{postText}</p>
+          )}
+
+          {/* AI-generated tags */}
+          {localTags && localTags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {localTags.map((tag, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-0.5 px-2.5 py-1 text-xs font-medium rounded-full bg-muted dark:bg-muted-dark text-sub dark:text-sub-dark border border-border dark:border-border-dark"
+                >
+                  #{tag}
+                  {isCurrentUser && (
+                    <button
+                      onClick={() => handleRemoveTag(tag)}
+                      className="ml-1 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                      aria-label={`Remove tag ${tag}`}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
           )}
 
           {videoImbeds}

@@ -12,18 +12,14 @@ try {
 
 router.get('/me', async (req, res) => {
   try {
-    console.log("/api/me session:", req.session);
     if (!req.session || !req.session.user) {
-      console.log("/api/me: not logged in");
       return res.json({ user: null });
     }
     const githubId = req.session.user.id;
     const user = await User.findOne({ githubId });
     if (!user) {
-      console.log("/api/me: user not found in DB", githubId);
       return res.json({ user: null });
     }
-    console.log("/api/me: returning user", user.handle);
     res.json({
       user: {
         id: user.githubId,

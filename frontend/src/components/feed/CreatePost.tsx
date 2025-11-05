@@ -99,11 +99,30 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
 
       setUploading(true);
       try {
-         const urls = files.length > 0 ? await uploadImages(files) : []; // images AND videos; server stores only links
-         await createPost({ content: text, urls, meId });
+         // Upload ALL files (images + videos) to PictShare to get URLs
+         const urls = files.length > 0 ? await uploadImages(files) : [];
+         
+         // Filter to get only image URLs for AI analysis
+         const imageUrls = [];
+         let urlIndex = 0;
+         
+         for (let i = 0; i < files.length; i++) {
+            if (files[i].type.startsWith('image/') && urls[urlIndex]) {
+               imageUrls.push(urls[urlIndex]);
+            }
+            urlIndex++;
+         }
+         
+         // Send to backend - backend will fetch images from PictShare URLs
+         const response = await createPost({ 
+            content: text, 
+            imageUrls,
+            urls,
+            meId 
+         });
 
          // Reset state
-         previews.forEach(u => URL.revokeObjectURL(u)); // Revoke all preview URLs
+         previews.forEach(u => URL.revokeObjectURL(u));
          setText("");
          setFiles([]);
          setPreviews([]);

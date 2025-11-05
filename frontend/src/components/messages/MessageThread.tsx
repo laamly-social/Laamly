@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Paperclip, Send, X, File, Video, Edit2, Trash2, SmilePlus } from "lucide-react";
+import { Paperclip, Send, X, File, Video, Edit2, Trash2, SmilePlus, Bell, MoreHorizontal } from "lucide-react";
 import { clsx } from "../../utils";
 import UserChip from "../ui/UserChip";
 import InputField from "../ui/InputField";
@@ -28,10 +28,6 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
    const shouldFocusRef = useRef(false);
 
    const commonEmojis = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
-
-   useEffect(() => {
-      console.log("MessageThread - typingUsers prop updated:", typingUsers);
-   }, [typingUsers]);
 
    // Focus input after uploading completes
    useEffect(() => {
@@ -74,11 +70,9 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
          clearTimeout(typingTimeoutRef.current);
       }
 
-      console.log("Emitting typing-start for thread:", thread.id);
       socket.emit("typing-start", { threadId: thread.id });
 
       typingTimeoutRef.current = setTimeout(() => {
-         console.log("Emitting typing-stop for thread:", thread.id);
          socket.emit("typing-stop", { threadId: thread.id });
       }, 2000);
    };
@@ -189,12 +183,6 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
       return thread.participants[0].avatar;
    };
 
-   // Debug: Log thread ID on mount
-   useEffect(() => {
-      console.log("MessageThread mounted with thread ID:", thread.id);
-      console.log("Thread participants:", thread.participants?.map(p => p.name));
-   }, [thread.id]);
-
    return (
       <>
          <section className="flex flex-col bg-transparent overflow-hidden">
@@ -208,24 +196,6 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
                      />
                   )}
                </div>
-               {/* DEBUG: Test typing indicator */}
-               {import.meta.env.DEV && (
-                  <button
-                     onClick={() => {
-                        console.log("Manual test: Emitting typing-start");
-                        const socket = getSocket();
-                        socket.emit("typing-start", { threadId: thread.id });
-                        setTimeout(() => {
-                           console.log("Manual test: Emitting typing-stop");
-                           socket.emit("typing-stop", { threadId: thread.id });
-                        }, 3000);
-                     }}
-                     className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                     title={`Typing users: ${JSON.stringify(typingUsers)}`}
-                  >
-                     Test Typing ({typingUsers.length})
-                  </button>
-               )}
                {/* <div className="flex items-center gap-2 text-sub dark:text-sub-dark">
             <button className="p-1 hover:text-text dark:hover:text-text-dark transition">
               <Bell size={18} />
