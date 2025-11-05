@@ -5,6 +5,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-
 import type { Reel, Post, User } from "./types";
 import HomeFeed from "./components/feed/HomeFeed";
 import Messages from "./components/messages/Messages";
+import MessageThreadPage from "./components/messages/MessageThreadPage";
 import Reels from "./components/reels/Reels";
 import SinglePost from "./components/feed/SinglePost";
 import SingleReel from "./components/reels/SingleReel";
@@ -191,6 +192,7 @@ export default function App({ initialData }: AppProps) {
               }
             />
             <Route path="/messages" element={<Messages />} />
+            <Route path="/messages/:threadId" element={<MessageThreadPage />} />
 
             {/* Individual post route */}
             <Route

@@ -185,7 +185,7 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
 
    return (
       <>
-         <section className="flex flex-col bg-transparent overflow-hidden">
+         <section className="h-full flex flex-col bg-transparent overflow-hidden">
             <div className="sticky top-0 p-3 flex items-center justify-between bg-panel dark:bg-panel-dark border-b border-border dark:border-border-dark">
                <div className="flex items-center gap-2">
                   {thread.participants && thread.participants.length > 0 && (

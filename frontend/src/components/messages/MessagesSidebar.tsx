@@ -42,31 +42,31 @@ export default function MessagesSidebar({
    };
 
    return (
-      <aside className="border-r border-border dark:border-border-dark bg-panel dark:bg-panel-dark flex flex-col">
-         <div className="sticky top-0 bg-transparent p-2.5 flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-               <h2 className="text-lg font-semibold text-text dark:text-text-dark flex-1">Messages</h2>
+      <aside className="border-r border-border dark:border-border-dark bg-panel dark:bg-panel-dark flex flex-col w-full max-w-full overflow-hidden">
+         <div className="sticky top-0 bg-panel dark:bg-panel-dark p-2.5 flex flex-col gap-2 z-10">
+            <div className="flex items-center gap-2 w-full">
+               <h2 className="text-lg font-semibold text-text dark:text-text-dark flex-1 truncate">Messages</h2>
                <GenericButton
                   onClick={onNewMessage}
-                  className="inline-flex gap-2 items-center justify-center bg-accent text-white hover:bg-accent/90 h-[36px] w-[36px] p-0 cursor-pointer"
+                  className="inline-flex gap-2 items-center justify-center bg-accent text-white hover:bg-accent/90 h-[36px] w-[36px] min-w-[36px] p-0 cursor-pointer flex-shrink-0"
                   aria-label="New message"
                >
                   <Plus size={20} />
                </GenericButton>
             </div>
-            <div className="flex items-center gap-2 bg-muted dark:bg-muted-dark rounded-xl px-3 py-2">
-               <Search size={18} className="text-sub dark:text-sub-dark" />
+            <div className="flex items-center gap-2 bg-muted dark:bg-muted-dark rounded-xl px-3 py-2 w-full">
+               <Search size={18} className="text-sub dark:text-sub-dark flex-shrink-0" />
                <input
                   type="text"
                   placeholder="Search DMs"
                   value={searchQuery}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  className="flex-1 bg-transparent border-none outline-none text-text dark:text-text-dark placeholder:text-sub dark:placeholder:text-sub-dark text-sm"
+                  className="flex-1 bg-transparent border-none outline-none text-text dark:text-text-dark placeholder:text-sub dark:placeholder:text-sub-dark text-sm min-w-0"
                />
             </div>
          </div>
 
-         <div className="flex-1 overflow-y-auto">
+         <div className="flex-1 overflow-y-auto overflow-x-hidden">
             {loading ? (
                <div className="p-4 text-center text-sub dark:text-sub-dark">
                   Loading conversations...

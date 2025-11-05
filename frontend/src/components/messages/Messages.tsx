@@ -1,5 +1,6 @@
 import GenericButton from "../ui/GenericButton";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import NewChatModal from "./NewChatModal";
 import MessagesSidebar from "./MessagesSidebar";
@@ -10,6 +11,7 @@ import type { Thread } from "../../types";
 import { getSocket } from "../../utils/socket";
 
 export default function Messages() {
+   const navigate = useNavigate();
    const [threads, setThreads] = useState<Thread[]>([]);
    const [activeId, setActiveId] = useState<string>("");
    const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,6 +19,7 @@ export default function Messages() {
    const [loading, setLoading] = useState(true);
    const [loggedOut, setLoggedOut] = useState(false);
    const [typingUsers, setTypingUsers] = useState<{ [threadId: string]: string[] }>({});
+   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
    const activeThread = threads.find(t => t.id === activeId);
 
    // Initialize Socket.IO
@@ -77,6 +80,16 @@ export default function Messages() {
          socket.off("message-reaction");
          socket.off("user-typing");
       };
+   }, []);
+
+   // Handle window resize to detect mobile/desktop
+   useEffect(() => {
+      const handleResize = () => {
+         setIsMobile(window.innerWidth < 768);
+      };
+
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
    }, []);
 
    // Join/leave thread rooms
@@ -182,28 +195,41 @@ export default function Messages() {
       setThreads(prev => prev.map(t => t.id === updatedThread.id ? updatedThread : t));
    };
 
+   const handleThreadSelect = (threadId: string) => {
+      setActiveId(threadId);
+      // On mobile, navigate to the dedicated thread page
+      if (isMobile) {
+         navigate(`/messages/${threadId}`);
+      }
+   };
+
    return (
       <>
-         <div className="grid h-[calc(100vh-1rem)] w-[calc(100vw-12.5rem)] rounded-xl border border-border dark:border-border-dark overflow-hidden small:grid-cols-1 m-2 ml-0" style={{ gridTemplateColumns: loggedOut ? "minmax(420px, 1fr)" : "320px minmax(420px, 1fr)" }}>
+         <div className={`grid overflow-hidden ${
+            isMobile
+               ? 'h-[calc(100vh-5rem)] w-full m-0 rounded-none border-0'
+               : 'h-[calc(100vh-1rem)] w-[calc(100vw-12.5rem)] rounded-xl border border-border dark:border-border-dark m-2 ml-0'
+         } small:grid-cols-1`} style={{ gridTemplateColumns: loggedOut ? "minmax(420px, 1fr)" : isMobile ? "1fr" : "320px minmax(420px, 1fr)" }}>
             {!loggedOut && (
                <MessagesSidebar
                   threads={threads}
                   activeId={activeId}
                   searchQuery={searchQuery}
                   loading={loading}
-                  onThreadSelect={setActiveId}
+                  onThreadSelect={handleThreadSelect}
                   onSearchChange={setSearchQuery}
                   onNewMessage={() => setIsModalOpen(true)}
                />
             )}
 
-            {activeThread ? (
+            {/* Hide thread view on mobile - it will be shown on a separate page */}
+            {!isMobile && activeThread ? (
                <MessageThread
                   thread={activeThread}
                   onThreadUpdate={handleThreadUpdate}
                   typingUsers={typingUsers[activeId] || []}
                />
-            ) : (
+            ) : !isMobile ? (
                <section className="flex flex-col bg-transparent overflow-hidden">
                   <div className="flex-1 flex items-center justify-center bg-[linear-gradient(180deg,#dadada_0%,#ffffff_100%)] dark:bg-[linear-gradient(180deg,#12141a_0%,#090a0d_100%)]">
                      <div className="text-center">
@@ -247,7 +273,7 @@ export default function Messages() {
                      </div>
                   </div>
                </section>
-            )}
+            ) : null}
          </div>
 
          <NewChatModal

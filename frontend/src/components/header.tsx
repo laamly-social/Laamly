@@ -51,7 +51,7 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
 
           <div className="flex flex-col items-stretch w-full px-4 space-y-2">
             <TabBtn icon={Home} label="Posts" active={location.pathname === "/home"} to="/home" />
-            <TabBtn icon={MessageSquare} label="Messages" active={location.pathname === "/messages"} to="/messages" />
+            {user && (<TabBtn icon={MessageSquare} label="Messages" active={location.pathname === "/messages"} to="/messages" />)}
             <TabBtn icon={PlayTab} label="Reels" active={location.pathname === "/reels"} to="/reels" />
             <TabBtn icon={Podcast} label="Podcasts" active={location.pathname === "/podcasts"} to="/podcasts" />
           </div>
@@ -151,13 +151,13 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
             <Podcast size={24} />
           </a>
           {user && (
-            <a href="/notifications" className={`flex items-center justify-center p-2 rounded-lg transition ${location.pathname === "/notifications" ? "text-accent" : "text-text dark:text-text-dark"}`}>
-              <NotificationBell />
+            <a href="/messages" className={`flex items-center justify-center p-2 rounded-lg transition ${location.pathname === "/messages" ? "text-accent" : "text-text dark:text-text-dark"}`}>
+              <MessageSquare />
             </a>
           )}
           {user && (
-            <a href="/media" className={`flex flex-col items-center justify-center p-2 rounded-lg transition ${location.pathname === "/media" ? "text-accent" : "text-text dark:text-text-dark"}`}>
-              <ImageIcon size={24} />
+            <a href="/notifications" className={`flex items-center justify-center p-2 rounded-lg transition ${location.pathname === "/notifications" ? "text-accent" : "text-text dark:text-text-dark"}`}>
+              <NotificationBell />
             </a>
           )}
           {user && user.name ? (
