@@ -149,7 +149,7 @@ export default function App({ initialData }: AppProps) {
     <div className="min-h-screen bg-bg dark:bg-bg-dark md:grid md:grid-cols-[12rem_auto]">
       {/* Notification prompt - only show to logged-in users */}
       {data.user && shouldShowPrompt && (
-        <NotificationPrompt 
+        <NotificationPrompt
           onClose={hidePrompt}
           onEnable={() => {
             console.log('Notifications enabled successfully');

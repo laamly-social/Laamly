@@ -299,6 +299,41 @@ app.get("/api/me", async (req, res) => {
   });
 });
 
+// User search (must be before /api/users/:userId to avoid route collision)
+app.get("/api/users/search", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "You need to be logged in" });
+    }
+
+    const query = req.query.q;
+    if (!query || String(query).trim().length < 2) {
+      return res.json({ users: [] });
+    }
+
+    const searchRegex = new RegExp(String(query).trim(), "i");
+    const users = await User.find({
+      $or: [{ handle: searchRegex }, { "profile.name": searchRegex }],
+    })
+      .limit(20)
+      .lean();
+
+    const results = users.map((u) => ({
+      id: u.githubId || u.googleId, // support both providers
+      githubId: u.githubId,
+      googleId: u.googleId,
+      name: u.profile?.name || u.handle,
+      handle: u.handle,
+      avatar: u.profile?.avatar || "",
+    }));
+
+    res.json({ users: results });
+  } catch (err) {
+    console.error("Error searching users:", err);
+    return res.status(500).json({ message: "Error searching users" });
+  }
+});
+
 // Public endpoint to fetch any user's profile by their githubId or googleId
 app.get("/api/users/:userId", async (req, res) => {
    try {
@@ -547,41 +582,6 @@ app.use("/posts", postsRouter);
 
 const reelsRouter = require("./routes/reels")(io, userSockets);
 app.use("/reels", reelsRouter);
-
-// User search (provider-agnostic ID)
-app.get("/api/users/search", async (req, res) => {
-  try {
-    if (!req.session.user) {
-      return res.status(401).json({ message: "You need to be logged in" });
-    }
-
-    const query = req.query.q;
-    if (!query || String(query).trim().length < 2) {
-      return res.json({ users: [] });
-    }
-
-    const searchRegex = new RegExp(String(query).trim(), "i");
-    const users = await User.find({
-      $or: [{ handle: searchRegex }, { "profile.name": searchRegex }],
-    })
-      .limit(20)
-      .lean();
-
-    const results = users.map((u) => ({
-      id: u.githubId || u.googleId, // support both providers
-      githubId: u.githubId,
-      googleId: u.googleId,
-      name: u.profile?.name || u.handle,
-      handle: u.handle,
-      avatar: u.profile?.avatar || "",
-    }));
-
-    res.json({ users: results });
-  } catch (err) {
-    console.error("Error searching users:", err);
-    return res.status(500).json({ message: "Error searching users" });
-  }
-});
 
 const messagesRouter = require("./routes/messages")(io, userSockets);
 app.use("/api/messages", messagesRouter);

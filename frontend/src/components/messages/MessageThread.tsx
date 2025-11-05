@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Paperclip, Send, X, File, Video, Edit2, Trash2, SmilePlus, Bell, MoreHorizontal } from "lucide-react";
-import { clsx } from "../../utils";
+import { clsx, formatDate, formatTimeFromDate } from "../../utils";
 import UserChip from "../ui/UserChip";
 import InputField from "../ui/InputField";
 import GenericButton from "../ui/GenericButton";
@@ -8,6 +8,198 @@ import { uploadFiles, getFileType } from "../../utils/uploads";
 import { sendMessage as sendMessageAPI, reactToMessage, editMessage as editMessageAPI, deleteMessage } from "../../utils/messages";
 import { getSocket } from "../../utils/socket";
 import type { Thread, DM } from "../../types";
+
+interface MessageProps {
+   message: DM;
+   mine: boolean;
+   onReact: (messageId: string, emoji: string) => void;
+   onEdit: (messageId: string, newText: string) => void;
+   onDelete: (messageId: string) => void;
+   onContextMenu: (messageId: string, x: number, y: number) => void;
+   showHeader?: boolean;
+   senderName?: string;
+   senderHandle?: string;
+   senderAvatar?: string;
+}
+
+function Message({ message, mine, onReact, onEdit, onDelete, onContextMenu, showHeader, senderName, senderHandle, senderAvatar }: MessageProps) {
+   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+   const commonEmojis = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "✅", "💀", "😭"];
+
+   useEffect(() => {
+      const handleClick = () => setShowEmojiPicker(false);
+      if (showEmojiPicker) {
+         document.addEventListener('click', handleClick);
+         return () => document.removeEventListener('click', handleClick);
+      }
+   }, [showEmojiPicker]);
+
+   // Determine if message was sent in the last day
+   const messageDate = new Date(message.ts);
+   const now = Date.now();
+   const isWithinLastDay = (now - message.ts) < 86400000; // 24 hours in milliseconds
+
+   const timeDisplay = isWithinLastDay
+      ? formatTimeFromDate(messageDate, "12")
+      : formatDate(messageDate, "quick");
+
+   return (
+      <div className={clsx("flex", mine ? "justify-end" : "justify-start")}>
+         <div className="relative group max-w-[70%]">
+            {showHeader && !mine && senderAvatar && senderHandle && (
+               <div className="flex items-center gap-1.5 mb-1 ml-1">
+                  <img
+                     src={senderAvatar}
+                     alt={senderName || senderHandle}
+                     className="w-5 h-5 rounded-full object-cover"
+                  />
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                     @{senderHandle}
+                  </span>
+               </div>
+            )}
+            <div>
+               <div
+                  className={clsx(
+                     "py-2 px-3.5 text-[15px] rounded-2xl relative break-words border shadow-sm",
+                     mine
+                        ? "bg-gradient-to-br from-blue-500 to-blue-600 border-accent-dark dark:border-accent text-white"
+                        : "bg-muted dark:bg-muted-dark border-border dark:border-border-dark text-gray-900 dark:text-gray-100"
+                  )}
+                  onContextMenu={(e) => {
+                     if (mine) {
+                        e.preventDefault();
+                        onContextMenu(message.id, e.clientX, e.clientY);
+                     }
+                  }}
+               >
+                  {message.text && (
+                     <div className="whitespace-pre-wrap leading-[1.4]">
+                        {message.text}
+                        {message.edited && <span className="ml-2 text-[11px] opacity-60 italic">(edited)</span>}
+                        {/* time */}
+                        <span className={clsx("mx-2 font-mono")}>
+                           <time className={clsx("text-[11px] opacity-70")}>
+                              {timeDisplay}
+                           </time>
+                           {mine && message.read && <span className="text-[11px] opacity-70 ml-1">✓✓</span>}
+                        </span>
+                     </div>
+                  )}
+                  {message.attachments && message.attachments.length > 0 && (
+                     <div className="flex flex-col gap-2 mt-2">
+                        {message.attachments.map((url, idx) => {
+                           const fileType = getFileType(url);
+                           return (
+                              <div key={idx}>
+                                 {fileType === 'image' && (
+                                    <img
+                                       src={url}
+                                       alt="attachment"
+                                       className="max-w-full rounded-xl max-h-80 object-cover cursor-pointer hover:opacity-95 transition"
+                                       onClick={() => window.open(url, '_blank')}
+                                    />
+                                 )}
+                                 {fileType === 'video' && (
+                                    <video
+                                       src={url}
+                                       controls
+                                       className="max-w-full rounded-xl max-h-80"
+                                    />
+                                 )}
+                                 {fileType === 'file' && (
+                                    <a
+                                       href={url}
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       className={clsx(
+                                          "flex items-center gap-2 p-2.5 rounded-lg transition",
+                                          mine ? "bg-white/15 hover:bg-white/25" : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                       )}
+                                    >
+                                       <File size={20} />
+                                       <span className="text-sm">View file</span>
+                                    </a>
+                                 )}
+                              </div>
+                           );
+                        })}
+                     </div>
+                  )}
+                  {!message.text && (
+                     <span className={clsx("mx-2 font-mono")}>
+                        <time className={clsx("text-[11px] opacity-70")}>
+                           {timeDisplay}
+                        </time>
+                        {mine && message.read && <span className="text-[11px] opacity-70 ml-1">✓✓</span>}
+                     </span>
+                  )}
+               </div>
+            </div>
+
+            {message.reactions && message.reactions.length > 0 && (
+               <div className={clsx("flex flex-wrap gap-1 mt-1", mine ? "justify-end" : "justify-start")}>
+                  {Object.entries(
+                     message.reactions.reduce((acc, r) => {
+                        acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                        return acc;
+                     }, {} as Record<string, number>)
+                  ).map(([emoji, count]) => (
+                     <button
+                        key={emoji}
+                        onClick={() => onReact(message.id, emoji)}
+                        className={clsx(
+                           "px-2 py-1 rounded-xl text-sm flex items-center gap-1 transition-all",
+                           "border bg-muted dark:bg-muted-dark border-border dark:border-border-dark shadow-sm hover:shadow-md"
+                        )}
+                        title="Click to remove your reaction"
+                     >
+                        <span className="leading-none">{emoji}</span>
+                        {count > 1 && <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">{count}</span>}
+                     </button>
+                  ))}
+               </div>
+            )}
+
+            <button
+               onClick={(e) => {
+                  e.stopPropagation();
+                  setShowEmojiPicker(!showEmojiPicker);
+               }}
+               className={clsx(
+                  "absolute top-0 p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md",
+                  "opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 transform",
+                  mine ? "-left-10" : "-right-10"
+               )}
+               title="Add reaction"
+            >
+               <SmilePlus size={16} className="text-gray-600 dark:text-gray-400" />
+            </button>
+
+            {showEmojiPicker && (
+               <div
+                  onClick={(e) => e.stopPropagation()}
+                  className={clsx(
+                     "absolute z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl p-2 flex gap-1",
+                     mine ? "right-0 top-12" : "left-0 top-12"
+                  )}
+               >
+                  {commonEmojis.map(emoji => (
+                     <button
+                        key={emoji}
+                        onClick={() => onReact(message.id, emoji)}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all transform hover:scale-125 text-xl"
+                        title={`React with ${emoji}`}
+                     >
+                        {emoji}
+                     </button>
+                  ))}
+               </div>
+            )}
+         </div>
+      </div>
+   );
+}
 
 interface MessageThreadProps {
    thread: Thread;
@@ -20,14 +212,11 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
    const [uploading, setUploading] = useState(false);
    const [contextMenu, setContextMenu] = useState<{ messageId: string; x: number; y: number } | null>(null);
-   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
    const endRef = useRef<HTMLDivElement | null>(null);
    const fileInputRef = useRef<HTMLInputElement>(null);
    const messageInputRef = useRef<HTMLInputElement>(null);
    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
    const shouldFocusRef = useRef(false);
-
-   const commonEmojis = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
    // Focus input after uploading completes
    useEffect(() => {
@@ -46,7 +235,6 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
    useEffect(() => {
       const handleClick = () => {
          setContextMenu(null);
-         setShowEmojiPicker(null);
       };
       document.addEventListener('click', handleClick);
       return () => document.removeEventListener('click', handleClick);
@@ -144,8 +332,6 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
    };
 
    const handleReaction = async (messageId: string, emoji: string) => {
-      setShowEmojiPicker(null);
-
       try {
          await reactToMessage(thread.id, messageId, emoji);
       } catch (error) {
@@ -207,154 +393,30 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 bg-[linear-gradient(180deg,#dadada_0%,#ffffff_100%)] dark:bg-[linear-gradient(180deg,#12141a_0%,#090a0d_100%)]">
-               {thread.messages.map(m => {
+               {thread.messages.map((m, index) => {
                   const mine = m.from === "me";
+                  const prevMessage = index > 0 ? thread.messages[index - 1] : null;
+                  const showHeader = !mine && (!prevMessage || prevMessage.from !== m.from);
+
+                  // Get sender info from participants
+                  const sender = !mine && thread.participants
+                     ? thread.participants.find(p => p.id === m.from || p.githubId === m.from)
+                     : null;
+
                   return (
-                     <div key={m.id} className={clsx("flex", mine ? "justify-end" : "justify-start")}>
-                        <div className="relative group max-w-[70%]">
-                           <div>
-                              <div
-                                 className={clsx(
-                                    "py-2 px-3.5 text-[15px] rounded-2xl relative break-words border shadow-sm",
-                                    mine
-                                       ? "bg-gradient-to-br from-blue-500 to-blue-600 border-accent-dark dark:border-accent text-white"
-                                       : "bg-muted dark:bg-muted-dark border-border dark:border-border-dark text-gray-900 dark:text-gray-100"
-                                 )}
-                                 onContextMenu={(e) => {
-                                    if (mine) {
-                                       e.preventDefault();
-                                       setContextMenu({ messageId: m.id, x: e.clientX, y: e.clientY });
-                                    }
-                                 }}
-                              >
-                                 {m.text && (
-                                    <div className="whitespace-pre-wrap leading-[1.4]">
-                                       {m.text}
-                                       {m.edited && <span className="ml-2 text-[11px] opacity-60 italic">(edited)</span>}
-                                       {/* time */}
-                                       <span className={clsx("mx-2 font-mono")}>
-                                          <time className={clsx("text-[11px] opacity-70")}>
-                                             {new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                          </time>
-                                          {mine && m.read && <span className="text-[11px] opacity-70">✓✓</span>}
-                                       </span>
-
-                                    </div>
-                                 )}
-                                 {m.attachments && m.attachments.length > 0 && (
-                                    <div className="flex flex-col gap-2 mt-2">
-                                       {m.attachments.map((url, idx) => {
-                                          const fileType = getFileType(url);
-                                          return (
-                                             <div key={idx}>
-                                                {fileType === 'image' && (
-                                                   <img
-                                                      src={url}
-                                                      alt="attachment"
-                                                      className="max-w-full rounded-xl max-h-80 object-cover cursor-pointer hover:opacity-95 transition"
-                                                      onClick={() => window.open(url, '_blank')}
-                                                   />
-                                                )}
-                                                {fileType === 'video' && (
-                                                   <video
-                                                      src={url}
-                                                      controls
-                                                      className="max-w-full rounded-xl max-h-80"
-                                                   />
-                                                )}
-                                                {fileType === 'file' && (
-                                                   <a
-                                                      href={url}
-                                                      target="_blank"
-                                                      rel="noopener noreferrer"
-                                                      className={clsx(
-                                                         "flex items-center gap-2 p-2.5 rounded-lg transition",
-                                                         mine ? "bg-white/15 hover:bg-white/25" : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
-                                                      )}
-                                                   >
-                                                      <File size={20} />
-                                                      <span className="text-sm">View file</span>
-                                                   </a>
-                                                )}
-                                             </div>
-                                          );
-                                       })}
-                                    </div>
-                                 )}
-                                 {!m.text && (
-                                    <span className={clsx("mx-2 font-mono")}>
-                                       <time className={clsx("text-[11px] opacity-70")}>
-                                          {new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                       </time>
-                                       {mine && m.read && <span className="text-[11px] opacity-70">✓✓</span>}
-                                    </span>
-
-                                 )}
-                              </div>
-
-                           </div>
-
-                           {m.reactions && m.reactions.length > 0 && (
-                              <div className={clsx("flex flex-wrap gap-1 mt-1", mine ? "justify-end" : "justify-start")}>
-                                 {Object.entries(
-                                    m.reactions.reduce((acc, r) => {
-                                       acc[r.emoji] = (acc[r.emoji] || 0) + 1;
-                                       return acc;
-                                    }, {} as Record<string, number>)
-                                 ).map(([emoji, count]) => (
-                                    <button
-                                       key={emoji}
-                                       onClick={() => handleReaction(m.id, emoji)}
-                                       className={clsx(
-                                          "px-2 py-1 rounded-xl text-sm flex items-center gap-1 transition-all",
-                                          "border bg-muted dark:bg-muted-dark border-border dark:border-border-dark shadow-sm hover:shadow-md"
-                                       )}
-                                       title="Click to remove your reaction"
-                                    >
-                                       <span className="leading-none">{emoji}</span>
-                                       {count > 1 && <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">{count}</span>}
-                                    </button>
-                                 ))}
-                              </div>
-                           )}
-
-                           <button
-                              onClick={(e) => {
-                                 e.stopPropagation();
-                                 setShowEmojiPicker(showEmojiPicker === m.id ? null : m.id);
-                              }}
-                              className={clsx(
-                                 "absolute top-0 p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md",
-                                 "opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 transform",
-                                 mine ? "-left-10" : "-right-10"
-                              )}
-                              title="Add reaction"
-                           >
-                              <SmilePlus size={16} className="text-gray-600 dark:text-gray-400" />
-                           </button>
-
-                           {showEmojiPicker === m.id && (
-                              <div
-                                 onClick={(e) => e.stopPropagation()}
-                                 className={clsx(
-                                    "absolute z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl p-2 flex gap-1",
-                                    mine ? "right-0 top-12" : "left-0 top-12"
-                                 )}
-                              >
-                                 {commonEmojis.map(emoji => (
-                                    <button
-                                       key={emoji}
-                                       onClick={() => handleReaction(m.id, emoji)}
-                                       className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all transform hover:scale-125 text-xl"
-                                       title={`React with ${emoji}`}
-                                    >
-                                       {emoji}
-                                    </button>
-                                 ))}
-                              </div>
-                           )}
-                        </div>
-                     </div>
+                     <Message
+                        key={m.id}
+                        message={m}
+                        mine={mine}
+                        onReact={handleReaction}
+                        onEdit={handleEditMessage}
+                        onDelete={handleDeleteMessage}
+                        onContextMenu={(messageId, x, y) => setContextMenu({ messageId, x, y })}
+                        showHeader={showHeader}
+                        senderName={sender?.name}
+                        senderHandle={sender?.handle}
+                        senderAvatar={sender?.avatar}
+                     />
                   );
                })}
 

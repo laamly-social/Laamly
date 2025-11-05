@@ -42,8 +42,8 @@ export function NotificationPrompt({ onClose, onEnable }: NotificationPromptProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/10 backdrop-blur-sm">
+      <div className="bg-bg dark:bg-bg-dark border-2 border-border dark:border-border-dark rounded-xl max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
         {/* Close button */}
         <button
           onClick={handleDismiss}
@@ -66,13 +66,13 @@ export function NotificationPrompt({ onClose, onEnable }: NotificationPromptProp
         </h2>
 
         {/* Description */}
-        <p className="text-center text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-center text-sub dark:text-sub-dark mb-6">
           Enable notifications to get instant updates when someone likes your posts,
           comments on your content, or sends you a message.
         </p>
 
         {/* Benefits list */}
-        <ul className="space-y-3 mb-6">
+        <ul className="space-y-3 my-8 mx-4">
           <li className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
             <span className="text-green-500 mt-0.5">✓</span>
             <span>Get notified about new likes and comments</span>
@@ -92,23 +92,18 @@ export function NotificationPrompt({ onClose, onEnable }: NotificationPromptProp
           <button
             onClick={handleEnable}
             disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-accent hover:scale-105 transition text-white font-semibold py-3 px-4 rounded-xl duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Requesting...' : 'Enable Notifications'}
           </button>
 
           <button
             onClick={handleDismiss}
-            className="w-full text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+            className="w-full text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors duration-200 underline"
           >
-            Maybe Later
+            Nah
           </button>
         </div>
-
-        {/* Privacy note */}
-        <p className="text-xs text-center text-gray-500 dark:text-gray-500 mt-4">
-          You can change this setting anytime in your browser preferences.
-        </p>
       </div>
     </div>
   );

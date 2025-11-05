@@ -20,7 +20,7 @@ export function NotificationWarningBanner({ onDismiss }: NotificationWarningBann
     setIsLoading(true);
     try {
       const permission = await requestNotificationPermission();
-      
+
       if (permission === 'granted') {
         // Success - banner will disappear on next render via parent component check
         onDismiss?.();
@@ -38,7 +38,7 @@ export function NotificationWarningBanner({ onDismiss }: NotificationWarningBann
   };
 
   return (
-    <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-600 p-4 mx-4 mt-4 rounded-r-lg shadow-sm">
+    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-border dark:border-border-dark p-4 mx-4 mt-4 rounded-lg">
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div className="flex-shrink-0">
@@ -53,7 +53,7 @@ export function NotificationWarningBanner({ onDismiss }: NotificationWarningBann
           <p className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
             Get instant alerts for new likes, comments, and messages even when Laamly is closed.
           </p>
-          
+
           <button
             onClick={handleEnable}
             disabled={isLoading}
