@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useMemo, useState } from "react";
 import type { User } from "../types";
 import TabBtn from "./nav/TabBtn";
-import { Home, PlayCircle as PlayTab, Github, Podcast, MessageSquare, Bell } from "lucide-react";
+import { Home, PlayCircle as PlayTab, Github, Podcast, MessageSquare, Bell, UserRound } from "lucide-react";
 import Avatar from "./ui/Avatar";
 import { BACKEND_URL } from "../config";
 import NotificationBell from "./notifications/NotificationBell";
@@ -87,26 +87,26 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
                 </a>
               </div>
             ) : githubAuthUrl ? (
-              <div className="w-full px-4 my-6">
+              <div className="w-full">
                 <a
                   href={githubAuthUrl}
                   aria-disabled={!githubAuthUrl}
-                  className={`inline-block transition-all py-3 px-4 my-2 w-full rounded-md border-2 border-white bg-black text-white ${
+                  className={`inline-block transition-all py-3 px-4 mt-1 w-full rounded-lg border-2 border-white bg-black text-white ${
                     !githubAuthUrl ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
                   <span className="fa fa-github"></span>GitHub login
                 </a>
-                {/* <br />
+                <br />
                 <a
                   href={googleAuthUrl}
                   aria-disabled={!googleAuthUrl}
-                  className={`inline-block transition-all py-3 px-4 my-2 w-full rounded-md border-2 border-white bg-red-500 text-white ${
+                  className={`inline-block transition-all py-3 px-4 mt-1 w-full rounded-lg border-2 border-white bg-red-500 text-white ${
                     !googleAuthUrl ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
                   <span className="fa fa-google"></span>Google login
-                </a> */}
+                </a>
               </div>
             ) : (
               <div className="w-full px-4">
@@ -160,8 +160,8 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
               <Avatar src={user.avatar} alt={user.name} size="sm" className="w-6 h-6" />
             </button>
           ) : (
-            <a href={githubAuthUrl} aria-disabled={!githubAuthUrl} className="flex flex-col items-center justify-center p-2 rounded-lg text-text dark:text-text-dark">
-              <Github size={24} />
+            <a href="/logged-out" className="flex flex-col items-center justify-center p-2 rounded-lg text-text dark:text-text-dark">
+              <UserRound size={24} />
             </a>
           )}
         </div>

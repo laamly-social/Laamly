@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Bell, X } from 'lucide-react';
-import { 
-  requestNotificationPermission, 
-  setUserDismissedPrompt 
+import {
+  requestNotificationPermission,
+  setUserDismissedPrompt
 } from '../../utils/browserNotifications';
 
 interface NotificationPromptProps {
@@ -20,7 +20,7 @@ export function NotificationPrompt({ onClose, onEnable }: NotificationPromptProp
     setIsLoading(true);
     try {
       const permission = await requestNotificationPermission();
-      
+
       if (permission === 'granted') {
         onEnable();
         onClose();
@@ -67,7 +67,7 @@ export function NotificationPrompt({ onClose, onEnable }: NotificationPromptProp
 
         {/* Description */}
         <p className="text-center text-gray-600 dark:text-gray-400 mb-6">
-          Enable notifications to get instant updates when someone likes your posts, 
+          Enable notifications to get instant updates when someone likes your posts,
           comments on your content, or sends you a message.
         </p>
 
@@ -96,7 +96,7 @@ export function NotificationPrompt({ onClose, onEnable }: NotificationPromptProp
           >
             {isLoading ? 'Requesting...' : 'Enable Notifications'}
           </button>
-          
+
           <button
             onClick={handleDismiss}
             className="w-full text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors duration-200"

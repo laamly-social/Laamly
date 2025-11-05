@@ -77,6 +77,62 @@ const MONGODB_URI =
 const User = require("./models/User");
 const Chat = require("./models/Chat");
 
+// Helper: Upload image from URL to Pictshare
+async function uploadImageToPictshare(imageUrl) {
+  try {
+    // 1. Fetch the image from the URL
+    const imageResponse = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+      timeout: 10000, // 10 second timeout
+    });
+
+    if (!imageResponse.data) {
+      throw new Error('Failed to fetch image from URL');
+    }
+
+    // 2. Prepare form data for Pictshare upload
+    const FormData = require('form-data');
+    const formData = new FormData();
+
+    // Determine file extension from URL or content-type
+    const contentType = imageResponse.headers['content-type'] || 'image/jpeg';
+    let extension = 'jpg';
+    if (contentType.includes('png')) extension = 'png';
+    else if (contentType.includes('gif')) extension = 'gif';
+    else if (contentType.includes('webp')) extension = 'webp';
+
+    formData.append('file', Buffer.from(imageResponse.data), {
+      filename: `profile.${extension}`,
+      contentType: contentType,
+    });
+    formData.append('upload_code', '5219dd95-5672-44ca-8423-970afa123633');
+
+    // 3. Upload to Pictshare
+    const uploadResponse = await axios.post(
+      'https://pictshare.hnasheralneam.dev/api/upload.php',
+      formData,
+      {
+        headers: formData.getHeaders(),
+        timeout: 15000, // 15 second timeout
+      }
+    );
+
+    if (uploadResponse.data && uploadResponse.data.status === 'ok') {
+      const pictshareUrl = uploadResponse.data.url.replace(
+        'http://',
+        'https://pictshare.hnasheralneam.dev'
+      );
+      return pictshareUrl;
+    } else {
+      console.error('Pictshare upload failed:', uploadResponse.data);
+      return imageUrl; // Fallback to original URL
+    }
+  } catch (error) {
+    console.error('Error uploading image to Pictshare:', error.message);
+    return imageUrl; // Fallback to original URL on error
+  }
+}
+
 // Helper: find user for current session (supports both providers)
 async function findDbUserBySession(req) {
   const sid = String(req.session?.user?.id || "");
@@ -346,13 +402,21 @@ app.get("/github/login", (req, res) => {
                         || data.email
                         || "";
 
+      // Upload GitHub avatar to Pictshare
+      let pictshareAvatarUrl = data.avatar_url;
+      if (data.avatar_url) {
+        console.log('Uploading GitHub avatar to Pictshare...');
+        pictshareAvatarUrl = await uploadImageToPictshare(data.avatar_url);
+        console.log('Pictshare URL:', pictshareAvatarUrl);
+      }
+
       // Normalize the session
       req.session.user = {
         id: String(data.id),
         provider: "github",
         login: data.login,
         name: data.name,
-        avatar: data.avatar_url,
+        avatar: pictshareAvatarUrl, // Use Pictshare URL instead of GitHub's
         email: primaryEmail,
       };
 
@@ -364,11 +428,24 @@ app.get("/github/login", (req, res) => {
           profile: {
             description: data.bio,
             name: data.name,
-            avatar: data.avatar_url,
+            avatar: pictshareAvatarUrl, // Use Pictshare URL instead of GitHub's
             email: primaryEmail,
           },
           postIds: [],
         }).save();
+      } else if (exists.profile?.avatar !== pictshareAvatarUrl) {
+        // Update avatar if it changed
+        await User.updateOne(
+          { githubId: data.id },
+          {
+            $set: {
+              'profile.avatar': pictshareAvatarUrl,
+              'profile.name': data.name,
+              'profile.email': primaryEmail,
+              'profile.description': data.bio,
+            }
+          }
+        );
       }
 
       res.redirect(FRONTEND_ORIGIN);
@@ -381,42 +458,63 @@ app.get("/github/login", (req, res) => {
 });
 
 // ---------- OAuth: Google ----------
-app.get("/google/login", (req, res) => {
-  axios({
-    method: "get",
-    url: `https://www.googleapis.com/oauth2/v2/userinfo`,
-    headers: { Authorization: `Bearer ${req.session.google_access_token}` },
-  })
-    .then(async ({ data }) => {
-      // Normalize the session
-      req.session.user = {
-        id: String(data.id),
-        provider: "google",
-        login: (data.email || "").split("@")[0],
-        name: data.name,
-        avatar: data.picture,
-        email: data.email,
-      };
-
-      const exists = await User.findOne({ googleId: data.id });
-      if (!exists) {
-        await new User({
-          googleId: data.id,
-          handle: (data.email || "").split("@")[0],
-          profile: {
-            name: data.name,
-            avatar: data.picture,
-            email: data.email,
-          },
-          postIds: [],
-        }).save();
-      }
-      res.redirect(FRONTEND_ORIGIN);
-    })
-    .catch((err) => {
-      console.error("Google profile error:", err);
-      res.status(500).send("Login failed");
+app.get("/google/login", async (req, res) => {
+  try {
+    const { data } = await axios({
+      method: "get",
+      url: `https://www.googleapis.com/oauth2/v2/userinfo`,
+      headers: { Authorization: `Bearer ${req.session.google_access_token}` },
     });
+
+    // Upload Google profile picture to Pictshare
+    let pictshareAvatarUrl = data.picture;
+    if (data.picture) {
+      console.log('Uploading Google profile picture to Pictshare...');
+      pictshareAvatarUrl = await uploadImageToPictshare(data.picture);
+      console.log('Pictshare URL:', pictshareAvatarUrl);
+    }
+
+    // Normalize the session
+    req.session.user = {
+      id: String(data.id),
+      provider: "google",
+      login: (data.email || "").split("@")[0],
+      name: data.name,
+      avatar: pictshareAvatarUrl, // Use Pictshare URL instead of Google's
+      email: data.email,
+    };
+
+    const exists = await User.findOne({ googleId: data.id });
+    if (!exists) {
+      await new User({
+        googleId: data.id,
+        handle: (data.email || "").split("@")[0],
+        profile: {
+          name: data.name,
+          avatar: pictshareAvatarUrl, // Use Pictshare URL instead of Google's
+          email: data.email,
+        },
+        postIds: [],
+      }).save();
+    } else if (exists.profile?.avatar !== pictshareAvatarUrl) {
+      // Update avatar if it changed
+      await User.updateOne(
+        { googleId: data.id },
+        {
+          $set: {
+            'profile.avatar': pictshareAvatarUrl,
+            'profile.name': data.name,
+            'profile.email': data.email,
+          }
+        }
+      );
+    }
+
+    res.redirect(FRONTEND_ORIGIN);
+  } catch (err) {
+    console.error("Google profile error:", err);
+    res.status(500).send("Login failed");
+  }
 });
 
 app.get("/auth/google", (req, res) => {
