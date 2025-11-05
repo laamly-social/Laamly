@@ -9,7 +9,6 @@ import MessageThreadPage from "./components/messages/MessageThreadPage";
 import Reels from "./components/reels/Reels";
 import SinglePost from "./components/feed/SinglePost";
 import SingleReel from "./components/reels/SingleReel";
-import MediaGallery from "./components/media/MediaGallery";
 import Profile from "./components/profile/Profile";
 import Podcasts from "./components/podcasts/Podcasts";
 import NotificationsPage from "./components/notifications/NotificationsPage";
@@ -139,12 +138,6 @@ export default function App({ initialData }: AppProps) {
     console.log("Repost:", originalId);
   };
 
-  const mediaItems = useMemo(() => {
-    const images = posts.filter(p => p.image).map(p => ({ kind: "image" as const, url: p.image!, id: p.id }));
-    const videos = reels.map(r => ({ kind: "video" as const, url: r.src, id: r.id }));
-    return [...images, ...videos];
-  }, [posts, reels]);
-
   const isReelsPage = location.pathname === "/reels" || location.pathname.startsWith("/reel/");
 
   return (
@@ -235,7 +228,6 @@ export default function App({ initialData }: AppProps) {
               }
             />
 
-            <Route path="/media" element={<MediaGallery items={mediaItems} />} />
             <Route path="/podcasts" element={<Podcasts />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route

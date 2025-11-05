@@ -229,36 +229,6 @@ module.exports = function createPostsRouter(io, userSockets) {
     }
   });
 
-  // Get media for current user
-  router.get('/getMedia', async (req, res) => {
-    try {
-      if (!req.session.user) return res.status(401).json({ message: 'You need to be logged in' });
-
-      const user = await User.findOne(qById(req.session.user.id));
-      if (!user) return res.status(404).json({ message: 'User not found' });
-
-      const postIds = user.postIds || [];
-      if (!postIds.length) return res.json({ media: [] });
-
-      const posts = await Post.find({ _id: { $in: postIds }, deleted: { $ne: true } }).lean();
-      const media = [];
-      for (const post of posts) {
-        if (Array.isArray(post.urls)) {
-          for (const url of post.urls) {
-            const ext = url.split('.').pop()?.toLowerCase();
-            const kind = ['mp4', 'webm', 'ogg', 'mov'].includes(ext) ? 'video' : 'image';
-            media.push({ kind, url });
-          }
-        }
-        if (post.image) media.push({ kind: 'image', url: post.image });
-      }
-      return res.json({ media });
-    } catch (err) {
-      console.error('Error fetching user media:', err);
-      return res.status(500).json({ message: 'Error fetching media' });
-    }
-  });
-
   // Edit post
   router.post('/edit', async (req, res) => {
     try {

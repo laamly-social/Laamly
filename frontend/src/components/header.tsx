@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useMemo, useState } from "react";
 import type { User } from "../types";
 import TabBtn from "./nav/TabBtn";
-import { Image as ImageIcon, Home, PlayCircle as PlayTab, Github, Podcast, MessageSquare, Bell } from "lucide-react";
+import { Home, PlayCircle as PlayTab, Github, Podcast, MessageSquare, Bell } from "lucide-react";
 import Avatar from "./ui/Avatar";
 import { BACKEND_URL } from "../config";
 import NotificationBell from "./notifications/NotificationBell";
@@ -58,11 +58,6 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
 
           <div className="flex flex-col items-center space-y-4">
             <div className="flex">
-              {user && (
-                <div className="w-full px-1">
-                  <TabBtn icon={ImageIcon} label="Media" active={location.pathname === "/media"} to="/media" />
-                </div>
-              )}
               {user && (
                 <span
                   onClick={() => setShowNotifications(!showNotifications)}

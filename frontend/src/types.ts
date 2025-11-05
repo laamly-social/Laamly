@@ -108,4 +108,4 @@ export type Notification = {
   createdAt: number;
 };
 
-export type Tab = "home" | "messages" | "reels" | "media" | "profile";
+export type Tab = "home" | "messages" | "reels" | "profile";
