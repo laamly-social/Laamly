@@ -122,9 +122,213 @@ Post text: ${postText}`;
   }
 }
 
-// Toggle like
+/* ------------------------------------------------------------------
+   FEED RANKING HELPERS (halal-weighted + tag similarity)
+   ------------------------------------------------------------------ */
+
+const FEED_DEFAULT_PAGE_SIZE = 10;
+const FEED_MAX_PAGE_SIZE = 50;
+const FEED_LIKED_LOOKBACK_DAYS = 30;
+const FEED_CANDIDATE_DAYS = 90;
+const FEED_MIN_CANDIDATES = 80;
+const FEED_MAX_CANDIDATES = 400;
+
+/** Normalize a tag like "QuranRecitation" or "quran_tafsir" → ["quran","recitation"/"tafsir"] */
+function normalizeTagToTokens(tag) {
+  if (!tag) return [];
+  let s = String(tag);
+  s = s.replace(/^#/, ""); // remove leading #
+  s = s.replace(/([a-z])([A-Z])/g, "$1_$2"); // split camelCase
+  const parts = s
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  return parts;
+}
+
+/** Build per-user token affinity from tags on posts they liked recently */
+async function buildUserTagTokenAffinity(viewerUuid) {
+  if (!viewerUuid) return {};
+
+  const since = new Date(
+    Date.now() - FEED_LIKED_LOOKBACK_DAYS * 24 * 60 * 60 * 1000
+  );
+
+  const likedPosts = await Post.find(
+    {
+      deleted: { $ne: true },
+      likedBy: viewerUuid,
+      datePosted: { $gte: since },
+    },
+    { tags: 1 }
+  ).lean();
+
+  const tokenCounts = {};
+
+  for (const p of likedPosts) {
+    if (!Array.isArray(p.tags)) continue;
+    for (const rawTag of p.tags) {
+      const tokens = normalizeTagToTokens(rawTag);
+      for (const token of tokens) {
+        tokenCounts[token] = (tokenCounts[token] || 0) + 1;
+      }
+    }
+  }
+
+  return tokenCounts;
+}
+
+/** Score a raw post document using recency, engagement, tags, and halal-ness */
+function scorePostForUser(rawPost, tokenAffinity = {}) {
+  const now = Date.now();
+
+  const createdAtMs =
+    rawPost.datePosted instanceof Date
+      ? rawPost.datePosted.getTime()
+      : typeof rawPost.datePosted === "string"
+      ? new Date(rawPost.datePosted).getTime()
+      : now;
+
+  const ageHours = Math.max(0, (now - createdAtMs) / (1000 * 60 * 60));
+  // strong within first 24h, then decays
+  const recencyScore = 1 / (1 + ageHours / 24);
+
+  const likeCount = Array.isArray(rawPost.likedBy)
+    ? rawPost.likedBy.length
+    : Number(rawPost.likes || 0);
+  const commentCount = Array.isArray(rawPost.comments)
+    ? rawPost.comments.length
+    : 0;
+
+  const engagementScore = Math.log(1 + likeCount * 2 + commentCount * 1.5);
+
+  // Token-based tag affinity (captures related tags, not just exact strings)
+  const tags = Array.isArray(rawPost.tags) ? rawPost.tags : [];
+  let tagScore = 0;
+  const seenTokens = new Set();
+
+  for (const rawTag of tags) {
+    const tokens = normalizeTagToTokens(rawTag);
+    for (const token of tokens) {
+      if (seenTokens.has(token)) continue;
+      seenTokens.add(token);
+      const w = tokenAffinity[token] || 0;
+      if (w > 0) {
+        tagScore += Math.log(1 + w);
+      }
+    }
+  }
+
+  if (seenTokens.size > 0) {
+    // small normalization so posts with tons of tags don't explode
+    tagScore = tagScore / Math.sqrt(seenTokens.size);
+  }
+
+  // Halal multiplier: halal posts stay at full weight, haram posts are heavily downranked
+  const halalMultiplier = rawPost.isHalal === false ? 0.3 : 1.0;
+
+  // tiny random jitter so the feed doesn't freeze in one exact order
+  const randomJitter = Math.random() * 0.03;
+
+  const base =
+    0.4 * recencyScore +
+    0.4 * engagementScore +
+    0.2 * tagScore;
+
+  return halalMultiplier * base + randomJitter;
+}
+
+/** Merge halal and haram lists so feed is halal-heavy but still can show haram content. */
+function mergeHalalAndHaram(halalScored, haramScored, halalBatch = 4, haramBatch = 1) {
+  const merged = [];
+  let iH = 0;
+  let iN = 0;
+
+  while (iH < halalScored.length || iN < haramScored.length) {
+    // push a batch of halal
+    for (let k = 0; k < halalBatch && iH < halalScored.length; k++) {
+      merged.push(halalScored[iH++]);
+    }
+    // then a smaller batch of haram
+    for (let k = 0; k < haramBatch && iN < haramScored.length; k++) {
+      merged.push(haramScored[iN++]);
+    }
+
+    if (iH >= halalScored.length && iN >= haramScored.length) break;
+  }
+
+  return merged;
+}
+
+/** Hydrate posts with author info, likes, liked, and comment user info (original style) */
+async function hydratePosts(rawPosts, req) {
+  const posts = rawPosts.map((p) => ({ ...p }));
+  const viewer = req.session?.user || null;
+  const viewerUuid = viewer ? String(viewer.uuid || viewer.id) : null;
+
+  for (const p of posts) {
+    try {
+      const author = await User.findOne(qByUuid(p.author)).lean();
+      const isCurrentUser = viewerUuid ? String(p.author) === viewerUuid : false;
+
+      p.authorInfo = author
+        ? {
+            profile: author.profile,
+            handle: author.handle,
+            avatar: author.profile?.avatar || '',
+            name: author.profile?.name || author.handle,
+            isCurrentUser
+          }
+        : { handle: 'unknown', name: 'Unknown', avatar: '', isCurrentUser: false };
+
+      p.authorId = p.author;
+      p.createdAt = new Date(p.datePosted).getTime();
+
+      const likedBy = Array.isArray(p.likedBy) ? p.likedBy.map(String) : [];
+      p.likes = likedBy.length;
+      p.liked = !!(viewerUuid && likedBy.includes(viewerUuid));
+
+      if (Array.isArray(p.comments)) {
+        p.comments = await Promise.all(
+          p.comments.map(async (c) => {
+            const commenter = await User.findOne(qByUuid(c.author)).lean();
+            if (commenter) {
+              const commentIsCurrentUser = viewerUuid
+                ? String(c.author) === viewerUuid
+                : false;
+              return {
+                ...c,
+                authorInfo: {
+                  profile: commenter.profile,
+                  handle: commenter.handle,
+                  avatar: commenter.profile?.avatar || '',
+                  name: commenter.profile?.name || commenter.handle,
+                  isCurrentUser: commentIsCurrentUser
+                }
+              };
+            } else {
+              return { ...c, authorInfo: { deleted: true } };
+            }
+          })
+        );
+      } else {
+        p.comments = [];
+      }
+    } catch (e) {
+      console.error(`Author fetch error for ${p._id}:`, e);
+    }
+  }
+
+  return posts;
+}
+
+/* ------------------------------------------------------------------
+   ROUTES
+   ------------------------------------------------------------------ */
+
 module.exports = function createPostsRouter(io, userSockets) {
 
+  // Toggle like
   router.post('/toggle-like', async (req, res) => {
     try {
       if (!req.session.user) return res.status(401).json({ message: 'You need to be logged in' });
@@ -316,9 +520,9 @@ module.exports = function createPostsRouter(io, userSockets) {
 
       const post = await Post.findById(postId);
       if (!post) return res.status(404).json({ message: 'Post not found' });
-        if (String(post.author) !== String(req.session.user.uuid)) {
-          return res.status(403).json({ message: 'You can only remove tags from your own posts' });
-        }
+      if (String(post.author) !== String(req.session.user.uuid)) {
+        return res.status(403).json({ message: 'You can only remove tags from your own posts' });
+      }
 
       post.tags = (post.tags || []).filter(t => t !== tag);
       await post.save();
@@ -366,7 +570,7 @@ module.exports = function createPostsRouter(io, userSockets) {
         isHalal: aiAnalysis.isHalal
       });
 
-  await User.updateOne(qByUuid(req.session.user.uuid), { $push: { postIds: post._id } });
+      await User.updateOne(qByUuid(req.session.user.uuid), { $push: { postIds: post._id } });
 
       return res.status(201).json({
         message: 'Post created successfully!',
@@ -379,54 +583,77 @@ module.exports = function createPostsRouter(io, userSockets) {
     }
   });
 
-  // Get all posts
+  // Personalized halal-weighted feed with pagination
+  // GET /posts/feed?page=1&pageSize=10
+  router.get('/feed', async (req, res) => {
+    try {
+      const viewer = req.session?.user || null;
+      const viewerUuid = viewer ? String(viewer.uuid || viewer.id) : null;
+
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const requestedSize = parseInt(req.query.pageSize, 10) || FEED_DEFAULT_PAGE_SIZE;
+      const pageSize = Math.min(requestedSize, FEED_MAX_PAGE_SIZE);
+
+      const since = new Date(Date.now() - FEED_CANDIDATE_DAYS * 24 * 60 * 60 * 1000);
+      const candidateLimit = Math.min(
+        Math.max(page * pageSize * 4, FEED_MIN_CANDIDATES),
+        FEED_MAX_CANDIDATES
+      );
+
+      // Pull candidate posts and user affinity in parallel
+      const [rawPosts, tokenAffinity] = await Promise.all([
+        Post.find({
+          deleted: { $ne: true },
+          datePosted: { $gte: since },
+        })
+          .sort({ datePosted: -1 })
+          .limit(candidateLimit)
+          .lean(),
+        buildUserTagTokenAffinity(viewerUuid),
+      ]);
+
+      // Score raw posts first (cheaper), then merge halal and haram
+      const scored = rawPosts.map((p) => ({
+        raw: p,
+        score: scorePostForUser(p, tokenAffinity),
+      }));
+
+      const halal = scored
+        .filter((x) => x.raw.isHalal !== false)
+        .sort((a, b) => b.score - a.score);
+
+      const haram = scored
+        .filter((x) => x.raw.isHalal === false)
+        .sort((a, b) => b.score - a.score);
+
+      const merged = mergeHalalAndHaram(halal, haram).map((x) => x.raw);
+
+      const total = merged.length;
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize;
+      const pageRaw = merged.slice(start, end);
+
+      // Hydrate only the page we’re returning
+      const hydrated = await hydratePosts(pageRaw, req);
+
+      return res.json({
+        posts: hydrated,
+        page,
+        pageSize,
+        total,
+        hasMore: end < total,
+      });
+    } catch (err) {
+      console.error('GET /posts/feed failed:', err);
+      return res.status(500).json({ message: 'Failed to build feed' });
+    }
+  });
+
+  // Get all posts (legacy / admin / debugging)
   router.get('/get-all', async (req, res) => {
     try {
-      const posts = await Post.find({ deleted: { $ne: true } }).lean();
-      for (const p of posts) {
-        try {
-          const author = await User.findOne(qByUuid(p.author)).lean();
-          p.authorInfo = author
-            ? {
-                profile: author.profile,
-                handle: author.handle,
-                avatar: author.profile?.avatar || '',
-                name: author.profile?.name || author.handle,
-                isCurrentUser: req.session.user ? (p.author === String(req.session.user.id)) : false
-              }
-            : { handle: 'unknown', name: 'Unknown', avatar: '', isCurrentUser: false };
-
-          p.authorId = p.author;
-          p.createdAt = new Date(p.datePosted).getTime();
-
-          p.likes = (p.likedBy || []).length;
-          p.liked = !!(req.session.user && p.likedBy?.includes(String(req.session.user.id)));
-
-          if (Array.isArray(p.comments)) {
-            p.comments = await Promise.all(p.comments.map(async c => {
-              const commenter = await User.findOne(qByUuid(c.author)).lean();
-              if (commenter) {
-                return {
-                  ...c,
-                  authorInfo: {
-                    profile: commenter.profile,
-                    handle: commenter.handle,
-                    avatar: commenter.profile?.avatar || '',
-                    name: commenter.profile?.name || commenter.handle,
-                    isCurrentUser: req.session.user ? (c.author === String(req.session.user.id)) : false
-                  }
-                };
-              } else {
-                return { ...c, authorInfo: { deleted: true } };
-              }
-            }));
-          } else {
-            p.comments = [];
-          }
-        } catch (e) {
-          console.error(`Author fetch error for ${p._id}:`, e);
-        }
-      }
+      const postsRaw = await Post.find({ deleted: { $ne: true } }).lean();
+      const posts = await hydratePosts(postsRaw, req);
       return res.json({ posts });
     } catch (err) {
       console.error('Error fetching posts:', err);
@@ -438,50 +665,13 @@ module.exports = function createPostsRouter(io, userSockets) {
   router.get('/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const post = await Post.findById(id).lean();
+      const postRaw = await Post.findById(id).lean();
 
-      if (!post || post.deleted) {
+      if (!postRaw || postRaw.deleted) {
         return res.status(404).json({ message: 'Post not found' });
       }
 
-  const author = await User.findOne(qByUuid(post.author)).lean();
-      post.authorInfo = author
-        ? {
-            profile: author.profile,
-            handle: author.handle,
-            avatar: author.profile?.avatar || '',
-            name: author.profile?.name || author.handle,
-            isCurrentUser: req.session.user ? (post.author === String(req.session.user.id)) : false
-          }
-        : { handle: 'unknown', name: 'Unknown', avatar: '', isCurrentUser: false };
-
-      post.authorId = post.author;
-      post.createdAt = new Date(post.datePosted).getTime();
-      post.likes = (post.likedBy || []).length;
-      post.liked = !!(req.session.user && post.likedBy?.includes(String(req.session.user.id)));
-
-      if (Array.isArray(post.comments)) {
-        post.comments = await Promise.all(post.comments.map(async c => {
-          const commenter = await User.findOne(qByUuid(c.author)).lean();
-          if (commenter) {
-            return {
-              ...c,
-              authorInfo: {
-                profile: commenter.profile,
-                handle: commenter.handle,
-                avatar: commenter.profile?.avatar || '',
-                name: commenter.profile?.name || commenter.handle,
-                isCurrentUser: req.session.user ? (c.author === String(req.session.user.id)) : false
-              }
-            };
-          } else {
-            return { ...c, authorInfo: { deleted: true } };
-          }
-        }));
-      } else {
-        post.comments = [];
-      }
-
+      const [post] = await hydratePosts([postRaw], req);
       return res.json({ post });
     } catch (err) {
       console.error('Error fetching post:', err);
