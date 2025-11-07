@@ -207,7 +207,7 @@ export default function Post({
    const createdAt = p.createdAt || Date.now();
 
    return (
-      <motion.div key={p.id} id={"id-" + p._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+      <motion.div id={"id-" + p._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
          <Card className="post">
             <div className="p-3 border-b border-border dark:border-border-dark flex items-center gap-2.5 justify-between">
                <div>
@@ -284,13 +284,14 @@ export default function Post({
 
                {/* AI-generated tags */}
                {localTags && localTags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                     {localTags.map((tag, idx) => (
-                        <span
-                           key={idx}
-                           className="inline-flex items-center gap-0.5 px-2.5 py-1 text-xs font-medium rounded-full bg-muted dark:bg-muted-dark text-sub dark:text-sub-dark border border-border dark:border-border-dark"
-                        >
-                           #{tag}
+                  <div className="relative mb-3">
+                     <div className="flex gap-2 overflow-x-auto scrollbar-hide max-w-[650px]">
+                        {localTags.map((tag, idx) => (
+                           <span
+                              key={idx}
+                              className="inline-flex items-center gap-0.5 px-2.5 py-1 text-xs font-medium rounded-full bg-muted dark:bg-muted-dark text-sub dark:text-sub-dark border border-border dark:border-border-dark whitespace-nowrap"
+                           >
+                              #{tag}
                            {isCurrentUser && (
                               <button
                                  onClick={() => handleRemoveTag(tag)}
@@ -302,6 +303,8 @@ export default function Post({
                            )}
                         </span>
                      ))}
+                     </div>
+                     <div className="absolute right-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-l from-panel dark:from-panel-dark to-transparent"></div>
                   </div>
                )}
 

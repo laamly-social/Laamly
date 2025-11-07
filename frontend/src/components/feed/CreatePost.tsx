@@ -20,6 +20,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
    const [previews, setPreviews] = useState<string[]>([]);
    const [uploading, setUploading] = useState(false);
    const [error, setError] = useState<string | null>(null);
+   const [success, setSuccess] = useState(false);
    const [isDragging, setIsDragging] = useState(false);
    const fileInputRef = useRef<HTMLInputElement | null>(null);
    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -95,6 +96,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
    const handleCreatePost = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       setError(null);
+      setSuccess(false);
       if (!text.trim()) return setError("Post content cannot be empty.");
 
       setUploading(true);
@@ -128,6 +130,11 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
          setPreviews([]);
          if (fileInputRef.current) fileInputRef.current.value = "";
          if (textareaRef.current) textareaRef.current.style.height = 'auto';
+         
+         // Show success message
+         setSuccess(true);
+         setTimeout(() => setSuccess(false), 3000);
+         
          onPosted?.();
       } catch (err) {
          console.error("Failed to create post:", err);
@@ -224,6 +231,12 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
                {error && (
                   <div className="alert p-2 my-2 bg-red-100 border border-red-400 text-red-700 rounded-md">
                      {error}
+                  </div>
+               )}
+
+               {success && (
+                  <div className="alert p-2 my-2 bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-600 text-green-700 dark:text-green-200 rounded-md">
+                     ✓ Post created successfully!
                   </div>
                )}
 

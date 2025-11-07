@@ -114,7 +114,7 @@ export default function App({ initialData }: AppProps) {
   const handleDeletePost = async (id: string) => {
     try {
       await deletePostApi(id);
-      setPosts(prev => prev.filter(p => p._id !== id));
+      setPosts(prev => prev.filter(p => p._id !== id && p.id !== id));
     } catch (error) {
       console.error("Failed to delete post:", error);
     }
@@ -260,6 +260,10 @@ export default function App({ initialData }: AppProps) {
                   reels={reels}
                   openProfile={openProfile}
                   onBack={() => { navigate("/home"); setProfileUserId(null); }}
+                  deletePost={handleDeletePost}
+                  editPost={handleEditPost}
+                  toggleLike={handleToggleLike}
+                  addComment={handleAddComment}
                 />
               }
             />

@@ -53,7 +53,7 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
             <TabBtn icon={Home} label="Posts" active={location.pathname === "/home"} to="/home" />
             {user && (<TabBtn icon={MessageSquare} label="Messages" active={location.pathname === "/messages"} to="/messages" />)}
             <TabBtn icon={PlayTab} label="Reels" active={location.pathname === "/reels"} to="/reels" />
-            <TabBtn icon={Podcast} label="Podcasts" active={location.pathname === "/podcasts"} to="/podcasts" />
+            {/* <TabBtn icon={Podcast} label="Podcasts" active={location.pathname === "/podcasts"} to="/podcasts" /> */}
           </div>
 
           <div className="flex flex-col items-center space-y-4">
@@ -142,9 +142,9 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
           <a href="/reels" className={`flex flex-col items-center justify-center p-2 rounded-lg transition ${location.pathname === "/reels" ? "text-accent" : "text-text dark:text-text-dark"}`}>
             <PlayTab size={24} />
           </a>
-          <a href="/podcasts" className={`flex flex-col items-center justify-center p-2 rounded-lg transition ${location.pathname === "/podcasts" ? "text-accent" : "text-text dark:text-text-dark"}`}>
+          {/* <a href="/podcasts" className={`flex flex-col items-center justify-center p-2 rounded-lg transition ${location.pathname === "/podcasts" ? "text-accent" : "text-text dark:text-text-dark"}`}>
             <Podcast size={24} />
-          </a>
+          </a> */}
           {user && (
             <a href="/messages" className={`flex items-center justify-center p-2 rounded-lg transition ${location.pathname === "/messages" ? "text-accent" : "text-text dark:text-text-dark"}`}>
               <MessageSquare />

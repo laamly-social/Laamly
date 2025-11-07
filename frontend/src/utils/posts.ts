@@ -80,7 +80,7 @@ export async function deletePost(id: string): Promise<{ message: string }> {
     : { message: await res.text() };
   if (!res.ok)
     throw new Error((data as any)?.message || `Delete failed: ${res.status}`);
-  else document.querySelector(`#id-${id}`)?.remove();
+  // Don't manipulate DOM directly - let React handle it via state updates
   return data;
 }
 

@@ -205,7 +205,7 @@ export default function HomeFeed({
   const deletePost = async (id: string) => {
     try {
       await deletePostApi(id);
-      setPosts((prev) => prev.filter((p) => p.id !== id && p._id !== id));
+      setPosts((prev) => prev.filter((p) => p._id !== id && p.id !== id));
     } catch (e) {
       alert("Failed to delete post: " + (e instanceof Error ? e.message : e));
     }
@@ -223,8 +223,16 @@ export default function HomeFeed({
   };
 
   // Backend already returns posts in ranked order,
-  // so just pass them through.
-  const orderedPosts = useMemo(() => posts, [posts]);
+  // so just pass them through. But deduplicate by _id to avoid duplicate keys.
+  const orderedPosts = useMemo(() => {
+    const seen = new Set();
+    return posts.filter((p) => {
+      const key = p._id || p.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [posts]);
 
   return (
     // Center the two-column feed and give the main column a comfortable, stable width
@@ -243,7 +251,7 @@ export default function HomeFeed({
         <div className="grid">
           {orderedPosts.map((p) => (
             <PostComponent
-              key={p._id}
+              key={p._id || p.id}
               post={p}
               meId={meId}
               posts={orderedPosts}

@@ -22,9 +22,13 @@ export default function Profile(props: {
    reels: Reel[];
    openProfile: (uid: string) => void;
    onBack: () => void;
+   deletePost?: (id: string) => void;
+   editPost?: (id: string, content: string) => void;
+   toggleLike?: (id: string) => void;
+   addComment?: (postId: string, text: string) => void;
 }) {
    const { userId } = useParams<{ userId: string }>();
-   const { meId, posts, followMap, followToggle, reels, openProfile, onBack } = props;
+   const { meId, posts, followMap, followToggle, reels, openProfile, onBack, deletePost, editPost, toggleLike, addComment } = props;
    const [user, setUser] = useState<User | null>(null);
    const [loading, setLoading] = useState(true);
    const [view, setView] = useState<
@@ -223,10 +227,10 @@ export default function Profile(props: {
                      posts={posts}
                      setPosts={props.setPosts}
                      openProfile={openProfile}
-                     addComment={() => { }}
-                     deletePost={() => { }}
-                     editPost={() => { }}
-                     toggleLike={() => { }}
+                     addComment={addComment || (() => { })}
+                     deletePost={deletePost || (() => { })}
+                     editPost={editPost || (() => { })}
+                     toggleLike={toggleLike || (() => { })}
                      toggleRepost={() => { }}
                      user={user}
                   />
@@ -279,10 +283,10 @@ export default function Profile(props: {
                      posts={posts}
                      setPosts={props.setPosts}
                      openProfile={openProfile}
-                     addComment={() => { }}
-                     deletePost={() => { }}
-                     editPost={() => { }}
-                     toggleLike={() => { }}
+                     addComment={addComment || (() => { })}
+                     deletePost={deletePost || (() => { })}
+                     editPost={editPost || (() => { })}
+                     toggleLike={toggleLike || (() => { })}
                      toggleRepost={() => { }}
                      user={user}
                   />
@@ -305,10 +309,10 @@ export default function Profile(props: {
                      posts={posts}
                      setPosts={props.setPosts}
                      openProfile={openProfile}
-                     addComment={() => { }}
-                     deletePost={() => { }}
-                     editPost={() => { }}
-                     toggleLike={() => { }}
+                     addComment={addComment || (() => { })}
+                     deletePost={deletePost || (() => { })}
+                     editPost={editPost || (() => { })}
+                     toggleLike={toggleLike || (() => { })}
                      toggleRepost={() => { }}
                      user={user}
                   />
@@ -331,10 +335,10 @@ export default function Profile(props: {
                      posts={posts}
                      setPosts={props.setPosts}
                      openProfile={openProfile}
-                     addComment={() => { }}
-                     deletePost={() => { }}
-                     editPost={() => { }}
-                     toggleLike={() => { }}
+                     addComment={addComment || (() => { })}
+                     deletePost={deletePost || (() => { })}
+                     editPost={editPost || (() => { })}
+                     toggleLike={toggleLike || (() => { })}
                      toggleRepost={() => { }}
                      user={user}
                   />
@@ -348,22 +352,27 @@ export default function Profile(props: {
                </Card>
             )}
 
-            {view === "likedReels" &&
-               likedReels.map(r => {
-                  return (
-                     <Card key={r.id}>
-                        <div className="p-3 sm:p-4">
-                           <div className="flex items-center gap-2 sm:gap-3">
-                              <Avatar src={user.avatar} alt={user.name} />
-                              <div className="min-w-0 flex-1">
-                                 <div className="font-bold text-text dark:text-text-dark text-sm sm:text-base truncate">{user.name}</div>
-                                 <div className="text-xs sm:text-sm text-sub dark:text-sub-dark truncate">{r.title}</div>
-                              </div>
-                           </div>
+            {view === "likedReels" && likedReels.length > 0 && (
+               <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  {likedReels.map(r => (
+                     <a
+                        key={r.id}
+                        href={`/reel/${r.id}`}
+                        className="relative aspect-[9/16] rounded-lg overflow-hidden bg-muted dark:bg-muted-dark hover:opacity-90 transition-opacity cursor-pointer"
+                     >
+                        <video
+                           src={r.src + "/raw"}
+                           className="absolute inset-0 w-full h-full object-cover"
+                           preload="metadata"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50" />
+                        <div className="absolute bottom-2 left-2 right-2">
+                           <p className="text-white text-xs font-medium truncate">{r.title}</p>
                         </div>
-                     </Card>
-                  );
-               })}
+                     </a>
+                  ))}
+               </div>
+            )}
 
             {view === "savedReels" && savedReels.length === 0 && (
                <Card>
