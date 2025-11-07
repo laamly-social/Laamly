@@ -291,8 +291,75 @@ app.get("/api/me", async (req, res) => {
       avatar: dbUser.profile?.avatar || "",
       email: dbUser.profile?.email || "",
       handle: dbUser.handle || "",
+      bio: dbUser.profile?.bio || "",
     },
   });
+});
+
+// Update current user's profile
+app.put("/api/me", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "You need to be logged in" });
+    }
+
+    const dbUser = await User.findOne({ uuid: req.session.user.uuid });
+    if (!dbUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { name, bio, avatar, handle } = req.body;
+
+    // Update fields if provided
+    if (name !== undefined && String(name).trim()) {
+      if (!dbUser.profile) dbUser.profile = {};
+      dbUser.profile.name = String(name).trim();
+      dbUser.markModified('profile');
+    }
+
+    if (bio !== undefined) {
+      if (!dbUser.profile) dbUser.profile = {};
+      dbUser.profile.bio = String(bio).trim();
+      dbUser.markModified('profile');
+    }
+
+    if (avatar !== undefined && String(avatar).trim()) {
+      if (!dbUser.profile) dbUser.profile = {};
+      dbUser.profile.avatar = String(avatar).trim();
+      dbUser.markModified('profile');
+    }
+
+    if (handle !== undefined && String(handle).trim()) {
+      // Check if handle is already taken by another user
+      const existingUser = await User.findOne({ 
+        handle: String(handle).trim(), 
+        uuid: { $ne: dbUser.uuid } 
+      });
+      
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+      
+      dbUser.handle = String(handle).trim();
+    }
+
+    await dbUser.save();
+
+    res.json({
+      user: {
+        id: dbUser.uuid,
+        uuid: dbUser.uuid,
+        name: dbUser.profile?.name || dbUser.handle,
+        avatar: dbUser.profile?.avatar || "",
+        email: dbUser.profile?.email || "",
+        handle: dbUser.handle || "",
+        bio: dbUser.profile?.bio || "",
+      },
+    });
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    res.status(500).json({ message: "Failed to update profile" });
+  }
 });
 
 // User search (must be before /api/users/:userId to avoid route collision)
@@ -349,6 +416,7 @@ app.get("/api/users/:userId", async (req, res) => {
         handle: dbUser.handle,
         avatar: dbUser.profile?.avatar || "",
         email: dbUser.profile?.email || "",
+        bio: dbUser.profile?.bio || "",
       }
     });
    } catch (error) {

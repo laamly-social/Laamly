@@ -9,19 +9,20 @@ const userSchema = new mongoose.Schema({
    profile: {
       name: String,
       email: String,
-      avatar: String
+      avatar: String,
+      bio: String
    },
    handle: String,
    stats: Object,
    postIds: [mongoose.Schema.Types.ObjectId],
    likedPostIds: [mongoose.Schema.Types.ObjectId],
    notifications: [{
-      type: { type: String, enum: ['like', 'comment', 'message', 'reply'], required: true },
+      type: { type: String, enum: ['like', 'comment', 'comment_like', 'message', 'reply', 'group-add'], required: true },
       from: { type: String, required: true }, // uuid of the person who triggered the notification
       fromName: String,
       fromAvatar: String,
       contentId: String, // postId, reelId, or threadId
-      contentType: { type: String, enum: ['post', 'reel', 'message', 'comment'] },
+      contentType: { type: String, enum: ['post', 'reel', 'message', 'comment', 'group'] },
       message: String,
       read: { type: Boolean, default: false },
       createdAt: { type: Date, default: Date.now }

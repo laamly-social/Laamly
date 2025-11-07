@@ -4,14 +4,17 @@ import Avatar from "../ui/Avatar";
 import GenericButton from "../ui/GenericButton";
 import Chip from "../ui/Chip";
 import Card from "../ui/Card";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { ChevronLeft, Calendar, Link as LinkIcon, MapPin } from "lucide-react";
+import { ChevronLeft, Calendar, Link as LinkIcon, MapPin, Pencil, Check, X, Upload } from "lucide-react";
 import { clsx } from "../../utils";
 import UserChip from "../ui/UserChip";
 import type { Post, Reel, User } from "../../types";
 import PostComponent from "../feed/Post";
 import { apiEndpoint } from "../../config";
+import { updateProfile } from "../../utils/me";
+import { uploadFiles } from "../../utils/uploads";
+import IconBtn from "../ui/IconBtn";
 
 export default function Profile(props: {
    meId: string;
@@ -34,6 +37,18 @@ export default function Profile(props: {
    const [view, setView] = useState<
       "posts" | "reels" | "reposts" | "likedPosts" | "likedReels" | "savedPosts" | "savedReels"
    >("posts");
+
+   // Edit states
+   const [editingName, setEditingName] = useState(false);
+   const [editingHandle, setEditingHandle] = useState(false);
+   const [editingBio, setEditingBio] = useState(false);
+   const [editingAvatar, setEditingAvatar] = useState(false);
+   const [tempName, setTempName] = useState("");
+   const [tempHandle, setTempHandle] = useState("");
+   const [tempBio, setTempBio] = useState("");
+   const [uploading, setUploading] = useState(false);
+   const [error, setError] = useState("");
+   const fileInputRef = useRef<HTMLInputElement>(null);
 
    const isMe = userId === meId;
 
@@ -62,7 +77,8 @@ export default function Profile(props: {
                   githubId: data.user.id,
                   name: data.user.name,
                   handle: data.user.handle || data.user.name,
-                  avatar: data.user.avatar
+                  avatar: data.user.avatar,
+                  bio: data.user.bio || ""
                });
             } else {
                setUser(null);
@@ -77,6 +93,93 @@ export default function Profile(props: {
 
       fetchUserProfile();
    }, [userId, meId]);
+
+   // Edit handlers
+   const startEditName = () => {
+      setTempName(user?.name || "");
+      setEditingName(true);
+      setError("");
+   };
+
+   const startEditHandle = () => {
+      setTempHandle(user?.handle || "");
+      setEditingHandle(true);
+      setError("");
+   };
+
+   const startEditBio = () => {
+      setTempBio(user?.bio || "");
+      setEditingBio(true);
+      setError("");
+   };
+
+   const cancelEdit = () => {
+      setEditingName(false);
+      setEditingHandle(false);
+      setEditingBio(false);
+      setEditingAvatar(false);
+      setError("");
+   };
+
+   const saveName = async () => {
+      if (!tempName.trim()) {
+         setError("Name cannot be empty");
+         return;
+      }
+      try {
+         const updated = await updateProfile({ name: tempName.trim() });
+         setUser({ ...user, name: updated.name });
+         setEditingName(false);
+         setError("");
+      } catch (err) {
+         setError(err.message || "Failed to update name");
+      }
+   };
+
+   const saveHandle = async () => {
+      if (!tempHandle.trim()) {
+         setError("Username cannot be empty");
+         return;
+      }
+      try {
+         const updated = await updateProfile({ handle: tempHandle.trim() });
+         setUser({ ...user, handle: updated.handle });
+         setEditingHandle(false);
+         setError("");
+      } catch (err) {
+         setError(err.message || "Failed to update username");
+      }
+   };
+
+   const saveBio = async () => {
+      try {
+         const updated = await updateProfile({ bio: tempBio.trim() });
+         setUser({ ...user, bio: updated.bio });
+         setEditingBio(false);
+         setError("");
+      } catch (err) {
+         setError(err.message || "Failed to update bio");
+      }
+   };
+
+   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+
+      try {
+         setUploading(true);
+         setError("");
+         const urls = await uploadFiles(Array.from(files));
+         if (urls.length > 0) {
+            const updated = await updateProfile({ avatar: urls[0] });
+            setUser({ ...user, avatar: updated.avatar });
+         }
+      } catch (err) {
+         setError(err.message || "Failed to upload avatar");
+      } finally {
+         setUploading(false);
+      }
+   };
 
    if (loading) {
       return (
@@ -130,42 +233,182 @@ export default function Profile(props: {
             <div className="px-4 sm:px-6 pb-4 sm:pb-6">
                {/* Avatar positioned over cover */}
                <div className="flex justify-between items-start -mt-12 sm:-mt-16 mb-3 sm:mb-4">
-                  <Avatar
-                     src={user.avatar}
-                     alt={user.name}
-                     className="w-24 h-24 sm:w-32 sm:h-32 border-4 border-white dark:border-gray-800 object-cover rounded-full shadow-lg"
-                  />
-                  {!isMe && (
-                     <GenericButton
-                        className={clsx(
-                           "mt-12 sm:mt-16 inline-flex gap-2 items-center justify-center h-9 sm:h-10 px-4 sm:px-6 rounded-full text-sm sm:text-base font-semibold cursor-pointer transition-all",
-                           (followMap[meId] || new Set()).has(user.id)
-                              ? "bg-accent hover:bg-accent-dark text-white"
-                              : "bg-transparent text-accent dark:text-accent-dark border-2 border-accent dark:border-accent-dark hover:bg-accent hover:text-white"
-                        )}
-                        onClick={() => followToggle(user.id)}
-                     >
-                        {(followMap[meId] || new Set()).has(user.id) ? "Following" : "Follow"}
-                     </GenericButton>
-                  )}
+                  <div className="relative">
+                     <Avatar
+                        src={user.avatar}
+                        alt={user.name}
+                        className="w-24 h-24 sm:w-32 sm:h-32 border-4 border-white dark:border-gray-800 object-cover rounded-full shadow-lg"
+                     />
+                     {isMe && (
+                        <>
+                           <button
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={uploading}
+                              className="absolute bottom-0 right-0 bg-accent hover:bg-accent-dark text-white p-2 rounded-full shadow-lg transition-all disabled:opacity-50"
+                              title="Change avatar"
+                           >
+                              {uploading ? (
+                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                 <Upload size={16} />
+                              )}
+                           </button>
+                           <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept="image/*"
+                              onChange={handleAvatarChange}
+                              className="hidden"
+                           />
+                        </>
+                     )}
+                  </div>
                </div>
 
                {/* Name and Handle */}
                <div className="mb-3 sm:mb-4">
-                  <h1 className="text-xl sm:text-2xl font-bold text-text dark:text-text-dark mb-1">
-                     {user.name}
-                  </h1>
-                  <p className="text-sub dark:text-sub-dark text-sm sm:text-base">
-                     @{user.handle}
-                  </p>
+                  {/* Name */}
+                  {editingName ? (
+                     <div className="flex items-center gap-2 mb-2">
+                        <input
+                           type="text"
+                           value={tempName}
+                           onChange={(e) => setTempName(e.target.value)}
+                           className="flex-1 px-3 py-1.5 text-xl sm:text-2xl font-bold bg-muted dark:bg-muted-dark border border-border dark:border-border-dark rounded-lg text-text dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-accent"
+                           autoFocus
+                        />
+                        <div className="inline-flex items-center rounded-full flex-wrap bg-bg dark:bg-bg-dark border border-border dark:border-border-dark">
+                           <IconBtn
+                              icon={Check}
+                              label="Save"
+                              onClick={saveName}
+                              title="Save"
+                           />
+                           <IconBtn
+                              icon={X}
+                              label="Cancel"
+                              onClick={cancelEdit}
+                              title="Cancel"
+                           />
+                        </div>
+                     </div>
+                  ) : (
+                     <div className="flex items-center justify-between mb-1 group">
+                        <h1 className="text-xl sm:text-2xl font-bold text-text dark:text-text-dark">
+                           {user.name}
+                        </h1>
+                        {isMe && (
+                           <div className="inline-flex items-center rounded-full flex-wrap bg-bg dark:bg-bg-dark border border-border dark:border-border-dark">
+                              <IconBtn
+                                 icon={Pencil}
+                                 label="Edit"
+                                 onClick={startEditName}
+                                 title="Edit name"
+                              />
+                           </div>
+                        )}
+                     </div>
+                  )}
+
+                  {/* Handle */}
+                  {editingHandle ? (
+                     <div className="flex items-center gap-2">
+                        <span className="text-sub dark:text-sub-dark text-sm sm:text-base">@</span>
+                        <input
+                           type="text"
+                           value={tempHandle}
+                           onChange={(e) => setTempHandle(e.target.value)}
+                           className="flex-1 px-3 py-1 text-sm sm:text-base bg-muted dark:bg-muted-dark border border-border dark:border-border-dark rounded-lg text-text dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-accent"
+                           autoFocus
+                        />
+                        <div className="inline-flex items-center rounded-full flex-wrap bg-bg dark:bg-bg-dark border border-border dark:border-border-dark">
+                           <IconBtn
+                              icon={Check}
+                              label="Save"
+                              onClick={saveHandle}
+                              title="Save"
+                           />
+                           <IconBtn
+                              icon={X}
+                              label="Cancel"
+                              onClick={cancelEdit}
+                              title="Cancel"
+                           />
+                        </div>
+                     </div>
+                  ) : (
+                     <div className="flex items-center justify-between group">
+                        <p className="text-sub dark:text-sub-dark text-sm sm:text-base">
+                           @{user.handle}
+                        </p>
+                        {isMe && (
+                           <div className="inline-flex items-center rounded-full flex-wrap bg-bg dark:bg-bg-dark border border-border dark:border-border-dark">
+                              <IconBtn
+                                 icon={Pencil}
+                                 label="Edit"
+                                 onClick={startEditHandle}
+                                 title="Edit username"
+                              />
+                           </div>
+                        )}
+                     </div>
+                  )}
                </div>
 
                {/* Bio Section */}
                <div className="mb-3 sm:mb-4 text-text dark:text-text-dark">
-                  <p className="text-sm sm:text-base leading-relaxed">
-                     Welcome to my profile! 👋
-                  </p>
+                  {editingBio ? (
+                     <div className="space-y-2">
+                        <textarea
+                           value={tempBio}
+                           onChange={(e) => setTempBio(e.target.value)}
+                           placeholder="Write something about yourself..."
+                           className="w-full px-3 py-2 text-sm sm:text-base bg-muted dark:bg-muted-dark border border-border dark:border-border-dark rounded-lg text-text dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+                           rows={3}
+                           autoFocus
+                        />
+                        <div className="flex items-center gap-2 justify-end">
+                           <div className="inline-flex items-center rounded-full flex-wrap bg-bg dark:bg-bg-dark border border-border dark:border-border-dark">
+                              <IconBtn
+                                 icon={Check}
+                                 label="Save"
+                                 onClick={saveBio}
+                                 title="Save"
+                              />
+                              <IconBtn
+                                 icon={X}
+                                 label="Cancel"
+                                 onClick={cancelEdit}
+                                 title="Cancel"
+                              />
+                           </div>
+                        </div>
+                     </div>
+                  ) : (
+                     <div className="flex items-start justify-between group">
+                        <p className="text-sm sm:text-base leading-relaxed flex-1">
+                           {user.bio || (isMe ? "Add a bio to tell others about yourself..." : "No bio yet")}
+                        </p>
+                        {isMe && (
+                           <div className="inline-flex items-center rounded-full flex-wrap bg-bg dark:bg-bg-dark border border-border dark:border-border-dark ml-2 flex-shrink-0">
+                              <IconBtn
+                                 icon={Pencil}
+                                 label="Edit"
+                                 onClick={startEditBio}
+                                 title="Edit bio"
+                              />
+                           </div>
+                        )}
+                     </div>
+                  )}
                </div>
+
+               {/* Error message */}
+               {error && (
+                  <div className="mb-3 sm:mb-4 p-3 bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
+                     {error}
+                  </div>
+               )}
 
                {/* Additional Info */}
                <div className="flex flex-wrap gap-3 sm:gap-4 sm:mb-4 text-sub dark:text-sub-dark text-xs sm:text-sm">

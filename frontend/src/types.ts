@@ -6,6 +6,7 @@ export type User = {
   name: string;
   handle: string;
   avatar: string;
+  bio?: string;
 };
 
 export type Comment = {
@@ -99,7 +100,7 @@ export type Reel = {
 
 export type Notification = {
   id: string;
-  type: 'like' | 'comment' | 'message' | 'reply' | 'group-add';
+  type: 'like' | 'comment' | 'comment_like' | 'message' | 'reply' | 'group-add';
   from: string; // githubId of the person who triggered the notification
   fromName: string;
   fromAvatar: string;
