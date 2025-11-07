@@ -621,6 +621,62 @@ app.use("/api/notifications", notificationsRouter);
     await mongoose.connect(MONGODB_URI, {
       serverSelectionTimeoutMS: 15000,
     });
+    console.info("MongoDB connected successfully");
+
+    // Migrate all existing individual chats to group chats
+    console.info("Running chat migration...");
+    try {
+      const individualChats = await Chat.find({ 
+        $or: [
+          { isGroup: false },
+          { isGroup: { $exists: false } }
+        ]
+      });
+
+      if (individualChats.length > 0) {
+        console.info(`Found ${individualChats.length} individual chats to migrate`);
+        
+        let migrated = 0;
+        for (const chat of individualChats) {
+          try {
+            // Get member details to generate a group name
+            const memberUsers = await User.find({ 
+              $or: [
+                { uuid: { $in: chat.members } },
+                { githubId: { $in: chat.members } }
+              ]
+            }).lean();
+
+            // Generate a default group name from members
+            const groupName = memberUsers
+              .map(u => u.profile?.name || u.handle)
+              .filter(Boolean)
+              .join(", ") || "Unnamed Chat";
+
+            // Update the chat
+            await Chat.updateOne(
+              { _id: chat._id },
+              { 
+                $set: { 
+                  isGroup: true,
+                  groupName: groupName
+                } 
+              }
+            );
+
+            migrated++;
+          } catch (err) {
+            console.error(`Error migrating chat ${chat._id}:`, err.message);
+          }
+        }
+        console.info(`Migration complete! Migrated ${migrated} out of ${individualChats.length} chats.`);
+      } else {
+        console.info("No chats need migration");
+      }
+    } catch (migrationErr) {
+      console.error("Migration error (non-fatal):", migrationErr.message);
+    }
+
     server.listen(PORT, () => {
       console.info(
         "Server is running on port " + PORT + ", started " + new Date().toLocaleTimeString()

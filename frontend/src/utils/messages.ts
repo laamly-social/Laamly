@@ -57,7 +57,11 @@ export async function createThread(
       ...(options?.groupAvatar && { groupAvatar: options.groupAvatar }),
     }),
   });
-  if (!res.ok) throw new Error('Failed to create thread');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: 'Failed to create thread' }));
+    console.error('Create thread error:', errorData);
+    throw new Error(errorData.message || 'Failed to create thread');
+  }
   return res.json();
 }
 
@@ -112,5 +116,90 @@ export async function deleteMessage(threadId: string, messageId: string) {
     body: JSON.stringify({ threadId, messageId }),
   });
   if (!res.ok) throw new Error('Failed to delete message');
+  return res.json();
+}
+
+/**
+ * Add a member to a group chat
+ */
+export async function addGroupMember(threadId: string, userId: string) {
+  const res = await fetch(apiEndpoint('/api/messages/group/add-member'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ threadId, userId }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message || 'Failed to add member');
+  }
+  return res.json();
+}
+
+/**
+ * Remove a member from a group chat
+ */
+export async function removeGroupMember(threadId: string, userId: string) {
+  const res = await fetch(apiEndpoint('/api/messages/group/remove-member'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ threadId, userId }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message || 'Failed to remove member');
+  }
+  return res.json();
+}
+
+/**
+ * Update group chat name
+ */
+export async function updateGroupName(threadId: string, groupName: string) {
+  const res = await fetch(apiEndpoint('/api/messages/group/update-name'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ threadId, groupName }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message || 'Failed to update group name');
+  }
+  return res.json();
+}
+
+/**
+ * Update group avatar
+ */
+export async function updateGroupAvatar(threadId: string, groupAvatar: string) {
+  const res = await fetch(apiEndpoint('/api/messages/group/update-avatar'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ threadId, groupAvatar }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message || 'Failed to update group avatar');
+  }
+  return res.json();
+}
+
+/**
+ * Delete a group chat
+ */
+export async function deleteGroup(threadId: string) {
+  const res = await fetch(apiEndpoint('/api/messages/group/delete'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ threadId }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message || 'Failed to delete group');
+  }
   return res.json();
 }

@@ -12,21 +12,30 @@ export async function uploadFiles(files: File[]): Promise<string[]> {
     formData.append("upload_code", "5219dd95-5672-44ca-8423-970afa123633");
 
     try {
+      console.log(`Uploading file: ${file.name} (${file.size} bytes)`);
       const r = await fetch(UPLOAD_API, { method: "POST", body: formData });
+      console.log(`Upload response status: ${r.status}`);
+      
       const ct = r.headers.get("content-type") || "";
       const result = ct.includes("application/json")
         ? await r.json()
         : { status: "error", reason: await r.text() };
 
+      console.log("Upload result:", result);
+
       if ((result as any).status === "ok") {
         const raw = (result as any).url as string;
         // Normalize to https absolute URL so files can be loaded directly
-        urls.push(raw.replace("http://", "https://pictshare.hnasheralneam.dev"));
+        const finalUrl = raw.replace("http://", "https://pictshare.hnasheralneam.dev");
+        console.log("Final URL:", finalUrl);
+        urls.push(finalUrl);
       } else {
         console.error("Upload failed:", result);
+        throw new Error(result.reason || "Upload failed");
       }
     } catch (e) {
       console.error("Upload error:", e);
+      throw e; // Re-throw the error instead of silently catching it
     }
   }
   return urls;

@@ -1,10 +1,11 @@
 import GenericButton from "../ui/GenericButton";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Plus } from "lucide-react";
 import NewChatModal from "./NewChatModal";
 import MessagesSidebar from "./MessagesSidebar";
 import MessageThread from "./MessageThread";
+import GroupSettings from "./GroupSettings";
 import { createThread, fetchThreads } from "../../utils/messages";
 import { apiEndpoint } from "../../config";
 import type { Thread } from "../../types";
@@ -12,9 +13,11 @@ import { getSocket } from "../../utils/socket";
 
 export default function Messages() {
    const navigate = useNavigate();
+   const { threadId: urlThreadId } = useParams<{ threadId?: string }>();
    const [threads, setThreads] = useState<Thread[]>([]);
    const [activeId, setActiveId] = useState<string>("");
    const [isModalOpen, setIsModalOpen] = useState(false);
+   const [showSettings, setShowSettings] = useState(false);
    const [searchQuery, setSearchQuery] = useState("");
    const [loading, setLoading] = useState(true);
    const [loggedOut, setLoggedOut] = useState(false);
@@ -128,8 +131,17 @@ export default function Messages() {
 
             const fetchedThreads = await fetchThreads();
             setThreads(fetchedThreads);
-            if (fetchedThreads.length > 0) {
+            
+            // If there's a threadId in the URL, set it as active
+            if (urlThreadId && fetchedThreads.some(t => t.id === urlThreadId)) {
+               setActiveId(urlThreadId);
+            } else if (fetchedThreads.length > 0) {
+               // Otherwise, select the first thread
                setActiveId(fetchedThreads[0].id);
+               // Update URL to reflect the first thread
+               if (!isMobile) {
+                  navigate(`/messages/${fetchedThreads[0].id}`, { replace: true });
+               }
             }
          } catch (error) {
             console.error("Failed to load threads:", error);
@@ -137,7 +149,14 @@ export default function Messages() {
             setLoading(false);
          }
       })();
-   }, []);
+   }, []); // Only run on mount
+
+   // Sync activeId when URL changes (without reloading threads)
+   useEffect(() => {
+      if (urlThreadId && threads.some(t => t.id === urlThreadId)) {
+         setActiveId(urlThreadId);
+      }
+   }, [urlThreadId, threads]);
 
    useEffect(() => {
       setThreads(prev => prev.map(t => (t.id === activeId ? { ...t, unread: false } : t)));
@@ -148,7 +167,9 @@ export default function Messages() {
       options?: { isGroup?: boolean; groupName?: string; groupAvatar?: string }
    ) => {
       try {
+         console.log('Creating chat with users:', userIds, 'options:', options);
          const response = await createThread(userIds, options);
+         console.log('Create chat response:', response);
          const threadId = response.threadId || `t_${Date.now()}`;
 
          // Check if thread already exists in the list
@@ -156,38 +177,32 @@ export default function Messages() {
 
          if (existingThread) {
             // Thread already exists, just switch to it
+            console.log('Thread already exists, switching to it:', threadId);
             setActiveId(threadId);
+            navigate(`/messages/${threadId}`);
             return;
          }
 
          // Create new thread entry
          const newThread: Thread = {
             id: threadId,
-            participantIds: userIds,
+            participantIds: response.participants?.map((p: any) => p.id) || userIds,
             participants: response.participants || [],
             last: "",
             lastTs: Date.now(),
             messages: [],
             unread: false,
-            ...(options?.isGroup && { isGroup: options.isGroup }),
-            ...(options?.groupName && { groupName: options.groupName }),
-            ...(options?.groupAvatar && { groupAvatar: options.groupAvatar }),
+            isGroup: response.isGroup ?? true,
+            groupName: response.groupName,
+            groupAvatar: response.groupAvatar,
          };
+         console.log('Adding new thread to list:', newThread);
          setThreads(prev => [newThread, ...prev]);
          setActiveId(newThread.id);
+         navigate(`/messages/${newThread.id}`);
       } catch (error) {
          console.error("Failed to create thread:", error);
-         const newThread: Thread = {
-            id: `t_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            participantIds: userIds,
-            participants: [],
-            last: "",
-            lastTs: Date.now(),
-            messages: [],
-            unread: false,
-         };
-         setThreads(prev => [newThread, ...prev]);
-         setActiveId(newThread.id);
+         alert(`Failed to create chat: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
       }
    };
 
@@ -195,12 +210,17 @@ export default function Messages() {
       setThreads(prev => prev.map(t => t.id === updatedThread.id ? updatedThread : t));
    };
 
+   const handleGroupDeleted = () => {
+      setThreads(prev => prev.filter(t => t.id !== activeId));
+      setActiveId("");
+      setShowSettings(false);
+   };
+
    const handleThreadSelect = (threadId: string) => {
       setActiveId(threadId);
-      // On mobile, navigate to the dedicated thread page
-      if (isMobile) {
-         navigate(`/messages/${threadId}`);
-      }
+      // Always update the URL for both mobile and desktop
+      // Use replace on desktop to avoid history clutter, push on mobile for back button
+      navigate(`/messages/${threadId}`, { replace: !isMobile });
    };
 
    return (
@@ -224,11 +244,23 @@ export default function Messages() {
 
             {/* Hide thread view on mobile - it will be shown on a separate page */}
             {!isMobile && activeThread ? (
-               <MessageThread
-                  thread={activeThread}
-                  onThreadUpdate={handleThreadUpdate}
-                  typingUsers={typingUsers[activeId] || []}
-               />
+               <div className="relative overflow-hidden">
+                  {/* Settings Panel Overlay */}
+                  {showSettings && (
+                     <GroupSettings
+                        thread={activeThread}
+                        onClose={() => setShowSettings(false)}
+                        onGroupUpdate={handleThreadUpdate}
+                        onGroupDeleted={handleGroupDeleted}
+                     />
+                  )}
+                  <MessageThread
+                     thread={activeThread}
+                     onThreadUpdate={handleThreadUpdate}
+                     typingUsers={typingUsers[activeId] || []}
+                     onOpenSettings={() => setShowSettings(true)}
+                  />
+               </div>
             ) : !isMobile ? (
                <section className="flex flex-col bg-transparent overflow-hidden">
                   <div className="flex-1 flex items-center justify-center bg-[linear-gradient(180deg,#dadada_0%,#ffffff_100%)] dark:bg-[linear-gradient(180deg,#12141a_0%,#090a0d_100%)]">

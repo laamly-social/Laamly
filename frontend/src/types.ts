@@ -97,12 +97,12 @@ export type Reel = {
 
 export type Notification = {
   id: string;
-  type: 'like' | 'comment' | 'message' | 'reply';
+  type: 'like' | 'comment' | 'message' | 'reply' | 'group-add';
   from: string; // githubId of the person who triggered the notification
   fromName: string;
   fromAvatar: string;
   contentId: string; // postId, reelId, or threadId
-  contentType: 'post' | 'reel' | 'message' | 'comment';
+  contentType: 'post' | 'reel' | 'message' | 'comment' | 'group';
   message: string;
   read: boolean;
   createdAt: number;

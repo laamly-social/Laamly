@@ -16,7 +16,7 @@ const chatSchema = new mongoose.Schema({
    }],
    lastMessage: String,
    lastMessageTs: Date,
-   isGroup: { type: Boolean, default: false },
+   isGroup: { type: Boolean, default: true }, // Changed default to true
    groupName: String,
    groupAvatar: String,
    unreadCount: {

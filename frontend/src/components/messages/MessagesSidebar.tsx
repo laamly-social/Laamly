@@ -37,6 +37,9 @@ export default function MessagesSidebar({
    };
 
    const getThreadAvatar = (thread: Thread) => {
+      // If the thread has a group avatar, use that
+      if (thread.groupAvatar) return thread.groupAvatar;
+      // Otherwise, use the first participant's avatar
       if (!thread.participants || thread.participants.length === 0) return "";
       return thread.participants[0].avatar;
    };

@@ -76,6 +76,16 @@ export function NotificationsList() {
     }
 
     // Navigate to the relevant content
+    if (notification.type === 'group-add' || (notification.type === 'message' && notification.contentType === 'message')) {
+      // Added to group or message notification: go to group chat URL
+      navigate(`/messages/${notification.contentId}`);
+      return;
+    }
+    if (notification.contentType === 'group') {
+      // Group notifications
+      navigate(`/messages/${notification.contentId}`);
+      return;
+    }
     switch (notification.contentType) {
       case 'post':
       case 'comment': // Comments are on posts, so navigate to the post
@@ -85,7 +95,7 @@ export function NotificationsList() {
         navigate(`/reel/${notification.contentId}`);
         break;
       case 'message':
-        navigate(`/messages?thread=${notification.contentId}`);
+        navigate(`/messages/${notification.contentId}`);
         break;
       default:
         break;
@@ -101,6 +111,8 @@ export function NotificationsList() {
         return '💬';
       case 'message':
         return '✉️';
+      case 'group-add':
+        return '👥';
       default:
         return '🔔';
     }

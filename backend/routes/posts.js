@@ -45,30 +45,17 @@ async function callOllamaApi(imageUrls, postText) {
 
     // Prepare prompt based on whether images are present
     const hasImages = base64Images.length > 0;
-    const prompt = hasImages
-      ? `Analyze the following social media post text and images. Return ONLY valid JSON with this exact structure, no other text:
+    const prompt = `Analyze the following social media post.
+Images included: ${hasImages ? 'yes' : 'no'}
+Respond ONLY with valid JSON in this format:
 {
   "isHalal": true,
   "tags": ["tag1", "tag2", "tag3"]
 }
-
 Instructions:
-- Generate 5-8 relevant hashtags for the tags array
-- Set isHalal to false if content contains haram elements, true otherwise
-- Return ONLY the JSON object, no markdown, no explanations
-
-Post text: ${postText}`
-      : `Analyze the following social media post text. Return ONLY valid JSON with this exact structure, no other text:
-{
-  "isHalal": true,
-  "tags": ["tag1", "tag2", "tag3"]
-}
-
-Instructions:
-- Generate 5-8 relevant hashtags for the tags array based on the text content. THE MAX IS 8 TAGS. If there are multiple words in a hastag, do not put spaces, use pascalcase or underscores.
-- Set isHalal to false if content contains haram elements, true otherwise
-- Return ONLY the JSON object, no markdown, no explanations
-
+- Generate 5-8 relevant hashtags for "tags" (no spaces; use PascalCase or underscores for multi-word tags. Don't make them all caps)
+- Set "isHalal" to false if any haram content is detected, true otherwise
+- Do NOT include any extra text, markdown, or explanation. The output will be parsed directly.
 Post text: ${postText}`;
 
     const requestBody = {

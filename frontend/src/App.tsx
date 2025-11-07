@@ -204,7 +204,9 @@ export default function App({ initialData }: AppProps) {
               }
             />
             <Route path="/messages" element={<Messages />} />
-            <Route path="/messages/:threadId" element={<MessageThreadPage />} />
+            <Route path="/messages/:threadId" element={
+              window.innerWidth < 768 ? <MessageThreadPage /> : <Messages />
+            } />
 
             {/* Individual post route */}
             <Route

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Settings } from "lucide-react";
 import MessageThread from "./MessageThread";
+import GroupSettings from "./GroupSettings";
 import { fetchThreads } from "../../utils/messages";
 import type { Thread } from "../../types";
 import { getSocket } from "../../utils/socket";
@@ -13,6 +14,7 @@ export default function MessageThreadPage() {
    const [thread, setThread] = useState<Thread | null>(null);
    const [loading, setLoading] = useState(true);
    const [typingUsers, setTypingUsers] = useState<string[]>([]);
+   const [showSettings, setShowSettings] = useState(false);
 
    // Initialize Socket.IO
    useEffect(() => {
@@ -112,6 +114,10 @@ export default function MessageThreadPage() {
       setThread(updatedThread);
    };
 
+   const handleGroupDeleted = () => {
+      navigate("/messages");
+   };
+
    if (loading) {
       return (
          <div className="flex items-center justify-center h-screen bg-bg dark:bg-bg-dark">
@@ -136,6 +142,16 @@ export default function MessageThreadPage() {
 
    return (
       <div className="h-[calc(100vh-5rem)] flex flex-col bg-bg dark:bg-bg-dark">
+         {/* Settings Panel Overlay */}
+         {showSettings && (
+            <GroupSettings
+               thread={thread}
+               onClose={() => setShowSettings(false)}
+               onGroupUpdate={handleThreadUpdate}
+               onGroupDeleted={handleGroupDeleted}
+            />
+         )}
+
          {/* Mobile header with back button */}
          <div className="flex items-center gap-3 p-3 border-b border-border dark:border-border-dark bg-panel dark:bg-panel-dark">
             <button
@@ -152,6 +168,14 @@ export default function MessageThreadPage() {
                      : thread.participants?.map(p => p.name).join(", ") || "Unknown"}
                </h2>
             </div>
+            {/* Settings cog icon for all chats */}
+            <button
+               onClick={() => setShowSettings(true)}
+               className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted dark:hover:bg-muted-dark transition"
+               aria-label="Chat settings"
+            >
+               <Settings size={20} className="text-text dark:text-text-dark" />
+            </button>
          </div>
 
          {/* Message thread content */}
@@ -160,6 +184,7 @@ export default function MessageThreadPage() {
                thread={thread}
                onThreadUpdate={handleThreadUpdate}
                typingUsers={typingUsers}
+               onOpenSettings={() => setShowSettings(true)}
             />
          </div>
       </div>

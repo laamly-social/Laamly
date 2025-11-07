@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Paperclip, Send, X, File, Video, Edit2, Trash2, SmilePlus, Bell, MoreHorizontal } from "lucide-react";
+import { Paperclip, Send, X, File, Video, Edit2, Trash2, SmilePlus, Bell, MoreHorizontal, Settings } from "lucide-react";
 import { clsx, formatDate, formatTimeFromDate } from "../../utils";
 import UserChip from "../ui/UserChip";
 import InputField from "../ui/InputField";
@@ -180,7 +180,7 @@ function Message({ message, mine, onReact, onEdit, onDelete, onContextMenu, show
                <div
                   onClick={(e) => e.stopPropagation()}
                   className={clsx(
-                     "absolute z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl p-2 flex gap-1",
+                     "absolute z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl flex gap-1",
                      mine ? "right-0 top-12" : "left-0 top-12"
                   )}
                >
@@ -188,7 +188,7 @@ function Message({ message, mine, onReact, onEdit, onDelete, onContextMenu, show
                      <button
                         key={emoji}
                         onClick={() => onReact(message.id, emoji)}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all transform hover:scale-125 text-xl"
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all transform hover:scale-120"
                         title={`React with ${emoji}`}
                      >
                         {emoji}
@@ -205,9 +205,10 @@ interface MessageThreadProps {
    thread: Thread;
    onThreadUpdate: (updatedThread: Thread) => void;
    typingUsers: string[];
+   onOpenSettings?: () => void;
 }
 
-export default function MessageThread({ thread, onThreadUpdate, typingUsers }: MessageThreadProps) {
+export default function MessageThread({ thread, onThreadUpdate, typingUsers, onOpenSettings }: MessageThreadProps) {
    const [draft, setDraft] = useState("");
    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
    const [uploading, setUploading] = useState(false);
@@ -365,6 +366,9 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
    };
 
    const getThreadAvatar = () => {
+      // If the thread has a group avatar, use that
+      if (thread.groupAvatar) return thread.groupAvatar;
+      // Otherwise, use the first participant's avatar
       if (!thread.participants || thread.participants.length === 0) return "";
       return thread.participants[0].avatar;
    };
@@ -382,14 +386,23 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers }: M
                      />
                   )}
                </div>
-               {/* <div className="flex items-center gap-2 text-sub dark:text-sub-dark">
-            <button className="p-1 hover:text-text dark:hover:text-text-dark transition">
-              <Bell size={18} />
-            </button>
-            <button className="p-1 hover:text-text dark:hover:text-text-dark transition">
-              <MoreHorizontal size={18} />
-            </button>
-          </div> */}
+               <div className="flex items-center gap-2 text-sub dark:text-sub-dark">
+                  {onOpenSettings && (
+                     <button
+                        onClick={onOpenSettings}
+                        className="p-1.5 hover:text-text dark:hover:text-text-dark hover:bg-muted dark:hover:bg-muted-dark rounded-lg transition"
+                        aria-label="Chat settings"
+                     >
+                        <Settings size={18} />
+                     </button>
+                  )}
+                  {/* <button className="p-1 hover:text-text dark:hover:text-text-dark transition">
+                     <Bell size={18} />
+                  </button>
+                  <button className="p-1 hover:text-text dark:hover:text-text-dark transition">
+                     <MoreHorizontal size={18} />
+                  </button> */}
+               </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 bg-[linear-gradient(180deg,#dadada_0%,#ffffff_100%)] dark:bg-[linear-gradient(180deg,#12141a_0%,#090a0d_100%)]">
