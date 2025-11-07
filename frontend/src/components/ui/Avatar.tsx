@@ -3,11 +3,12 @@ import React from "react";
 interface AvatarProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
   alt: string;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   className?: string;
 }
 
 const sizeClass = {
+  xs: "w-3 h-3",
   sm: "w-6 h-6",
   md: "",
   lg: "w-16 h-16"

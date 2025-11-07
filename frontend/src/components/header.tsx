@@ -78,7 +78,7 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
                 <button onClick={() => openProfile(user.id)} className="cursor-pointer bg-transparent border-none p-0 transition-opacity hover:opacity-80">
                   <Avatar src={user.avatar} alt={user.name} size="lg" className="w-16 h-16" />
                 </button>
-                <span className="text-lg font-semibold text-green-700 dark:text-green-300">Hi, {getFirstName(user.name)}!</span>
+                <span className="text-lg font-semibold text-text dark:text-text-dark">Hi, {getFirstName(user.name)}!</span>
                 <a
                   href={`${BACKEND_URL}/logout`}
                   className="transition-all py-2 px-4 w-full border bg-red-100 dark:bg-red-900 hover:bg-red-200 hover:dark:bg-red-800 border-red-300 dark:border-red-700 rounded-md text-red-700 dark:text-red-200 text-center block"

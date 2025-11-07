@@ -24,15 +24,15 @@ export default function IconBtn({
   title?: string;
 }) {
   const isHeartIcon = Icon === Heart;
-  
+
   return (
     <button
       className={clsx(
-        "flex gap-1 items-center rounded-full py-1.5 px-2.5 border border-transparent text-text dark:text-text-dark cursor-pointer transition-all duration-150",
+        "flex gap-1 items-center rounded-full py-1.5 px-2.5 border border-transparent text-text dark:text-text-dark cursor-pointer transition-all duration-200",
         active && (isHeartIcon ? "text-red-500" : "text-[#ff9db5]"),
         danger
           ? "text-red-600 hover:bg-red-600 hover:text-white focus:bg-red-600 focus:text-white"
-          : "hover:bg-muted dark:hover:bg-muted-dark",
+          : "hover:bg-panel dark:hover:bg-panel-dark",
         disabled && "opacity-50 cursor-not-allowed",
         className
       )}
