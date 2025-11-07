@@ -73,7 +73,7 @@ module.exports = function createMessagesRouter(io, userSockets) {
       if (!req.session.user) return res.status(401).json({ message: 'You need to be logged in' });
 
       const { threadId } = req.params;
-      const userId = String(req.session.user.id);
+  const userId = String(req.session.user.uuid);
 
       const chat = await Chat.findById(threadId).lean();
       if (!chat) return res.status(404).json({ message: 'Thread not found' });
@@ -308,7 +308,7 @@ module.exports = function createMessagesRouter(io, userSockets) {
 
       const message = chat.messages.id(messageId);
       if (!message) return res.status(404).json({ message: 'Message not found' });
-      if (message.from !== userId) return res.status(403).json({ message: 'Can only edit your own messages' });
+  if (message.from !== userId) return res.status(403).json({ message: 'Can only edit your own messages' });
 
       message.text = text;
       message.edited = true;
@@ -328,14 +328,14 @@ module.exports = function createMessagesRouter(io, userSockets) {
       if (!req.session.user) return res.status(401).json({ message: 'You need to be logged in' });
 
       const { threadId, messageId } = req.body;
-      const userId = String(req.session.user.id);
+  const userId = String(req.session.user.uuid);
 
       const chat = await Chat.findById(threadId);
       if (!chat) return res.status(404).json({ message: 'Thread not found' });
 
       const message = chat.messages.id(messageId);
       if (!message) return res.status(404).json({ message: 'Message not found' });
-      if (message.from !== userId) return res.status(403).json({ message: 'Can only delete your own messages' });
+  if (message.from !== userId) return res.status(403).json({ message: 'Can only delete your own messages' });
 
       message.remove();
       chat.updatedAt = new Date();

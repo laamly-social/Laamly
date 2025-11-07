@@ -182,11 +182,11 @@ export default function Post({
   }, [p, source]);
 
   // Safe author info for both GitHub + Google users (or missing)
-  const authorId = p.authorId || p.authorHandle || ""; // whatever you store as canonical author identifier
+  const authorId = p.author || p.authorId || p.authorHandle || ""; // uuid as canonical author identifier
   const authorName = p.authorInfo?.name || p.authorInfo?.handle || "Unknown";
   const authorHandle = p.authorInfo?.handle || "unknown";
   const authorAvatar = p.authorInfo?.avatar || "";
-  const isCurrentUser = !!p.authorInfo?.isCurrentUser;
+  const isCurrentUser = authorId === meId;
 
   const createdAt = p.createdAt || Date.now();
 

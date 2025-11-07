@@ -242,7 +242,7 @@ module.exports = function createPostsRouter(io, userSockets) {
 
       const post = await Post.findById(postId);
       if (!post) return res.status(404).json({ message: 'Post not found' });
-      if (String(post.author) !== String(req.session.user.id)) {
+      if (String(post.author) !== String(req.session.user.uuid)) {
         return res.status(403).json({ message: 'You can only edit your own posts' });
       }
 
@@ -264,7 +264,7 @@ module.exports = function createPostsRouter(io, userSockets) {
 
       const post = await Post.findById(postId);
       if (!post) return res.status(404).json({ message: 'Post not found' });
-      if (String(post.author) !== String(req.session.user.id)) {
+      if (String(post.author) !== String(req.session.user.uuid)) {
         return res.status(403).json({ message: 'You can only delete your own posts' });
       }
 
@@ -285,7 +285,7 @@ module.exports = function createPostsRouter(io, userSockets) {
 
       const post = await Post.findById(postId);
       if (!post) return res.status(404).json({ message: 'Post not found' });
-      if (String(post.author) !== String(req.session.user.id)) {
+      if (String(post.author) !== String(req.session.user.uuid)) {
         return res.status(403).json({ message: 'You can only regenerate tags for your own posts' });
       }
 
@@ -329,9 +329,9 @@ module.exports = function createPostsRouter(io, userSockets) {
 
       const post = await Post.findById(postId);
       if (!post) return res.status(404).json({ message: 'Post not found' });
-      if (String(post.author) !== String(req.session.user.id)) {
-        return res.status(403).json({ message: 'You can only remove tags from your own posts' });
-      }
+        if (String(post.author) !== String(req.session.user.uuid)) {
+          return res.status(403).json({ message: 'You can only remove tags from your own posts' });
+        }
 
       post.tags = (post.tags || []).filter(t => t !== tag);
       await post.save();

@@ -102,11 +102,11 @@ export default function Profile(props: {
    }
 
    const profileUserId = userId || meId;
-   const userPosts = posts.filter(p => p.authorId === profileUserId);
+   const userPosts = posts.filter(p => p.author === profileUserId || p.authorId === profileUserId);
 
    const originalPosts = userPosts.filter(p => !p.originalId);
    const repostsList = userPosts.filter(p => p.originalId);
-   const userReels = reels.filter(r => r.authorId === profileUserId);
+   const userReels = reels.filter(r => r.author === profileUserId || r.authorId === profileUserId);
    const likedPosts = posts.filter(p => p.liked);
    const savedPosts = posts.filter(p => p.bookmarked);
    const likedReels = reels.filter(r => r.liked);
