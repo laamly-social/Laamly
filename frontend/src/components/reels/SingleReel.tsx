@@ -76,6 +76,8 @@ export default function SingleReel({ user }: { user: any }) {
     if (!confirm("Delete this reel?")) return;
     try {
       await deleteReel(reelId);
+      // Clear state to prevent rendering issues
+      setReel(null);
       navigate("/reels");
     } catch (err) {
       console.error("Failed to delete reel:", err);

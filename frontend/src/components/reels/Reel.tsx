@@ -35,6 +35,11 @@ export default function ReelItem({
    onDelete,
    user
 }: ReelItemProps) {
+   // Safeguard: if reel becomes invalid, don't crash
+   if (!reel || !reel.id) {
+      return null;
+   }
+
    const [showCopied, setShowCopied] = useState(false);
    const [viewCount, setViewCount] = useState(reel.views || 0);
    const [hasTrackedView, setHasTrackedView] = useState(false);

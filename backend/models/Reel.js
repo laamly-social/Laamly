@@ -11,7 +11,8 @@ const reelSchema = new mongoose.Schema({
    viewedBy: [String],           // uuid list - tracks who viewed this reel
    deleted: { type: Boolean, default: false },
    comments: [{
-   author: String,             // uuid
+      _id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+      author: String,             // uuid
       content: String,
       datePosted: Date,
       stats: Object

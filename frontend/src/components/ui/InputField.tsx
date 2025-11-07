@@ -10,7 +10,7 @@ const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
          ref={ref}
          className={
             [
-               "flex-1 h-[36px] border-1 border-border dark:border-border-dark rounded-xl text-text dark:text-text-dark px-2.5",
+               "flex-1 h-[36px] border-1 border-border dark:border-border-dark rounded-xl text-text dark:text-text-dark px-2.5 w-full focus:outline-none focus:ring-2 focus:ring-accent bg-background dark:bg-background-dark placeholder:text-sub dark:placeholder:text-sub-dark",
                className
             ].filter(Boolean).join(" ")
          }

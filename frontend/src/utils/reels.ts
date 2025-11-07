@@ -143,6 +143,30 @@ export async function createReelComment(reelId: string, text: string) {
   };
 }
 
+export async function editReelComment(reelId: string, commentId: string, text: string) {
+  const res = await fetch(apiEndpoint("/reels/comments/edit"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ reelId, commentId, text }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as any)?.message || "Failed to edit comment");
+  return data as { message: string };
+}
+
+export async function deleteReelComment(reelId: string, commentId: string) {
+  const res = await fetch(apiEndpoint("/reels/comments/delete"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ reelId, commentId }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as any)?.message || "Failed to delete comment");
+  return data as { message: string };
+}
+
 /** Track a reel view */
 export async function trackReelView(id: string): Promise<{ views: number }> {
   try {

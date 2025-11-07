@@ -12,6 +12,7 @@ const postSchema = new mongoose.Schema({
    tags: [String], // AI-generated tags
    isHalal: { type: Boolean, default: true }, // AI-determined halal status
    comments: [{
+      _id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
       author: String,
       content: String,
       datePosted: Date,

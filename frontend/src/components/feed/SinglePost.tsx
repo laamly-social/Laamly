@@ -90,6 +90,8 @@ export default function SinglePost({
         addComment={addComment}
         deletePost={(id) => {
           deletePost(id);
+          // Immediately set post to null to prevent rendering issues
+          setPost(null);
           navigate("/home");
         }}
         editPost={editPost}

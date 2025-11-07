@@ -1,10 +1,12 @@
 // src/components/feed/CommentsList.tsx
 // @ts-nocheck
 import { useState } from "react";
-import { createComment } from "../../utils/comments";
+import { createComment, editComment, deleteComment } from "../../utils/comments";
 import InputField from "../ui/InputField";
 import GenericButton from "../ui/GenericButton";
+import IconBtn from "../ui/IconBtn";
 import UserChip from "../ui/UserChip";
+import { Edit2, Trash2, Check, X } from "lucide-react";
 import type { Post as PostType, User } from "../../types";
 
 // local helper to avoid missing import
@@ -37,6 +39,13 @@ export default function CommentsList({ post, user, onAdd, showList = true, openP
       ts: c.datePosted ? new Date(c.datePosted).getTime() : (typeof c.ts === "number" ? c.ts : Date.now()),
     }))
   );
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+
+  // Safeguard: if post becomes invalid, don't crash
+  if (!post || !post._id) {
+    return null;
+  }
 
   const addComment = async () => {
     const text = draft.trim();
@@ -71,6 +80,47 @@ export default function CommentsList({ post, user, onAdd, showList = true, openP
     }
   };
 
+  const handleEditComment = async (commentId: string) => {
+    const text = editText.trim();
+    if (!text) return;
+
+    try {
+      await editComment(post._id!, commentId, text);
+      setComments(prev =>
+        prev.map(c =>
+          c._id === commentId ? { ...c, text, content: text } : c
+        )
+      );
+      setEditingId(null);
+      setEditText("");
+    } catch (err) {
+      console.error("Error editing comment:", err);
+      alert("Failed to edit comment. Please try again.");
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm("Are you sure you want to delete this comment?")) return;
+
+    try {
+      await deleteComment(post._id!, commentId);
+      setComments(prev => prev.filter(c => c._id !== commentId));
+    } catch (err) {
+      console.error("Error deleting comment:", err);
+      alert("Failed to delete comment. Please try again.");
+    }
+  };
+
+  const startEditing = (comment: any) => {
+    setEditingId(comment._id);
+    setEditText(comment.text);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditText("");
+  };
+
   return (
     <>
       <div className="grid gap-2.5">
@@ -80,10 +130,13 @@ export default function CommentsList({ post, user, onAdd, showList = true, openP
               const u = (c as any).authorInfo;
               if (u?.deleted) return <div key={c._id || idx} />;
               const isLast = idx === comments.length - 1;
+              const isEditing = editingId === c._id;
+              const isCurrentUser = u?.isCurrentUser;
+
               return (
                 <div key={c._id || idx} className="flex gap-2">
                   <div className={`comment ${isLast ? "" : "border-b"} border-border dark:border-border-dark flex-1 px-6 py-4`}>
-                    <div className="flex justify-between text-text dark:text-text-dark text-xs mb-1">
+                    <div className="flex justify-between items-start text-text dark:text-text-dark text-xs mb-1">
                       <div>
                         <UserChip
                           avatar={u?.avatar || ""}
@@ -92,11 +145,62 @@ export default function CommentsList({ post, user, onAdd, showList = true, openP
                           onClickName={openProfile ? () => openProfile(c.author) : undefined}
                         />
                       </div>
-                      <span className="opacity-[.75]">
-                        {timeBetween(c.ts)} ago
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="opacity-[.75]">
+                          {timeBetween(c.ts)} ago
+                        </span>
+                        {isCurrentUser && !isEditing && (
+                          <div className="flex gap-1">
+                            <IconBtn
+                              icon={Edit2}
+                              label="Edit"
+                              onClick={() => startEditing(c)}
+                              title="Edit comment"
+                            />
+                            <IconBtn
+                              icon={Trash2}
+                              className="hover:bg-red-600"
+                              danger
+                              label="Delete"
+                              onClick={() => handleDeleteComment(c._id)}
+                              title="Delete comment"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="mt-1 ml-13 mb-1 whitespace-pre-wrap">{c.text}</div>
+                    
+                    {isEditing ? (
+                      <div className="mt-2 ml-13">
+                        <InputField
+                          className="input bg-background dark:bg-background-dark mb-2"
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              handleEditComment(c._id);
+                            } else if (e.key === "Escape") {
+                              cancelEditing();
+                            }
+                          }}
+                        />
+                        <div className="flex gap-1">
+                          <IconBtn
+                            icon={Check}
+                            label="Save"
+                            onClick={() => handleEditComment(c._id)}
+                          />
+                          <IconBtn
+                            icon={X}
+                            label="Cancel"
+                            onClick={cancelEditing}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-1 ml-13 mb-1 whitespace-pre-wrap">{c.text}</div>
+                    )}
                   </div>
                 </div>
               );

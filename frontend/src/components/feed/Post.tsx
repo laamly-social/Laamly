@@ -80,6 +80,11 @@ export default function Post({
   toggleRepost,
   user,
 }: PostProps) {
+  // Safeguard: if post becomes invalid, don't crash
+  if (!p || !p._id) {
+    return null;
+  }
+
   const original = p.originalId ? posts.find((x) => x.id === p.originalId) : undefined;
   const isRepost = !!original;
   const source = original ?? p;
@@ -244,7 +249,11 @@ export default function Post({
                   className="hover:bg-red-600"
                   danger
                   label="Delete"
-                  onClick={() => deletePost(p._id)}
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete this post?")) {
+                      deletePost(p._id);
+                    }
+                  }}
                   title="Delete post"
                 />
               </>

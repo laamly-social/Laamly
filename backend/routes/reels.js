@@ -327,5 +327,65 @@ module.exports = function createReelsRouter(io, userSockets) {
     }
   });
 
+  // Edit comment
+  router.post('/comments/edit', async (req, res) => {
+    try {
+      if (!req.session.user) return res.status(401).json({ message: 'You need to be logged in' });
+      const { reelId, commentId, text } = req.body;
+
+      if (!reelId || !commentId || !text?.trim()) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      const reel = await Reel.findById(reelId);
+      if (!reel) return res.status(404).json({ message: 'Reel not found' });
+
+      const comment = reel.comments.id(commentId);
+      if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+      if (String(comment.author) !== String(req.session.user.uuid)) {
+        return res.status(403).json({ message: 'You can only edit your own comments' });
+      }
+
+      comment.content = String(text);
+      await reel.save();
+
+      return res.json({ message: 'Comment updated successfully' });
+    } catch (e) {
+      console.error('POST /reels/comments/edit failed:', e);
+      return res.status(500).json({ message: 'Failed to edit comment' });
+    }
+  });
+
+  // Delete comment
+  router.post('/comments/delete', async (req, res) => {
+    try {
+      if (!req.session.user) return res.status(401).json({ message: 'You need to be logged in' });
+      const { reelId, commentId } = req.body;
+
+      if (!reelId || !commentId) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      const reel = await Reel.findById(reelId);
+      if (!reel) return res.status(404).json({ message: 'Reel not found' });
+
+      const comment = reel.comments.id(commentId);
+      if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+      if (String(comment.author) !== String(req.session.user.uuid)) {
+        return res.status(403).json({ message: 'You can only delete your own comments' });
+      }
+
+      comment.deleteOne();
+      await reel.save();
+
+      return res.json({ message: 'Comment deleted successfully' });
+    } catch (e) {
+      console.error('POST /reels/comments/delete failed:', e);
+      return res.status(500).json({ message: 'Failed to delete comment' });
+    }
+  });
+
   return router;
 };
