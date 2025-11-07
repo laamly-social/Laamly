@@ -387,5 +387,67 @@ module.exports = function createReelsRouter(io, userSockets) {
     }
   });
 
+  // Like/unlike comment
+  router.post('/comments/like', async (req, res) => {
+    try {
+      if (!req.session.user) return res.status(401).json({ message: 'You need to be logged in' });
+      const { reelId, commentId } = req.body;
+
+      if (!reelId || !commentId) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      const reel = await Reel.findById(reelId);
+      if (!reel) return res.status(404).json({ message: 'Reel not found' });
+
+      const comment = reel.comments.id(commentId);
+      if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+      const userId = String(req.session.user.uuid);
+      
+      // Initialize likedBy array if it doesn't exist
+      if (!comment.likedBy) {
+        comment.likedBy = [];
+      }
+
+      const likedIndex = comment.likedBy.indexOf(userId);
+      const isLiked = likedIndex !== -1;
+
+      if (isLiked) {
+        // Unlike the comment
+        comment.likedBy.splice(likedIndex, 1);
+      } else {
+        // Like the comment
+        comment.likedBy.push(userId);
+        
+        // Send notification to comment author if it's not the current user
+        if (String(comment.author) !== userId) {
+          const user = await User.findOne(qByUuid(req.session.user.uuid)).lean();
+          await sendNotification(io, userSockets, {
+            to: String(comment.author),
+            type: 'comment_like',
+            from: userId,
+            fromName: user?.profile?.name || user?.handle || 'Someone',
+            fromAvatar: user?.profile?.avatar || '',
+            contentId: reelId,
+            contentType: 'reel',
+            message: `${user?.profile?.name || user?.handle || 'Someone'} liked your comment`
+          });
+        }
+      }
+
+      await reel.save();
+
+      return res.json({ 
+        message: isLiked ? 'Comment unliked' : 'Comment liked',
+        isLiked: !isLiked,
+        likeCount: comment.likedBy.length
+      });
+    } catch (e) {
+      console.error('POST /reels/comments/like failed:', e);
+      return res.status(500).json({ message: 'Failed to like comment' });
+    }
+  });
+
   return router;
 };

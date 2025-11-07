@@ -116,6 +116,7 @@ export default function ReelItem({
                         title="Like"
                         Icon={Heart}
                         onClick={() => onLike(reel.id)}
+                        active={reel.liked}
                      />
                      <div className="text-center text-xs text-white drop-shadow">{reel.likes ?? 0}</div>
                   </>
@@ -182,18 +183,27 @@ export default function ReelItem({
 
 interface ActionButtonProps {
    title: string;
-   Icon: React.ComponentType<{ size?: number }>;
+   Icon: React.ComponentType<{ size?: number; fill?: string }>;
    onClick?: () => void;
+   active?: boolean;
 }
 
-function ActionButton({ title, Icon, onClick }: ActionButtonProps) {
+function ActionButton({ title, Icon, onClick, active }: ActionButtonProps) {
+   const isHeart = Icon === Heart;
+   
    return (
       <button
-         className="bg-white/35 hover:bg-white/45 dark:bg-black/35 hover:dark:bg-black/45 text-white backdrop-blur-2xl rounded-full h-11 w-11 grid place-items-center relative"
+         className={`bg-white/35 hover:bg-white/45 dark:bg-black/35 hover:dark:bg-black/45 text-white backdrop-blur-2xl rounded-full h-11 w-11 grid place-items-center relative ${
+            active && isHeart ? 'text-red-500' : ''
+         }`}
          title={title}
          onClick={onClick}
       >
-         <Icon size={18} />
+         {isHeart && active ? (
+            <Icon size={18} fill="currentColor" />
+         ) : (
+            <Icon size={18} />
+         )}
       </button>
    );
 }

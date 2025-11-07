@@ -15,7 +15,8 @@ const reelSchema = new mongoose.Schema({
       author: String,             // uuid
       content: String,
       datePosted: Date,
-      stats: Object
+      stats: Object,
+      likedBy: [String]           // uuid list - who liked this comment
    }]
 });
 

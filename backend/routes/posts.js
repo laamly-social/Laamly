@@ -513,6 +513,68 @@ module.exports = function createPostsRouter(io, userSockets) {
     }
   });
 
+  // Like/unlike comment
+  router.post('/comments/like', async (req, res) => {
+    try {
+      if (!req.session.user) return res.status(401).json({ message: 'You need to be logged in' });
+      const { postId, commentId } = req.body;
+
+      if (!postId || !commentId) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      const post = await Post.findById(postId);
+      if (!post) return res.status(404).json({ message: 'Post not found' });
+
+      const comment = post.comments.id(commentId);
+      if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+      const userId = String(req.session.user.uuid);
+      
+      // Initialize likedBy array if it doesn't exist
+      if (!comment.likedBy) {
+        comment.likedBy = [];
+      }
+
+      const likedIndex = comment.likedBy.indexOf(userId);
+      const isLiked = likedIndex !== -1;
+
+      if (isLiked) {
+        // Unlike the comment
+        comment.likedBy.splice(likedIndex, 1);
+      } else {
+        // Like the comment
+        comment.likedBy.push(userId);
+        
+        // Send notification to comment author if it's not the current user
+        if (String(comment.author) !== userId) {
+          const user = await User.findOne(qByUuid(req.session.user.uuid)).lean();
+          await sendNotification(io, userSockets, {
+            to: String(comment.author),
+            type: 'comment_like',
+            from: userId,
+            fromName: user?.profile?.name || user?.handle || 'Someone',
+            fromAvatar: user?.profile?.avatar || '',
+            contentId: postId,
+            contentType: 'post',
+            message: `${user?.profile?.name || user?.handle || 'Someone'} liked your comment`
+          });
+        }
+      }
+
+      await post.save();
+
+      return res.json({ 
+        message: isLiked ? 'Comment unliked' : 'Comment liked',
+        isLiked: !isLiked,
+        likeCount: comment.likedBy.length
+      });
+    } catch (e) {
+      console.error('POST /posts/comments/like failed:', e);
+      return res.status(500).json({ message: 'Failed to like comment' });
+    }
+  });
+
   // Edit post
   router.post('/edit', async (req, res) => {
     try {

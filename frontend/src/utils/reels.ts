@@ -167,6 +167,18 @@ export async function deleteReelComment(reelId: string, commentId: string) {
   return data as { message: string };
 }
 
+export async function likeReelComment(reelId: string, commentId: string) {
+  const res = await fetch(apiEndpoint("/reels/comments/like"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ reelId, commentId }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as any)?.message || "Failed to like comment");
+  return data as { message: string; isLiked: boolean; likeCount: number };
+}
+
 /** Track a reel view */
 export async function trackReelView(id: string): Promise<{ views: number }> {
   try {

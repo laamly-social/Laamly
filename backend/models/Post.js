@@ -16,7 +16,8 @@ const postSchema = new mongoose.Schema({
       author: String,
       content: String,
       datePosted: Date,
-      stats: Object
+      stats: Object,
+      likedBy: [String] // Array of uuids who liked this comment
    }]
 });
 

@@ -1,12 +1,12 @@
 // src/components/feed/CommentsList.tsx
 // @ts-nocheck
 import { useState } from "react";
-import { createComment, editComment, deleteComment } from "../../utils/comments";
+import { createComment, editComment, deleteComment, likeComment } from "../../utils/comments";
 import InputField from "../ui/InputField";
 import GenericButton from "../ui/GenericButton";
 import IconBtn from "../ui/IconBtn";
 import UserChip from "../ui/UserChip";
-import { Edit2, Trash2, Check, X } from "lucide-react";
+import { Edit2, Trash2, Check, X, Heart } from "lucide-react";
 import type { Post as PostType, User } from "../../types";
 
 // local helper to avoid missing import
@@ -37,6 +37,7 @@ export default function CommentsList({ post, user, onAdd, showList = true, openP
       ...c,
       text: c.content ?? c.text ?? "",
       ts: c.datePosted ? new Date(c.datePosted).getTime() : (typeof c.ts === "number" ? c.ts : Date.now()),
+      likedBy: c.likedBy || [],
     }))
   );
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -108,6 +109,26 @@ export default function CommentsList({ post, user, onAdd, showList = true, openP
     } catch (err) {
       console.error("Error deleting comment:", err);
       alert("Failed to delete comment. Please try again.");
+    }
+  };
+
+  const handleLikeComment = async (commentId: string) => {
+    try {
+      const data = await likeComment(post._id!, commentId);
+      setComments(prev =>
+        prev.map(c =>
+          c._id === commentId
+            ? {
+                ...c,
+                likedBy: data.isLiked
+                  ? [...(c.likedBy || []), user?.uuid || ""]
+                  : (c.likedBy || []).filter((id: string) => id !== user?.uuid),
+              }
+            : c
+        )
+      );
+    } catch (err) {
+      console.error("Error liking comment:", err);
     }
   };
 
@@ -200,6 +221,28 @@ export default function CommentsList({ post, user, onAdd, showList = true, openP
                       </div>
                     ) : (
                       <div className="mt-1 ml-13 mb-1 whitespace-pre-wrap">{c.text}</div>
+                    )}
+                    
+                    {!isEditing && (
+                      <div className="mt-2 ml-13 flex items-center gap-2">
+                        <button
+                          onClick={() => handleLikeComment(c._id)}
+                          className={`flex items-center gap-1 text-xs ${
+                            (c.likedBy || []).includes(user?.uuid || "")
+                              ? "text-red-500"
+                              : "text-text dark:text-text-dark opacity-70 hover:opacity-100"
+                          }`}
+                          disabled={!user}
+                        >
+                          <Heart
+                            size={16}
+                            fill={(c.likedBy || []).includes(user?.uuid || "") ? "currentColor" : "none"}
+                          />
+                          {(c.likedBy || []).length > 0 && (
+                            <span>{(c.likedBy || []).length}</span>
+                          )}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
