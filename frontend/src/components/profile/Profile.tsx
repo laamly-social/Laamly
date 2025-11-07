@@ -78,7 +78,8 @@ export default function Profile(props: {
                   name: data.user.name,
                   handle: data.user.handle || data.user.name,
                   avatar: data.user.avatar,
-                  bio: data.user.bio || ""
+                  bio: data.user.bio || "",
+                  privilegeLevel: data.user.privilegeLevel || ""
                });
             } else {
                setUser(null);
@@ -294,9 +295,16 @@ export default function Profile(props: {
                      </div>
                   ) : (
                      <div className="flex items-center justify-between mb-1 group">
-                        <h1 className="text-xl sm:text-2xl font-bold text-text dark:text-text-dark">
-                           {user.name}
-                        </h1>
+                        <div className="flex items-center gap-2 flex-wrap">
+                           <h1 className="text-xl sm:text-2xl font-bold text-text dark:text-text-dark">
+                              {user.name}
+                           </h1>
+                           {user.privilegeLevel === "admin" && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-sm">
+                                 👑 ADMIN
+                              </span>
+                           )}
+                        </div>
                         {isMe && (
                            <div className="inline-flex items-center rounded-full flex-wrap bg-bg dark:bg-bg-dark border border-border dark:border-border-dark">
                               <IconBtn

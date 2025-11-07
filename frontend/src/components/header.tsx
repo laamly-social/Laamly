@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useMemo, useState } from "react";
 import type { User } from "../types";
 import TabBtn from "./nav/TabBtn";
-import { Home, PlayCircle as PlayTab, Github, Podcast, MessageSquare, Bell, UserRound } from "lucide-react";
+import { Home, PlayCircle as PlayTab, Github, Podcast, MessageSquare, Bell, UserRound, MessageCircle } from "lucide-react";
 import Avatar from "./ui/Avatar";
 import { BACKEND_URL } from "../config";
 import NotificationBell from "./notifications/NotificationBell";
@@ -57,19 +57,29 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
           </div>
 
           <div className="flex flex-col items-center space-y-4">
-            <div className="flex">
+            <div className="flex gap-2">
               {user && (
-                <span
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className={`relative flex items-center gap-1 px-2 py-2 rounded-xl transition-colors ${
-                    showNotifications ? "bg-accent text-white" : "hover:bg-gray-200 dark:hover:bg-gray-700 text-text dark:text-text-dark"
-                  }`}
-                >
-                  <Bell size={20} />
-                  <span className="absolute -right-1.5 -top-1">
-                    <NotificationBadge />
+                <>
+                  <a
+                    href="/feedback"
+                    className="flex items-center gap-1 px-2 py-2 rounded-xl transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 text-text dark:text-text-dark text-sm"
+                    title="Send Feedback"
+                  >
+                    <MessageCircle size={20} />
+                    <span className="ml-1">Feedback</span>
+                  </a>
+                  <span
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className={`relative flex items-center gap-1 px-2 py-2 rounded-xl transition-colors ${
+                      showNotifications ? "bg-accent text-white" : "hover:bg-gray-200 dark:hover:bg-gray-700 text-text dark:text-text-dark"
+                    }`}
+                  >
+                    <Bell size={20} />
+                    <span className="absolute -right-1.5 -top-1">
+                      <NotificationBadge />
+                    </span>
                   </span>
-                </span>
+                </>
               )}
             </div>
 
@@ -78,7 +88,14 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
                 <button onClick={() => openProfile(user.id)} className="cursor-pointer bg-transparent border-none p-0 transition-opacity hover:opacity-80">
                   <Avatar src={user.avatar} alt={user.name} size="lg" className="w-16 h-16" />
                 </button>
-                <span className="text-lg font-semibold text-text dark:text-text-dark">Hi, {getFirstName(user.name)}!</span>
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-lg font-semibold text-text dark:text-text-dark">Hi, {getFirstName(user.name)}!</span>
+                  {user.privilegeLevel === "admin" && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                      👑 ADMIN
+                    </span>
+                  )}
+                </div>
                 <a
                   href={`${BACKEND_URL}/logout`}
                   className="transition-all py-2 px-4 w-full border bg-red-100 dark:bg-red-900 hover:bg-red-200 hover:dark:bg-red-800 border-red-300 dark:border-red-700 rounded-md text-red-700 dark:text-red-200 text-center block"
@@ -148,6 +165,11 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
           {user && (
             <a href="/messages" className={`flex items-center justify-center p-2 rounded-lg transition ${location.pathname === "/messages" ? "text-accent" : "text-text dark:text-text-dark"}`}>
               <MessageSquare />
+            </a>
+          )}
+          {user && (
+            <a href="/feedback" className={`flex items-center justify-center p-2 rounded-lg transition ${location.pathname === "/feedback" ? "text-accent" : "text-text dark:text-text-dark"}`}>
+              <MessageCircle size={24} />
             </a>
           )}
           {user && (

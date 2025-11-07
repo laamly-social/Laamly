@@ -12,6 +12,8 @@ import SingleReel from "./components/reels/SingleReel";
 import Profile from "./components/profile/Profile";
 import Podcasts from "./components/podcasts/Podcasts";
 import NotificationsPage from "./components/notifications/NotificationsPage";
+import FeedbackPage from "./components/feedback/FeedbackPage";
+import FeedbackListPage from "./components/feedback/FeedbackListPage";
 import { NotificationPrompt } from "./components/notifications/NotificationPrompt";
 import { Header } from "./components/header";
 import { useAuthCheck } from "./hooks/useAuthCheck";
@@ -247,6 +249,8 @@ export default function App({ initialData }: AppProps) {
 
             <Route path="/podcasts" element={<Podcasts />} />
             <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/feedback" element={<FeedbackPage />} />
+            <Route path="/feedback/view" element={<FeedbackListPage />} />
             <Route
               path="/profile/:userId"
               element={

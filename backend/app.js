@@ -76,6 +76,7 @@ const MONGODB_URI =
 
 const User = require("./models/User");
 const Chat = require("./models/Chat");
+const Feedback = require("./models/Feedback");
 
 // Helper: Upload image from URL to Pictshare
 async function uploadImageToPictshare(imageUrl) {
@@ -278,22 +279,30 @@ app.get("/api/github-client-id", (_req, res) => {
 });
 
 app.get("/api/me", async (req, res) => {
-  if (!req.session.user) return res.status(200).json({ user: null });
+  try {
+    if (!req.session || !req.session.user?.uuid) {
+      return res.status(401).json({ error: "Not logged in" });
+    }
 
-  const dbUser = await findDbUserBySession(req);
-  if (!dbUser) return res.status(200).json({ user: null });
+    const user = await User.findOne({ uuid: req.session.user.uuid }).lean();
 
-  res.json({
-    user: {
-      id: dbUser.uuid,
-      uuid: dbUser.uuid,
-      name: dbUser.profile?.name || dbUser.handle,
-      avatar: dbUser.profile?.avatar || "",
-      email: dbUser.profile?.email || "",
-      handle: dbUser.handle || "",
-      bio: dbUser.profile?.bio || "",
-    },
-  });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({
+      id: user.uuid,
+      name: user.profile?.name,
+      email: user.profile?.email,
+      avatar: user.profile?.avatar,
+      bio: user.profile?.bio,
+      handle: user.handle,
+      privilegeLevel: user.privilegeLevel,
+    });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
 });
 
 // Update current user's profile
@@ -331,15 +340,15 @@ app.put("/api/me", async (req, res) => {
 
     if (handle !== undefined && String(handle).trim()) {
       // Check if handle is already taken by another user
-      const existingUser = await User.findOne({ 
-        handle: String(handle).trim(), 
-        uuid: { $ne: dbUser.uuid } 
+      const existingUser = await User.findOne({
+        handle: String(handle).trim(),
+        uuid: { $ne: dbUser.uuid }
       });
-      
+
       if (existingUser) {
         return res.status(400).json({ message: "Username already taken" });
       }
-      
+
       dbUser.handle = String(handle).trim();
     }
 
@@ -417,6 +426,7 @@ app.get("/api/users/:userId", async (req, res) => {
         avatar: dbUser.profile?.avatar || "",
         email: dbUser.profile?.email || "",
         bio: dbUser.profile?.bio || "",
+        privilegeLevel: dbUser.privilegeLevel || "",
       }
     });
    } catch (error) {
@@ -682,6 +692,100 @@ app.use("/api/messages", messagesRouter);
 const notificationsRouter = require("./routes/notifications");
 app.use("/api/notifications", notificationsRouter);
 
+
+// Admin middleware
+const isAdmin = async (req, res, next) => {
+  try {
+    if (!req.session?.user?.uuid) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const user = await User.findOne({ uuid: req.session.user.uuid });
+    if (!user || user.privilegeLevel !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    next();
+  } catch (error) {
+    console.error("Admin check error:", error);
+    res.status(500).json({ error: "Authorization check failed" });
+  }
+};
+
+// Feedback endpoints
+app.post("/api/feedback", async (req, res) => {
+  try {
+    const { type, subject, message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    let userId = null;
+    if (req.session?.user?.uuid) {
+      const user = await User.findOne({ uuid: req.session.user.uuid });
+      userId = user?._id || null;
+    }
+
+    const feedback = new Feedback({
+      userId: userId,
+      type: type || "general",
+      subject: subject?.trim() || undefined,
+      message: message.trim(),
+    });
+
+    await feedback.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Feedback submitted successfully"
+    });
+  } catch (error) {
+    console.error("Error submitting feedback:", error);
+    res.status(500).json({ error: "Failed to submit feedback" });
+  }
+});
+
+app.get("/api/feedback", isAdmin, async (req, res) => {
+  try {
+    const feedbackList = await Feedback.find()
+      .populate("userId", "profile.name profile.avatar")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json(feedbackList);
+  } catch (error) {
+    console.error("Error fetching feedback:", error);
+    res.status(500).json({ error: "Failed to fetch feedback" });
+  }
+});
+
+app.patch("/api/feedback/:id/status", isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["new", "reviewing", "resolved", "archived"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
+    const feedback = await Feedback.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
+
+    if (!feedback) {
+      return res.status(404).json({ error: "Feedback not found" });
+    }
+
+    res.json({ success: true, feedback });
+  } catch (error) {
+    console.error("Error updating feedback status:", error);
+    res.status(500).json({ error: "Failed to update feedback status" });
+  }
+});
+
 // ---------- Start server AFTER DB is reachable ----------
 (async () => {
   console.info("Connecting to MongoDB...");
@@ -694,7 +798,7 @@ app.use("/api/notifications", notificationsRouter);
     // Migrate all existing individual chats to group chats
     console.info("Running chat migration...");
     try {
-      const individualChats = await Chat.find({ 
+      const individualChats = await Chat.find({
         $or: [
           { isGroup: false },
           { isGroup: { $exists: false } }
@@ -703,12 +807,12 @@ app.use("/api/notifications", notificationsRouter);
 
       if (individualChats.length > 0) {
         console.info(`Found ${individualChats.length} individual chats to migrate`);
-        
+
         let migrated = 0;
         for (const chat of individualChats) {
           try {
             // Get member details to generate a group name
-            const memberUsers = await User.find({ 
+            const memberUsers = await User.find({
               $or: [
                 { uuid: { $in: chat.members } },
                 { githubId: { $in: chat.members } }
@@ -724,11 +828,11 @@ app.use("/api/notifications", notificationsRouter);
             // Update the chat
             await Chat.updateOne(
               { _id: chat._id },
-              { 
-                $set: { 
+              {
+                $set: {
                   isGroup: true,
                   groupName: groupName
-                } 
+                }
               }
             );
 

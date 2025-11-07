@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema({
    stats: Object,
    postIds: [mongoose.Schema.Types.ObjectId],
    likedPostIds: [mongoose.Schema.Types.ObjectId],
+   privilegeLevel: String,
    notifications: [{
       type: { type: String, enum: ['like', 'comment', 'comment_like', 'message', 'reply', 'group-add'], required: true },
       from: { type: String, required: true }, // uuid of the person who triggered the notification

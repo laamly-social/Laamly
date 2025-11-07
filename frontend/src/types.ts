@@ -7,6 +7,7 @@ export type User = {
   handle: string;
   avatar: string;
   bio?: string;
+  privilegeLevel?: string;
 };
 
 export type Comment = {
