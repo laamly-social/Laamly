@@ -122,6 +122,7 @@ export default function SingleReel({ user }: { user: any }) {
         <Reel
           reel={reel}
           index={0}
+          isActive={true}
           muted={muted}
           setItemRef={() => {}}
           togglePlay={togglePlay}

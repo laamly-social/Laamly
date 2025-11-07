@@ -370,3 +370,24 @@ export async function removeTag(
     );
   return data;
 }
+
+/** Track a post view */
+export async function trackPostView(postId: string): Promise<{ views: number }> {
+  try {
+    const res = await fetch(apiEndpoint("/posts/track-view"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ postId }),
+    });
+    const data = await res.json().catch(() => ({ views: 0 }));
+    if (!res.ok) {
+      console.warn("trackPostView failed:", res.status, data);
+      return { views: 0 };
+    }
+    return data;
+  } catch (err) {
+    console.warn("trackPostView error:", err);
+    return { views: 0 };
+  }
+}

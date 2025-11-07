@@ -288,6 +288,9 @@ async function hydratePosts(rawPosts, req) {
       p.likes = likedBy.length;
       p.liked = !!(viewerUuid && likedBy.includes(viewerUuid));
 
+      const viewedBy = Array.isArray(p.viewedBy) ? p.viewedBy.map(String) : [];
+      p.views = viewedBy.length;
+
       if (Array.isArray(p.comments)) {
         p.comments = await Promise.all(
           p.comments.map(async (c) => {
@@ -372,6 +375,35 @@ module.exports = function createPostsRouter(io, userSockets) {
     } catch (err) {
       console.error('POST /posts/toggle-like failed:', err);
       return res.status(500).json({ message: 'Failed to toggle like' });
+    }
+  });
+
+  // Track view (increment view count for unique viewers)
+  router.post('/track-view', async (req, res) => {
+    try {
+      const { postId } = req.body;
+      if (!postId) return res.status(400).json({ message: 'Missing post id' });
+
+      const post = await Post.findById(postId);
+      if (!post) return res.status(404).json({ message: 'Post not found' });
+
+      // Track views even for anonymous users - use a session ID or IP if user not logged in
+      const viewerId = req.session.user ? String(req.session.user.uuid) : `anon-${req.ip}`;
+      
+      post.viewedBy = post.viewedBy || [];
+      const viewedBySet = new Set(post.viewedBy.map(String));
+      
+      // Only increment if this viewer hasn't viewed before
+      if (!viewedBySet.has(viewerId)) {
+        viewedBySet.add(viewerId);
+        post.viewedBy = Array.from(viewedBySet);
+        await post.save();
+      }
+
+      res.json({ views: post.viewedBy.length });
+    } catch (err) {
+      console.error('POST /posts/track-view failed:', err);
+      return res.status(500).json({ message: 'Failed to track view' });
     }
   });
 

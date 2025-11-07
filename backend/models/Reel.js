@@ -8,6 +8,7 @@ const reelSchema = new mongoose.Schema({
    datePosted: { type: Date, default: Date.now },
    likedBy: [String],            // uuid list
    savedBy: [String],            // uuid list
+   viewedBy: [String],           // uuid list - tracks who viewed this reel
    deleted: { type: Boolean, default: false },
    comments: [{
    author: String,             // uuid

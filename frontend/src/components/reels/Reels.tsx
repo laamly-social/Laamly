@@ -337,6 +337,7 @@ export default function Reels({
             key={r.id}
             reel={r}
             index={i}
+            isActive={i === active}
             muted={muted}
             setItemRef={setItemRef(i)}
             togglePlay={togglePlay}

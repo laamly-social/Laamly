@@ -20,12 +20,13 @@ import {
   Check,
   X,
   RefreshCw,
+  Eye,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import CommentsList from "./CommentsList";
 import type { Post as PostType, User } from "../../types";
-import { regenerateTags, removeTag } from "../../utils/posts";
+import { regenerateTags, removeTag, trackPostView } from "../../utils/posts";
 
 // ---- Helpers ----
 function isVideo(url?: string): boolean {
@@ -92,6 +93,16 @@ export default function Post({
   const [showCopied, setShowCopied] = useState(false);
   const [isRegeneratingTags, setIsRegeneratingTags] = useState(false);
   const [localTags, setLocalTags] = useState(source.tags || []);
+  const [viewCount, setViewCount] = useState(source.views || 0);
+
+  // Track view on mount
+  useEffect(() => {
+    if (source._id) {
+      trackPostView(source._id).then((result) => {
+        setViewCount(result.views);
+      });
+    }
+  }, [source._id]);
 
   const handleSaveEdit = () => {
     if (editedContent.trim() !== postText) {
@@ -303,6 +314,12 @@ export default function Post({
               label="Comments"
               count={source?.comments?.length ?? 0}
               onClick={() => setShowComments((v) => !v)}
+            />
+            <IconBtn
+              icon={Eye}
+              label="Views"
+              count={viewCount}
+              disabled
             />
             <div className="relative">
               <IconBtn

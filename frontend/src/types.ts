@@ -45,6 +45,7 @@ export type Post = {
   image?: string;
   likes: number;
   liked?: boolean; // Whether the current user has liked this post
+  views?: number; // Number of unique views
   repostedBy: number;
   createdAt: number;
   comments: Comment[];
@@ -85,6 +86,7 @@ export type Reel = {
   liked?: boolean;
   saved?: boolean;
   likes?: number;
+  views?: number; // Number of unique views
   createdAt?: number;
   authorInfo?: {
     handle?: string;

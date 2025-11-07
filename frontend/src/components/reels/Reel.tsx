@@ -1,14 +1,16 @@
 // src/components/reels/ReelItem.tsx
 // @ts-nocheck
-import { VolumeX, Volume2, Heart, Bookmark, Share2, MessageSquare, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { VolumeX, Volume2, Heart, Bookmark, Share2, MessageSquare, Trash2, Eye } from "lucide-react";
+import { useState, useEffect } from "react";
 import Card from "../ui/Card";
 import Avatar from "../ui/Avatar";
 import type { Reel } from "../../types";
+import { trackReelView } from "../../utils/reels";
 
 interface ReelItemProps {
    reel: Reel;
    index: number;
+   isActive: boolean;
    muted: boolean;
    setItemRef: (el: HTMLDivElement | null) => void;
    togglePlay: (e: React.MouseEvent<HTMLVideoElement>) => void;
@@ -22,6 +24,7 @@ interface ReelItemProps {
 export default function ReelItem({
    reel,
    index,
+   isActive,
    muted,
    setItemRef,
    togglePlay,
@@ -33,6 +36,18 @@ export default function ReelItem({
    user
 }: ReelItemProps) {
    const [showCopied, setShowCopied] = useState(false);
+   const [viewCount, setViewCount] = useState(reel.views || 0);
+   const [hasTrackedView, setHasTrackedView] = useState(false);
+
+   // Track view only when reel becomes active (in focus)
+   useEffect(() => {
+      if (isActive && !hasTrackedView && reel.id) {
+         trackReelView(reel.id).then((result) => {
+            setViewCount(result.views);
+            setHasTrackedView(true);
+         });
+      }
+   }, [isActive, hasTrackedView, reel.id]);
 
    const handleShare = () => {
       const url = `${window.location.origin}/reel/${reel.id}`;
@@ -101,17 +116,17 @@ export default function ReelItem({
                   </>
                )}
 
-               {/* <ActionButton
-                  title="Save"
-                  Icon={Bookmark}
-                  onClick={() => onSave(reel.id)}
-               /> */}
-
                <ActionButton
                   title="Comments"
                   Icon={MessageSquare}
                   onClick={() => toggleComments(reel)}
                />
+
+               <ActionButton
+                  title="Views"
+                  Icon={Eye}
+               />
+               <div className="text-center text-xs text-white drop-shadow">{viewCount}</div>
 
                <div className="relative">
                   <ActionButton

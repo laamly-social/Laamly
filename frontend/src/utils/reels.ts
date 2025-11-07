@@ -45,6 +45,7 @@ export async function fetchAllReels() {
     liked: !!r.liked,
     saved: !!r.saved,
     likes: Number(r.likes || 0),
+    views: Number(r.views || 0),
     authorInfo: r.authorInfo || undefined,
     comments: Array.isArray(r.comments)
       ? r.comments.map((c: any) => ({
@@ -72,6 +73,7 @@ export async function fetchReelById(id: string) {
     liked: !!r.liked,
     saved: !!r.saved,
     likes: Number(r.likes || 0),
+    views: Number(r.views || 0),
     authorInfo: r.authorInfo || undefined,
     comments: Array.isArray(r.comments)
       ? r.comments.map((c: any) => ({
@@ -139,4 +141,25 @@ export async function createReelComment(reelId: string, text: string) {
     message: string;
     currentUser?: { id: string; handle: string; name: string; avatar: string };
   };
+}
+
+/** Track a reel view */
+export async function trackReelView(id: string): Promise<{ views: number }> {
+  try {
+    const res = await fetch(apiEndpoint("/reels/track-view"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json().catch(() => ({ views: 0 }));
+    if (!res.ok) {
+      console.warn("trackReelView failed:", res.status, data);
+      return { views: 0 };
+    }
+    return data;
+  } catch (err) {
+    console.warn("trackReelView error:", err);
+    return { views: 0 };
+  }
 }

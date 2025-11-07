@@ -52,6 +52,7 @@ module.exports = function createReelsRouter(io, userSockets) {
         r.likes = (r.likedBy || []).length;
         r.saved = !!(req.session.user && (r.savedBy || []).map(String).includes(String(req.session.user.uuid)));
         r.liked = !!(req.session.user && (r.likedBy || []).map(String).includes(String(req.session.user.uuid)));
+        r.views = (r.viewedBy || []).length;
         r.createdAt = new Date(r.datePosted).getTime();
 
         if (Array.isArray(r.comments)) {
@@ -167,6 +168,35 @@ module.exports = function createReelsRouter(io, userSockets) {
     }
   });
 
+  // Track view (increment view count for unique viewers)
+  router.post('/track-view', async (req, res) => {
+    try {
+      const { id } = req.body || {};
+      if (!id) return res.status(400).json({ message: 'Missing id' });
+
+      const reel = await Reel.findById(id);
+      if (!reel) return res.status(404).json({ message: 'Reel not found' });
+
+      // Track views even for anonymous users - use a session ID or IP if user not logged in
+      const viewerId = req.session.user ? String(req.session.user.uuid) : `anon-${req.ip}`;
+      
+      reel.viewedBy = reel.viewedBy || [];
+      const viewedBySet = new Set(reel.viewedBy.map(String));
+      
+      // Only increment if this viewer hasn't viewed before
+      if (!viewedBySet.has(viewerId)) {
+        viewedBySet.add(viewerId);
+        reel.viewedBy = Array.from(viewedBySet);
+        await reel.save();
+      }
+
+      res.json({ views: reel.viewedBy.length });
+    } catch (err) {
+      console.error('POST /reels/track-view failed:', err);
+      return res.status(500).json({ message: 'Failed to track view' });
+    }
+  });
+
   // Delete reel
   router.post('/delete', async (req, res) => {
     try {
@@ -212,6 +242,7 @@ module.exports = function createReelsRouter(io, userSockets) {
       reel.likes = (reel.likedBy || []).length;
   reel.saved = !!(req.session.user && (reel.savedBy || []).map(String).includes(String(req.session.user.uuid)));
   reel.liked = !!(req.session.user && (reel.likedBy || []).map(String).includes(String(req.session.user.uuid)));
+      reel.views = (reel.viewedBy || []).length;
       reel.createdAt = new Date(reel.datePosted).getTime();
 
       if (Array.isArray(reel.comments)) {
