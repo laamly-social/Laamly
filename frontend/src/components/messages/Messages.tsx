@@ -113,14 +113,22 @@ export default function Messages() {
             setLoading(true);
             // quick auth check
             try {
-               const meRes = await fetch(apiEndpoint('/api/me'), { credentials: 'include' });
-               if (!meRes.ok) {
+               const response = await fetch(apiEndpoint('/api/me'), { credentials: 'include' });
+               if (!response.ok) {
                   setLoggedOut(true);
                   return;
                }
-               const meData = await meRes.json().catch(() => null);
-               if (!meData || !meData.user) {
+               const data = await response.json();
+               if (!data) {
                   setLoggedOut(true);
+                  return;
+               } else {
+                  setLoggedOut(false);
+               }
+
+
+               if (!response.ok && !data.id) {
+                  console.warn('Auth check failed: HTTP', response.status);
                   return;
                }
             } catch (e) {
@@ -129,9 +137,10 @@ export default function Messages() {
                return;
             }
 
+
             const fetchedThreads = await fetchThreads();
             setThreads(fetchedThreads);
-            
+
             // If there's a threadId in the URL, set it as active
             if (urlThreadId && fetchedThreads.some(t => t.id === urlThreadId)) {
                setActiveId(urlThreadId);

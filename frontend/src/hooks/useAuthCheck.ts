@@ -4,7 +4,7 @@ import { apiEndpoint } from '../config';
 /**
  * Hook to periodically check if the user is still authenticated
  * If the user was logged in but is now logged out, reload the page
- * 
+ *
  * @param userId - The current user's ID (null if not logged in)
  * @param intervalMs - How often to check (default: 60 seconds)
  */
@@ -34,9 +34,9 @@ export function useAuthCheck(userId: string | null | undefined, intervalMs: numb
         }
 
         const data = await response.json();
-        
+
         // If we were logged in but now we're not, reload the page
-        if (wasLoggedInRef.current && !data.user) {
+        if (wasLoggedInRef.current && !data.id) {
           console.warn('User session expired, reloading page...');
           window.location.reload();
         }

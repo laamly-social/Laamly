@@ -8,9 +8,9 @@ interface AvatarProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 }
 
 const sizeClass = {
-  xs: "w-3 h-3",
-  sm: "w-6 h-6",
-  md: "",
+  xs: "w-5 h-5",
+  sm: "w-8 h-8",
+  md: "w-10 h-10",
   lg: "w-16 h-16"
 };
 
@@ -19,7 +19,7 @@ export default function Avatar({ src, alt, size = "md", className = "", ...props
     <img
       src={src}
       alt={alt}
-      className={["object-cover border border-border dark:border-border-dark", "w-10", "h-10", "rounded-full", "hover:scale-125", "transition", sizeClass[size], className].filter(Boolean).join(" ")}
+      className={["object-cover border border-border dark:border-border-dark", "rounded-full", "hover:scale-125", "transition", sizeClass[size], className].filter(Boolean).join(" ")}
       {...props}
     />
   );

@@ -212,11 +212,12 @@ export default function Profile(props: {
    const profileUserId = userId || meId;
    const userPosts = posts.filter(p => p.author === profileUserId || p.authorId === profileUserId);
 
-   const originalPosts = userPosts.filter(p => !p.originalId);
-   const repostsList = userPosts.filter(p => p.originalId);
+   // Sort posts by creation date (newest first)
+   const originalPosts = userPosts.filter(p => !p.originalId).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+   const repostsList = userPosts.filter(p => p.originalId).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
    const userReels = reels.filter(r => r.author === profileUserId || r.authorId === profileUserId);
-   const likedPosts = posts.filter(p => p.liked);
-   const savedPosts = posts.filter(p => p.bookmarked);
+   const likedPosts = posts.filter(p => p.liked).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+   const savedPosts = posts.filter(p => p.bookmarked).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
    const likedReels = reels.filter(r => r.liked);
    const savedReels = reels.filter(r => r.saved);
 
@@ -472,7 +473,7 @@ export default function Profile(props: {
             {view === "posts" &&
                originalPosts.map(p => (
                   <PostComponent
-                     key={p.id}
+                     key={p._id}
                      post={p}
                      meId={meId}
                      posts={posts}
@@ -528,7 +529,7 @@ export default function Profile(props: {
             {view === "reposts" &&
                repostsList.map(p => (
                   <PostComponent
-                     key={p.id}
+                     key={p._id}
                      post={p}
                      meId={meId}
                      posts={posts}
@@ -554,7 +555,7 @@ export default function Profile(props: {
             {view === "likedPosts" &&
                likedPosts.map(p => (
                   <PostComponent
-                     key={p.id}
+                     key={p._id}
                      post={p}
                      meId={meId}
                      posts={posts}
@@ -580,7 +581,7 @@ export default function Profile(props: {
             {view === "savedPosts" &&
                savedPosts.map(p => (
                   <PostComponent
-                     key={p.id}
+                     key={p._id}
                      post={p}
                      meId={meId}
                      posts={posts}

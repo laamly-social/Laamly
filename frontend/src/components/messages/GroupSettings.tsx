@@ -229,7 +229,7 @@ export default function GroupSettings({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 min-w-[60%] max-w-[600px] mx-auto">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 w-[95%] md:min-w-[60%] max-w-[600px] mx-auto">
         {error && (
           <div className="p-3 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg">
             {error}

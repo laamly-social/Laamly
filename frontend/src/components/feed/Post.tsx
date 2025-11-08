@@ -284,27 +284,29 @@ export default function Post({
 
                {/* AI-generated tags */}
                {localTags && localTags.length > 0 && (
-                  <div className="relative mb-3">
-                     <div className="flex gap-2 overflow-x-auto scrollbar-hide max-w-[650px]">
-                        {localTags.map((tag, idx) => (
-                           <span
-                              key={idx}
-                              className="inline-flex items-center gap-0.5 px-2.5 py-1 text-xs font-medium rounded-full bg-muted dark:bg-muted-dark text-sub dark:text-sub-dark border border-border dark:border-border-dark whitespace-nowrap"
-                           >
-                              #{tag}
-                           {isCurrentUser && (
-                              <button
-                                 onClick={() => handleRemoveTag(tag)}
-                                 className="ml-1 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                                 aria-label={`Remove tag ${tag}`}
+                  <div className="max-w-[650px]">
+                     <div className="relative mb-3 max-w-[90vw]">
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide max-w-full">
+                           {localTags.map((tag, idx) => (
+                              <span
+                                 key={idx}
+                                 className="inline-flex items-center gap-0.5 px-2.5 py-1 text-xs font-medium rounded-full bg-muted dark:bg-muted-dark text-sub dark:text-sub-dark border border-border dark:border-border-dark whitespace-nowrap"
                               >
-                                 <X size={12} />
-                              </button>
-                           )}
-                        </span>
-                     ))}
+                                 #{tag}
+                                 {isCurrentUser && (
+                                    <button
+                                       onClick={() => handleRemoveTag(tag)}
+                                       className="ml-1 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                                       aria-label={`Remove tag ${tag}`}
+                                    >
+                                       <X size={12} />
+                                    </button>
+                                 )}
+                              </span>
+                           ))}
+                        </div>
+                        <div className="absolute right-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-l from-panel dark:from-panel-dark to-transparent"></div>
                      </div>
-                     <div className="absolute right-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-l from-panel dark:from-panel-dark to-transparent"></div>
                   </div>
                )}
 

@@ -137,8 +137,17 @@ async function uploadImageToPictshare(imageUrl) {
 // Helper: find user for current session (supports both providers)
 async function findDbUserBySession(req) {
   const uuid = String(req.session?.user?.uuid || "");
-  if (!uuid) return null;
-  return await User.findOne({ uuid }).lean();
+  if (!uuid) {
+    console.warn("findDbUserBySession: No UUID found in session.", req.session);
+    return null;
+  }
+
+  const user = await User.findOne({ uuid }).lean();
+  if (!user) {
+    console.warn(`findDbUserBySession: No user found for UUID: ${uuid}`);
+  }
+
+  return user;
 }
 
 // ---------- Socket.IO ----------
@@ -509,17 +518,35 @@ app.get("/github/login", (req, res) => {
                         || data.email
                         || "";
 
-      // Upload GitHub avatar to Pictshare
-      let pictshareAvatarUrl = data.avatar_url;
-      if (data.avatar_url) {
-        console.log('Uploading GitHub avatar to Pictshare...');
-        pictshareAvatarUrl = await uploadImageToPictshare(data.avatar_url);
-        console.log('Pictshare URL:', pictshareAvatarUrl);
+      // Find existing user first
+      let user = await User.findOne({ githubId: data.id });
+
+      // Determine which avatar to use
+      let avatarUrl = data.avatar_url;
+
+      if (user && user.profile?.avatar) {
+        // Check if user already has a Pictshare avatar
+        const existingAvatar = user.profile.avatar;
+        const isPictshareUrl = existingAvatar.includes('pictshare');
+
+        if (isPictshareUrl) {
+          // Keep the existing Pictshare avatar
+          console.log('Keeping existing Pictshare avatar:', existingAvatar);
+          avatarUrl = existingAvatar;
+        } else {
+          // Upload GitHub avatar to Pictshare
+          console.log('Uploading GitHub avatar to Pictshare...');
+          avatarUrl = await uploadImageToPictshare(data.avatar_url);
+          console.log('New Pictshare URL:', avatarUrl);
+        }
+      } else {
+        // New user - upload GitHub avatar to Pictshare
+        console.log('New user - uploading GitHub avatar to Pictshare...');
+        avatarUrl = await uploadImageToPictshare(data.avatar_url);
+        console.log('Pictshare URL:', avatarUrl);
       }
 
-      // Normalize the session
-      // Find the user to get their uuid
-      let user = await User.findOne({ githubId: data.id });
+      // Create user if doesn't exist
       if (!user) {
         user = await new User({
           githubId: data.id,
@@ -527,42 +554,18 @@ app.get("/github/login", (req, res) => {
           profile: {
             description: data.bio,
             name: data.name,
-            avatar: pictshareAvatarUrl, // Use Pictshare URL instead of GitHub's
+            avatar: avatarUrl,
             email: primaryEmail,
           },
           postIds: [],
         }).save();
-      }
-      req.session.user = {
-        uuid: user.uuid,
-        id: String(data.id),
-        provider: "github",
-        login: data.login,
-        name: data.name,
-        avatar: pictshareAvatarUrl, // Use Pictshare URL instead of GitHub's
-        email: primaryEmail,
-      };
-
-      const exists = await User.findOne({ githubId: data.id });
-      if (!exists) {
-        await new User({
-          githubId: data.id,
-          handle: data.login,
-          profile: {
-            description: data.bio,
-            name: data.name,
-            avatar: pictshareAvatarUrl, // Use Pictshare URL instead of GitHub's
-            email: primaryEmail,
-          },
-          postIds: [],
-        }).save();
-      } else if (exists.profile?.avatar !== pictshareAvatarUrl) {
-        // Update avatar if it changed
+      } else {
+        // Update user info but preserve Pictshare avatar
         await User.updateOne(
           { githubId: data.id },
           {
             $set: {
-              'profile.avatar': pictshareAvatarUrl,
+              'profile.avatar': avatarUrl,
               'profile.name': data.name,
               'profile.email': primaryEmail,
               'profile.description': data.bio,
@@ -570,6 +573,16 @@ app.get("/github/login", (req, res) => {
           }
         );
       }
+
+      req.session.user = {
+        uuid: user.uuid,
+        id: String(data.id),
+        provider: "github",
+        login: data.login,
+        name: data.name,
+        avatar: avatarUrl,
+        email: primaryEmail,
+      };
 
       res.redirect(FRONTEND_ORIGIN);
     })
@@ -589,64 +602,68 @@ app.get("/google/login", async (req, res) => {
       headers: { Authorization: `Bearer ${req.session.google_access_token}` },
     });
 
-    // Upload Google profile picture to Pictshare
-    let pictshareAvatarUrl = data.picture;
-    if (data.picture) {
-      console.log('Uploading Google profile picture to Pictshare...');
-      pictshareAvatarUrl = await uploadImageToPictshare(data.picture);
-      console.log('Pictshare URL:', pictshareAvatarUrl);
+    // Find existing user first
+    let user = await User.findOne({ googleId: data.id });
+
+    // Determine which avatar to use
+    let avatarUrl = data.picture;
+
+    if (user && user.profile?.avatar) {
+      // Check if user already has a Pictshare avatar
+      const existingAvatar = user.profile.avatar;
+      const isPictshareUrl = existingAvatar.includes('pictshare'); // true if account exists
+      // const newAccount = !isPictshareUrl;
+
+      if (isPictshareUrl) {
+        // Keep the existing Pictshare avatar
+        console.log('Keeping existing Pictshare avatar:', existingAvatar);
+        avatarUrl = existingAvatar;
+      } else {
+        // Upload Google profile picture to Pictshare
+        console.log('Uploading Google profile picture to Pictshare...');
+        avatarUrl = await uploadImageToPictshare(data.picture);
+        console.log('New Pictshare URL:', avatarUrl);
+      }
+    } else {
+      // New user - upload Google avatar to Pictshare
+      console.log('New user - uploading Google profile picture to Pictshare...');
+      avatarUrl = await uploadImageToPictshare(data.picture);
+      console.log('Pictshare URL:', avatarUrl);
     }
 
-    // Normalize the session
-    // Find the user to get their uuid
-    let user = await User.findOne({ googleId: data.id });
+    // Create user if doesn't exist
     if (!user) {
       user = await new User({
         googleId: data.id,
         handle: (data.email || "").split("@")[0],
         profile: {
           name: data.name,
-          avatar: pictshareAvatarUrl, // Use Pictshare URL instead of Google's
+          avatar: avatarUrl,
           email: data.email,
         },
         postIds: [],
       }).save();
+    } else {
+      // Update user info but preserve Pictshare avatar
+      await User.updateOne(
+        { googleId: data.id },
+        {
+          $set: {
+            'profile.avatar': avatarUrl
+          }
+        }
+      );
     }
+
     req.session.user = {
       uuid: user.uuid,
       id: String(data.id),
       provider: "google",
       login: (data.email || "").split("@")[0],
       name: data.name,
-      avatar: pictshareAvatarUrl, // Use Pictshare URL instead of Google's
+      avatar: avatarUrl,
       email: data.email,
     };
-
-    const exists = await User.findOne({ googleId: data.id });
-    if (!exists) {
-      await new User({
-        googleId: data.id,
-        handle: (data.email || "").split("@")[0],
-        profile: {
-          name: data.name,
-          avatar: pictshareAvatarUrl, // Use Pictshare URL instead of Google's
-          email: data.email,
-        },
-        postIds: [],
-      }).save();
-    } else if (exists.profile?.avatar !== pictshareAvatarUrl) {
-      // Update avatar if it changed
-      await User.updateOne(
-        { googleId: data.id },
-        {
-          $set: {
-            'profile.avatar': pictshareAvatarUrl,
-            'profile.name': data.name,
-            'profile.email': data.email,
-          }
-        }
-      );
-    }
 
     res.redirect(FRONTEND_ORIGIN);
   } catch (err) {

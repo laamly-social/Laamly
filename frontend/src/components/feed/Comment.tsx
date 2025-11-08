@@ -56,7 +56,7 @@ export default function Comment({
 
    return (
       <div className="flex gap-2">
-         <div className={`comment ${isLast ? "" : "border-b"} border-border dark:border-border-dark flex-1 px-6 py-4`}>
+         <div className={`comment ${isLast ? "" : "border-b"} border-border dark:border-border-dark flex-1 px-3 py-3 md:px-6 md:py-4`}>
             <div className="flex justify-between items-start text-text dark:text-text-dark text-xs mb-1">
                <div>
                   <UserChip
@@ -64,10 +64,11 @@ export default function Comment({
                      handle={u?.handle ?? c.author}
                      fullName={u?.name ?? c.author}
                      onClickName={openProfile ? () => openProfile(c.author) : undefined}
+                     variant="flat"
                   />
                </div>
                <div className="flex items-center gap-2">
-                  <span className="opacity-[.75]">
+                  <span className="opacity-[.75] hidden md:block">
                      {timeBetween(c.ts)} ago
                   </span>
                   {!isEditing && (
@@ -120,7 +121,7 @@ export default function Comment({
             </div>
 
             {isEditing ? (
-               <div className="mt-2 ml-13">
+               <div className="mt-2 ml-10">
                   <InputField
                      className="input bg-background dark:bg-background-dark mb-2"
                      value={editText}
@@ -136,8 +137,11 @@ export default function Comment({
                   />
                </div>
             ) : (
-               <div className="mt-1 ml-13 mb-1 whitespace-pre-wrap">{c.text}</div>
+               <div className="mt-1 ml-10 mb-1 whitespace-pre-wrap">{c.text}</div>
             )}
+            <span className="ml-10 text-xs opacity-[.75] block md:hidden">
+               {timeBetween(c.ts)} ago
+            </span>
          </div>
       </div>
    );
