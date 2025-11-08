@@ -22,7 +22,8 @@ import {
   editPost as editPostApi,
 } from "../../utils/posts";
 
-const FEED_PAGE_SIZE = 12;
+// ***** FRONTEND FEED PAGE SIZE: ALWAYS 5 *****
+const FEED_PAGE_SIZE = 5;
 
 export default function HomeFeed({
   meId,
@@ -56,7 +57,13 @@ export default function HomeFeed({
     if (loading) return;
     setLoading(true);
     try {
+      console.log(
+        `[HomeFeed] loadFirstPage -> requesting page=1, pageSize=${FEED_PAGE_SIZE}`
+      );
       const data = await fetchFeedPage(1, FEED_PAGE_SIZE);
+      console.log(
+        `[HomeFeed] loadFirstPage -> got ${data.posts?.length ?? 0} posts`
+      );
       setPosts(data.posts || []);
       setPage(1);
       setHasMore(data.hasMore);
@@ -82,10 +89,16 @@ export default function HomeFeed({
   // Load next page (used by infinite scroll)
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;
+    const nextPage = page + 1;
     setLoading(true);
     try {
-      const nextPage = page + 1;
+      console.log(
+        `[HomeFeed] loadMore -> requesting page=${nextPage}, pageSize=${FEED_PAGE_SIZE}`
+      );
       const data = await fetchFeedPage(nextPage, FEED_PAGE_SIZE);
+      console.log(
+        `[HomeFeed] loadMore -> got ${data.posts?.length ?? 0} posts`
+      );
       setPosts((prev) => [...prev, ...(data.posts || [])]);
       setPage(nextPage);
       setHasMore(data.hasMore);
@@ -106,6 +119,7 @@ export default function HomeFeed({
       (entries) => {
         const entry = entries[0];
         if (entry.isIntersecting) {
+          console.log("[HomeFeed] sentinel intersected, calling loadMore()");
           loadMore();
         }
       },
@@ -205,7 +219,7 @@ export default function HomeFeed({
   const deletePost = async (id: string) => {
     try {
       await deletePostApi(id);
-      setPosts((prev) => prev.filter((p) => p._id !== id && p.id !== id));
+      setPosts((prev) => prev.filter((p) => p.id !== id && p._id !== id));
     } catch (e) {
       alert("Failed to delete post: " + (e instanceof Error ? e.message : e));
     }
@@ -223,16 +237,8 @@ export default function HomeFeed({
   };
 
   // Backend already returns posts in ranked order,
-  // so just pass them through. But deduplicate by _id to avoid duplicate keys.
-  const orderedPosts = useMemo(() => {
-    const seen = new Set();
-    return posts.filter((p) => {
-      const key = p._id || p.id;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [posts]);
+  // so just pass them through.
+  const orderedPosts = useMemo(() => posts, [posts]);
 
   return (
     // Center the two-column feed and give the main column a comfortable, stable width
@@ -245,13 +251,17 @@ export default function HomeFeed({
     >
       <div className="col col--main max-w-[680px] mx-auto w-full">
         {user && (
-          <CreatePost meId={meId} openProfile={openProfile} onPosted={onPosted} />
+          <CreatePost
+            meId={meId}
+            openProfile={openProfile}
+            onPosted={onPosted}
+          />
         )}
 
         <div className="grid">
           {orderedPosts.map((p) => (
             <PostComponent
-              key={p._id || p.id}
+              key={p._id}
               post={p}
               meId={meId}
               posts={orderedPosts}
@@ -306,11 +316,6 @@ export default function HomeFeed({
           )}
         </div>
       </div>
-
-      {/* Hide trends sidebar on mobile - only show on larger screens if needed */}
-      {/* <aside className="col sticky t-20 h-fit hidden lg:block">
-        <Trends />
-      </aside> */}
 
       <AnimatePresence>
         {lightbox && (

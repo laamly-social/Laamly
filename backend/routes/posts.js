@@ -126,12 +126,11 @@ Post text: ${postText}`;
    FEED RANKING HELPERS (halal-weighted + tag similarity)
    ------------------------------------------------------------------ */
 
-const FEED_DEFAULT_PAGE_SIZE = 10;
+// 5 POSTS PER PAGE BY DEFAULT
+const FEED_DEFAULT_PAGE_SIZE = 5;
 const FEED_MAX_PAGE_SIZE = 50;
 const FEED_LIKED_LOOKBACK_DAYS = 30;
 const FEED_CANDIDATE_DAYS = 90;
-const FEED_MIN_CANDIDATES = 80;
-const FEED_MAX_CANDIDATES = 400;
 
 /** Normalize a tag like "QuranRecitation" or "quran_tafsir" → ["quran","recitation"/"tafsir"] */
 function normalizeTagToTokens(tag) {
@@ -227,33 +226,28 @@ function scorePostForUser(rawPost, tokenAffinity = {}) {
   // Halal multiplier: halal posts stay at full weight, haram posts are heavily downranked
   const halalMultiplier = rawPost.isHalal === false ? 0.3 : 1.0;
 
-  // tiny random jitter so the feed doesn't freeze in one exact order
-  const randomJitter = Math.random() * 0.03;
-
   const base =
     0.4 * recencyScore +
     0.4 * engagementScore +
     0.2 * tagScore;
 
-  return halalMultiplier * base + randomJitter;
+  // NO RANDOM JITTER (keeps ordering stable across pages)
+  return halalMultiplier * base;
 }
 
-/** Merge halal and haram lists so feed is halal-heavy but still can show haram content. */
+/** (Unused now, but left here in case you want to mix halal/haram lists manually later) */
 function mergeHalalAndHaram(halalScored, haramScored, halalBatch = 4, haramBatch = 1) {
   const merged = [];
   let iH = 0;
   let iN = 0;
 
   while (iH < halalScored.length || iN < haramScored.length) {
-    // push a batch of halal
     for (let k = 0; k < halalBatch && iH < halalScored.length; k++) {
       merged.push(halalScored[iH++]);
     }
-    // then a smaller batch of haram
     for (let k = 0; k < haramBatch && iN < haramScored.length; k++) {
       merged.push(haramScored[iN++]);
     }
-
     if (iH >= halalScored.length && iN >= haramScored.length) break;
   }
 
@@ -737,8 +731,8 @@ module.exports = function createPostsRouter(io, userSockets) {
     }
   });
 
-  // Personalized halal-weighted feed with pagination
-  // GET /posts/feed?page=1&pageSize=10
+  // Personalized halal-weighted feed with STRICT pagination (no overfetch)
+  // GET /posts/feed?page=1&pageSize=5
   router.get('/feed', async (req, res) => {
     try {
       const viewer = req.session?.user || null;
@@ -749,53 +743,48 @@ module.exports = function createPostsRouter(io, userSockets) {
       const pageSize = Math.min(requestedSize, FEED_MAX_PAGE_SIZE);
 
       const since = new Date(Date.now() - FEED_CANDIDATE_DAYS * 24 * 60 * 60 * 1000);
-      const candidateLimit = Math.min(
-        Math.max(page * pageSize * 4, FEED_MIN_CANDIDATES),
-        FEED_MAX_CANDIDATES
-      );
+      const skipCount = (page - 1) * pageSize;
 
-      // Pull candidate posts and user affinity in parallel
-      const [rawPosts, tokenAffinity] = await Promise.all([
-        Post.find({
-          deleted: { $ne: true },
-          datePosted: { $gte: since },
-        })
+      // console.log(`[FEED] incoming page=${page}, requestedSize=${requestedSize}, using pageSize=${pageSize}, skip=${skipCount}`);
+
+      const baseQuery = {
+        deleted: { $ne: true },
+        datePosted: { $gte: since },
+      };
+
+      // Pull ONLY the exact slice we need for this page
+      const [rawPage, tokenAffinity, total] = await Promise.all([
+        Post.find(baseQuery)
           .sort({ datePosted: -1 })
-          .limit(candidateLimit)
+          .skip(skipCount)
+          .limit(pageSize)
           .lean(),
         buildUserTagTokenAffinity(viewerUuid),
+        Post.countDocuments(baseQuery),
       ]);
 
-      // Score raw posts first (cheaper), then merge halal and haram
-      const scored = rawPosts.map((p) => ({
-        raw: p,
-        score: scorePostForUser(p, tokenAffinity),
-      }));
+      // console.log(`[FEED] total=${total}, rawPage.length=${rawPage.length}`);
 
-      const halal = scored
-        .filter((x) => x.raw.isHalal !== false)
-        .sort((a, b) => b.score - a.score);
+      // Score and sort this page's posts for the viewer (within-page personalization)
+      const scored = rawPage
+        .map((p) => ({
+          raw: p,
+          score: scorePostForUser(p, tokenAffinity),
+        }))
+        .sort((a, b) => b.score - a.score)
+        .map((x) => x.raw);
 
-      const haram = scored
-        .filter((x) => x.raw.isHalal === false)
-        .sort((a, b) => b.score - a.score);
+      const hydrated = await hydratePosts(scored, req);
+      const hasMore = page * pageSize < total;
 
-      const merged = mergeHalalAndHaram(halal, haram).map((x) => x.raw);
-
-      const total = merged.length;
-      const start = (page - 1) * pageSize;
-      const end = start + pageSize;
-      const pageRaw = merged.slice(start, end);
-
-      // Hydrate only the page we’re returning
-      const hydrated = await hydratePosts(pageRaw, req);
+      // console.log(`[FEED] returning page=${page}, hydrated.length=${hydrated.length}, hasMore=${hasMore}`);
 
       return res.json({
         posts: hydrated,
         page,
         pageSize,
         total,
-        hasMore: end < total,
+        hasMore,
       });
     } catch (err) {
       console.error('GET /posts/feed failed:', err);

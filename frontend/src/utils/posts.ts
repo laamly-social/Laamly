@@ -113,6 +113,9 @@ const CREATE_POST_URL = apiEndpoint("/posts/create");
 const GET_ALL_URL = apiEndpoint("/posts/get-all");
 const FEED_URL = apiEndpoint("/posts/feed");
 
+// ***** CLIENT PAGE SIZE: ALWAYS 5 *****
+const CLIENT_FEED_PAGE_SIZE = 5;
+
 // ---------- FEED HELPERS ----------
 
 /**
@@ -129,26 +132,51 @@ export async function fetchFeedPage(
   total: number;
   hasMore: boolean;
 }> {
+  // Ignore caller's pageSize and always clamp to 5 for sanity.
+  const effectivePageSize = CLIENT_FEED_PAGE_SIZE;
+
+  console.log(
+    `[posts.ts] fetchFeedPage called with page=${page}, requestedPageSize=${pageSize}, effectivePageSize=${effectivePageSize}`
+  );
+
   const url = `${FEED_URL}?page=${encodeURIComponent(
     page
-  )}&pageSize=${encodeURIComponent(pageSize)}`;
+  )}&pageSize=${encodeURIComponent(effectivePageSize)}`;
 
   const res = await fetch(url, { credentials: "include" });
   if (!res.ok) {
     console.error("fetchFeedPage failed:", res.status);
-    return { posts: [], page, pageSize, total: 0, hasMore: false };
+    return {
+      posts: [],
+      page,
+      pageSize: effectivePageSize,
+      total: 0,
+      hasMore: false,
+    };
   }
 
   const data = await res.json();
   const list: BackendPost[] = data?.posts ?? [];
+  console.log(
+    `[posts.ts] backend returned ${list.length} posts for page=${
+      data.page ?? page
+    } (raw)`
+  );
 
-  // IMPORTANT: spread the whole object so tags, isHalal, etc. are preserved
-  const posts: Post[] = list.map((p) => ({ ...p }));
+  // HARD LIMIT: never expose more than effectivePageSize posts to the UI,
+  // even if the backend somehow returns more.
+  const limited = list.slice(0, effectivePageSize);
+  console.log(
+    `[posts.ts] limiting to ${limited.length} posts (effectivePageSize=${effectivePageSize})`
+  );
+
+  // Keep all fields (tags, isHalal, comments, etc.)
+  const posts: Post[] = limited.map((p) => ({ ...p }));
 
   return {
     posts,
     page: data.page ?? page,
-    pageSize: data.pageSize ?? pageSize,
+    pageSize: data.pageSize ?? effectivePageSize,
     total: data.total ?? posts.length,
     hasMore: !!data.hasMore,
   };
@@ -156,31 +184,68 @@ export async function fetchFeedPage(
 
 /**
  * Legacy helper for places that still call fetchAllPosts.
- * We map it onto the same ranked feed (big pageSize) so
- * the order doesn't "flip back" to chronological anywhere.
+ * IMPORTANT:
+ * - Now it ALSO uses /posts/feed, but with pageSize = 5 (NO MORE 200).
+ * - This keeps it from overfetching / spamming your feed logs.
  */
 export async function fetchAllPosts(): Promise<Post[]> {
-  // large page size just to pull a big chunk in ranked order
-  const res = await fetch(`${FEED_URL}?page=1&pageSize=200`, {
-    credentials: "include",
-  });
+  const page = 1;
+  const pageSize = CLIENT_FEED_PAGE_SIZE;
+
+  console.log(
+    `[posts.ts] fetchAllPosts -> using feed page=${page}, pageSize=${pageSize}`
+  );
+
+  const res = await fetch(
+    `${FEED_URL}?page=${encodeURIComponent(page)}&pageSize=${encodeURIComponent(
+      pageSize
+    )}`,
+    {
+      credentials: "include",
+    }
+  );
 
   if (!res.ok) {
-    // fallback to old /get-all if feed endpoint errors for some reason
+    console.error(
+      "[posts.ts] fetchAllPosts feed request failed, falling back to /get-all. status=",
+      res.status
+    );
+    // Fallback ONLY if feed endpoint fails
     try {
       const r2 = await fetch(GET_ALL_URL, { credentials: "include" });
-      if (!r2.ok) return [];
+      if (!r2.ok) {
+        console.error(
+          "[posts.ts] fetchAllPosts fallback /get-all also failed, status=",
+          r2.status
+        );
+        return [];
+      }
       const data2 = await r2.json();
       const list2: BackendPost[] = data2?.posts ?? [];
+      console.log(
+        `[posts.ts] fetchAllPosts fallback /get-all returned ${list2.length} posts`
+      );
       return list2.map((p) => ({ ...p }));
-    } catch {
+    } catch (err) {
+      console.error("[posts.ts] fetchAllPosts fallback error:", err);
       return [];
     }
   }
 
   const data = await res.json();
   const list: BackendPost[] = data?.posts ?? [];
-  return list.map((p) => ({ ...p }));
+  console.log(
+    `[posts.ts] fetchAllPosts feed returned ${list.length} posts (raw) for page=${
+      data.page ?? page
+    }`
+  );
+
+  const limited = list.slice(0, pageSize);
+  console.log(
+    `[posts.ts] fetchAllPosts limiting to ${limited.length} posts (pageSize=${pageSize})`
+  );
+
+  return limited.map((p) => ({ ...p }));
 }
 
 /** Fetch a single post by ID */

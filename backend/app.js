@@ -531,19 +531,19 @@ app.get("/github/login", (req, res) => {
 
         if (isPictshareUrl) {
           // Keep the existing Pictshare avatar
-          console.log('Keeping existing Pictshare avatar:', existingAvatar);
+          // console.log('Keeping existing Pictshare avatar:', existingAvatar);
           avatarUrl = existingAvatar;
         } else {
           // Upload GitHub avatar to Pictshare
-          console.log('Uploading GitHub avatar to Pictshare...');
+          // console.log('Uploading GitHub avatar to Pictshare...');
           avatarUrl = await uploadImageToPictshare(data.avatar_url);
-          console.log('New Pictshare URL:', avatarUrl);
+          // console.log('New Pictshare URL:', avatarUrl);
         }
       } else {
         // New user - upload GitHub avatar to Pictshare
-        console.log('New user - uploading GitHub avatar to Pictshare...');
+        // console.log('New user - uploading GitHub avatar to Pictshare...');
         avatarUrl = await uploadImageToPictshare(data.avatar_url);
-        console.log('Pictshare URL:', avatarUrl);
+        // console.log('Pictshare URL:', avatarUrl);
       }
 
       // Create user if doesn't exist
@@ -616,19 +616,19 @@ app.get("/google/login", async (req, res) => {
 
       if (isPictshareUrl) {
         // Keep the existing Pictshare avatar
-        console.log('Keeping existing Pictshare avatar:', existingAvatar);
+        // console.log('Keeping existing Pictshare avatar:', existingAvatar);
         avatarUrl = existingAvatar;
       } else {
         // Upload Google profile picture to Pictshare
-        console.log('Uploading Google profile picture to Pictshare...');
+        // console.log('Uploading Google profile picture to Pictshare...');
         avatarUrl = await uploadImageToPictshare(data.picture);
-        console.log('New Pictshare URL:', avatarUrl);
+        // console.log('New Pictshare URL:', avatarUrl);
       }
     } else {
       // New user - upload Google avatar to Pictshare
-      console.log('New user - uploading Google profile picture to Pictshare...');
+      // console.log('New user - uploading Google profile picture to Pictshare...');
       avatarUrl = await uploadImageToPictshare(data.picture);
-      console.log('Pictshare URL:', avatarUrl);
+      // console.log('Pictshare URL:', avatarUrl);
     }
 
     // Create user if doesn't exist
