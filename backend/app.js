@@ -416,15 +416,21 @@ app.get("/api/users/search", async (req, res) => {
 
 // Public endpoint to fetch any user's profile by their githubId or googleId
 app.get("/api/users/:userId", async (req, res) => {
-   try {
-      const { userId } = req.params;
+  try {
+    const { userId } = req.params;
 
-      // Use uuid as the main identifier
-      const dbUser = await User.findOne({ uuid: userId }).lean();
+    // Use uuid as the main identifier
+    const dbUser = await User.findOne({ uuid: userId }).lean();
 
-      if (!dbUser) {
-         return res.status(404).json({ error: "User not found" });
-      }
+    if (!dbUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const followers = Array.isArray(dbUser.followers) ? dbUser.followers : [];
+    const following = Array.isArray(dbUser.following) ? dbUser.following : [];
+
+    const viewerUuid = req.session?.user?.uuid;
+    const isFollowing = viewerUuid ? followers.includes(viewerUuid) : false;
 
     res.json({
       user: {
@@ -436,13 +442,142 @@ app.get("/api/users/:userId", async (req, res) => {
         email: dbUser.profile?.email || "",
         bio: dbUser.profile?.bio || "",
         privilegeLevel: dbUser.privilegeLevel || "",
-      }
+        followersCount: followers.length,
+        followingCount: following.length,
+        isFollowing,
+      },
     });
-   } catch (error) {
-      console.error("Error fetching user profile:", error);
-      res.status(500).json({ error: "Failed to fetch user profile" });
-   }
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    res.status(500).json({ error: "Failed to fetch user profile" });
+  }
 });
+
+// Toggle follow / unfollow a user
+app.post("/api/users/:userId/follow", async (req, res) => {
+  try {
+    if (!req.session?.user?.uuid) {
+      return res.status(401).json({ message: "You need to be logged in to follow users." });
+    }
+
+    const viewerUuid = req.session.user.uuid;
+    const { userId } = req.params;
+
+    if (viewerUuid === userId) {
+      return res.status(400).json({ message: "You cannot follow yourself." });
+    }
+
+    const [me, target] = await Promise.all([
+      User.findOne({ uuid: viewerUuid }),
+      User.findOne({ uuid: userId }),
+    ]);
+
+    if (!target) {
+      return res.status(404).json({ message: "Target user not found." });
+    }
+    if (!me) {
+      return res.status(404).json({ message: "Current user not found." });
+    }
+
+    if (!Array.isArray(me.following)) me.following = [];
+    if (!Array.isArray(target.followers)) target.followers = [];
+
+    const alreadyFollowing = me.following.includes(userId);
+
+    if (alreadyFollowing) {
+      // UNFOLLOW
+      me.following = me.following.filter((id) => id !== userId);
+      target.followers = target.followers.filter((id) => id !== viewerUuid);
+    } else {
+      // FOLLOW
+      me.following = Array.from(new Set([...me.following, userId]));
+      target.followers = Array.from(new Set([...target.followers, viewerUuid]));
+    }
+
+    await Promise.all([me.save(), target.save()]);
+
+    res.json({
+      isFollowing: !alreadyFollowing,
+      followersCount: target.followers.length,
+    });
+  } catch (error) {
+    console.error("Error toggling follow:", error);
+    res.status(500).json({ message: "Failed to update follow status." });
+  }
+});
+
+// List followers of a user
+app.get("/api/users/:userId/followers", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const target = await User.findOne({ uuid: userId }).lean();
+    if (!target) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const followerUuids = Array.isArray(target.followers)
+      ? target.followers
+      : [];
+
+    if (!followerUuids.length) {
+      return res.json({ users: [] });
+    }
+
+    const followers = await User.find({ uuid: { $in: followerUuids } }).lean();
+
+    const users = followers.map((u) => ({
+      id: u.uuid,
+      uuid: u.uuid,
+      name: u.profile?.name || u.handle,
+      handle: u.handle,
+      avatar: u.profile?.avatar || "",
+    }));
+
+    res.json({ users });
+  } catch (error) {
+    console.error("Error fetching followers:", error);
+    res.status(500).json({ error: "Failed to fetch followers" });
+  }
+});
+
+// List users that this user is following
+app.get("/api/users/:userId/following", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const target = await User.findOne({ uuid: userId }).lean();
+    if (!target) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const followingUuids = Array.isArray(target.following)
+      ? target.following
+      : [];
+
+    if (!followingUuids.length) {
+      return res.json({ users: [] });
+    }
+
+    const following = await User.find({
+      uuid: { $in: followingUuids },
+    }).lean();
+
+    const users = following.map((u) => ({
+      id: u.uuid,
+      uuid: u.uuid,
+      name: u.profile?.name || u.handle,
+      handle: u.handle,
+      avatar: u.profile?.avatar || "",
+    }));
+
+    res.json({ users });
+  } catch (error) {
+    console.error("Error fetching following:", error);
+    res.status(500).json({ error: "Failed to fetch following" });
+  }
+});
+
 
 app.get("/is-logged-in", (req, res) => {
   res.json({ loggedIn: !!req.session.user });
@@ -531,19 +666,19 @@ app.get("/github/login", (req, res) => {
 
         if (isPictshareUrl) {
           // Keep the existing Pictshare avatar
-          // console.log('Keeping existing Pictshare avatar:', existingAvatar);
+          console.log('Keeping existing Pictshare avatar:', existingAvatar);
           avatarUrl = existingAvatar;
         } else {
           // Upload GitHub avatar to Pictshare
-          // console.log('Uploading GitHub avatar to Pictshare...');
+          console.log('Uploading GitHub avatar to Pictshare...');
           avatarUrl = await uploadImageToPictshare(data.avatar_url);
-          // console.log('New Pictshare URL:', avatarUrl);
+          console.log('New Pictshare URL:', avatarUrl);
         }
       } else {
         // New user - upload GitHub avatar to Pictshare
-        // console.log('New user - uploading GitHub avatar to Pictshare...');
+        console.log('New user - uploading GitHub avatar to Pictshare...');
         avatarUrl = await uploadImageToPictshare(data.avatar_url);
-        // console.log('Pictshare URL:', avatarUrl);
+        console.log('Pictshare URL:', avatarUrl);
       }
 
       // Create user if doesn't exist
@@ -616,19 +751,19 @@ app.get("/google/login", async (req, res) => {
 
       if (isPictshareUrl) {
         // Keep the existing Pictshare avatar
-        // console.log('Keeping existing Pictshare avatar:', existingAvatar);
+        console.log('Keeping existing Pictshare avatar:', existingAvatar);
         avatarUrl = existingAvatar;
       } else {
         // Upload Google profile picture to Pictshare
-        // console.log('Uploading Google profile picture to Pictshare...');
+        console.log('Uploading Google profile picture to Pictshare...');
         avatarUrl = await uploadImageToPictshare(data.picture);
-        // console.log('New Pictshare URL:', avatarUrl);
+        console.log('New Pictshare URL:', avatarUrl);
       }
     } else {
       // New user - upload Google avatar to Pictshare
-      // console.log('New user - uploading Google profile picture to Pictshare...');
+      console.log('New user - uploading Google profile picture to Pictshare...');
       avatarUrl = await uploadImageToPictshare(data.picture);
-      // console.log('Pictshare URL:', avatarUrl);
+      console.log('Pictshare URL:', avatarUrl);
     }
 
     // Create user if doesn't exist
