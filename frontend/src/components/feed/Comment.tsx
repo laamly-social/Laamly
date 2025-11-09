@@ -6,8 +6,6 @@ import IconBtn from "../ui/IconBtn";
 import UserChip from "../ui/UserChip";
 import { Edit2, Trash2, Check, X, Heart } from "lucide-react";
 
-
-
 interface CommentProps {
    comment: any;
    user: any;
@@ -25,7 +23,7 @@ export default function Comment({
    onEdit,
    onDelete,
    onLike,
-   openProfile,
+   openProfile
 }: CommentProps) {
    const [editingId, setEditingId] = useState<string | null>(null);
    const [editText, setEditText] = useState("");
@@ -56,14 +54,17 @@ export default function Comment({
 
    return (
       <div className="flex gap-2">
-         <div className={`comment ${isLast ? "" : "border-b"} border-border dark:border-border-dark flex-1 px-3 py-3 md:px-6 md:py-4`}>
+         <div
+            className={`comment ${isLast ? "" : "border-b"} border-border dark:border-border-dark flex-1 px-3 py-3 md:px-4 md:py-4`}>
             <div className="flex justify-between items-start text-text dark:text-text-dark text-xs mb-1">
                <div>
                   <UserChip
                      avatar={u?.avatar || ""}
                      handle={u?.handle ?? c.author}
                      fullName={u?.name ?? c.author}
-                     onClickName={openProfile ? () => openProfile(c.author) : undefined}
+                     onClickName={
+                        openProfile ? () => openProfile(c.author) : undefined
+                     }
                      variant="flat"
                   />
                </div>
@@ -72,51 +73,56 @@ export default function Comment({
                      {timeBetween(c.ts)} ago
                   </span>
                   {!isEditing && (
-
                      <div className="inline-flex items-center rounded-full flex-wrap bg-bg dark:bg-bg-dark border border-border dark:border-border-dark">
                         <IconBtn
                            icon={Heart}
                            label="Like"
                            onClick={() => onLike(c._id)}
-                           count={(c.likedBy || []).length > 0 ? (c.likedBy || []).length : undefined}
-                           active={!!(c.likedBy || []).includes(user?.uuid || "")}
+                           count={
+                              (c.likedBy || []).length > 0
+                                 ? (c.likedBy || []).length
+                                 : undefined
+                           }
+                           active={
+                              !!(c.likedBy || []).includes(user?.uuid || "")
+                           }
                         />
-                        {isCurrentUser && (<>
-                           <span className="mx-1 h-3 border-l border-border dark:border-border-dark inline-block align-middle" />
+                        {isCurrentUser && (
+                           <>
+                              <span className="mx-1 h-3 border-l border-border dark:border-border-dark inline-block align-middle" />
 
-                           <IconBtn
-                              icon={Edit2}
-                              label="Edit"
-                              onClick={startEditing}
-                              title="Edit comment"
-                           />
-                           <IconBtn
-                              icon={Trash2}
-                              className="hover:bg-red-600"
-                              danger
-                              label="Delete"
-                              onClick={() => onDelete(c._id)}
-                              title="Delete comment"
-                           /></>)}
-
+                              <IconBtn
+                                 icon={Edit2}
+                                 label="Edit"
+                                 onClick={startEditing}
+                                 title="Edit comment"
+                              />
+                              <IconBtn
+                                 icon={Trash2}
+                                 className="hover:bg-red-600"
+                                 danger
+                                 label="Delete"
+                                 onClick={() => onDelete(c._id)}
+                                 title="Delete comment"
+                              />
+                           </>
+                        )}
                      </div>
                   )}
                   {isEditing && (
                      <div className="inline-flex items-center rounded-full flex-wrap bg-bg dark:bg-bg-dark border border-border dark:border-border-dark">
-                           <IconBtn
-                              icon={Check}
-                              label="Save"
-                              onClick={handleEditComment}
-                           />
-                           <IconBtn
-                              icon={X}
-                              label="Cancel"
-                              onClick={cancelEditing}
-                           />
-                        </div>
-
-                     )
-                  }
+                        <IconBtn
+                           icon={Check}
+                           label="Save"
+                           onClick={handleEditComment}
+                        />
+                        <IconBtn
+                           icon={X}
+                           label="Cancel"
+                           onClick={cancelEditing}
+                        />
+                     </div>
+                  )}
                </div>
             </div>
 
@@ -125,8 +131,8 @@ export default function Comment({
                   <InputField
                      className="input bg-background dark:bg-background-dark mb-2"
                      value={editText}
-                     onChange={e => setEditText(e.target.value)}
-                     onKeyDown={e => {
+                     onChange={(e) => setEditText(e.target.value)}
+                     onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                            e.preventDefault();
                            handleEditComment();
@@ -137,7 +143,9 @@ export default function Comment({
                   />
                </div>
             ) : (
-               <div className="mt-1 ml-10 mb-1 whitespace-pre-wrap">{c.text}</div>
+               <div className="mt-1 ml-10 mb-1 whitespace-pre-wrap">
+                  {c.text}
+               </div>
             )}
             <span className="ml-10 text-xs opacity-[.75] block md:hidden">
                {timeBetween(c.ts)} ago

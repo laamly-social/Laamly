@@ -53,7 +53,7 @@ Respond ONLY with valid JSON in this format:
   "tags": ["tag1", "tag2", "tag3"]
 }
 Instructions:
-- Generate 5-8 relevant hashtags for "tags" (no spaces; use PascalCase or underscores for multi-word tags. Don't make them all caps)
+- Generate 5-8 relevant hashtags for "tags" (no spaces; use PascalCase or underscores for multi-word tags. Do not make them all-caps)
 - Set "isHalal" to false if any haram content is detected, true otherwise
 - Do NOT include any extra text, markdown, or explanation. The output will be parsed directly.
 Post text: ${postText}`;
@@ -383,10 +383,10 @@ module.exports = function createPostsRouter(io, userSockets) {
 
       // Track views even for anonymous users - use a session ID or IP if user not logged in
       const viewerId = req.session.user ? String(req.session.user.uuid) : `anon-${req.ip}`;
-      
+
       post.viewedBy = post.viewedBy || [];
       const viewedBySet = new Set(post.viewedBy.map(String));
-      
+
       // Only increment if this viewer hasn't viewed before
       if (!viewedBySet.has(viewerId)) {
         viewedBySet.add(viewerId);
@@ -524,7 +524,7 @@ module.exports = function createPostsRouter(io, userSockets) {
       if (!comment) return res.status(404).json({ message: 'Comment not found' });
 
       const userId = String(req.session.user.uuid);
-      
+
       // Initialize likedBy array if it doesn't exist
       if (!comment.likedBy) {
         comment.likedBy = [];
@@ -539,7 +539,7 @@ module.exports = function createPostsRouter(io, userSockets) {
       } else {
         // Like the comment
         comment.likedBy.push(userId);
-        
+
         // Send notification to comment author if it's not the current user
         if (String(comment.author) !== userId) {
           const user = await User.findOne(qByUuid(req.session.user.uuid)).lean();
@@ -558,7 +558,7 @@ module.exports = function createPostsRouter(io, userSockets) {
 
       await post.save();
 
-      return res.json({ 
+      return res.json({
         message: isLiked ? 'Comment unliked' : 'Comment liked',
         isLiked: !isLiked,
         likeCount: comment.likedBy.length

@@ -77,6 +77,7 @@ const MONGODB_URI =
 const User = require("./models/User");
 const Chat = require("./models/Chat");
 const Feedback = require("./models/Feedback");
+const { sendNotification } = require("./utils/notifications");
 
 // Helper: Upload image from URL to Pictshare
 async function uploadImageToPictshare(imageUrl) {
@@ -488,17 +489,42 @@ app.post("/api/users/:userId/follow", async (req, res) => {
       // UNFOLLOW
       me.following = me.following.filter((id) => id !== userId);
       target.followers = target.followers.filter((id) => id !== viewerUuid);
+
+      // Send unfollow notification
+      await sendNotification(io, userSockets, {
+        to: userId,
+        type: "unfollow",
+        from: viewerUuid,
+        fromName: me.profile?.name || me.handle || "Someone",
+        fromAvatar: me.profile?.avatar || "",
+        contentId: viewerUuid,
+        contentType: "user",
+        message: `${me.profile?.name || me.handle || "Someone"} unfollowed you`
+      });
     } else {
       // FOLLOW
       me.following = Array.from(new Set([...me.following, userId]));
       target.followers = Array.from(new Set([...target.followers, viewerUuid]));
+
+      // Send follow notification
+      await sendNotification(io, userSockets, {
+        to: userId,
+        type: "follow",
+        from: viewerUuid,
+        fromName: me.profile?.name || me.handle || "Someone",
+        fromAvatar: me.profile?.avatar || "",
+        contentId: viewerUuid,
+        contentType: "user",
+        message: `${me.profile?.name || me.handle || "Someone"} started following you`
+      });
     }
 
     await Promise.all([me.save(), target.save()]);
 
     res.json({
       isFollowing: !alreadyFollowing,
-      followersCount: target.followers.length,
+      followerCount: target.followers.length,
+      followingCount: me.following.length,
     });
   } catch (error) {
     console.error("Error toggling follow:", error);

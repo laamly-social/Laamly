@@ -1,9 +1,14 @@
 // src/components/feed/CommentsList.tsx
 // @ts-nocheck
 import { useState } from "react";
-import { createComment, editComment, deleteComment, likeComment } from "../../utils/comments";
+import {
+   createComment,
+   editComment,
+   deleteComment,
+   likeComment
+} from "../../utils/comments";
 import InputField from "../ui/InputField";
-import GenericButton from "../ui/GenericButton";
+import StyledButton from "../ui/StyleButton";
 import Comment from "./Comment";
 import type { Post as PostType, User } from "../../types";
 
@@ -15,14 +20,24 @@ interface Props {
    openProfile?: (uid: string) => void;
 }
 
-export default function CommentsList({ post, user, onAdd, showList = true, openProfile }: Props) {
+export default function CommentsList({
+   post,
+   user,
+   onAdd,
+   showList = true,
+   openProfile
+}: Props) {
    const [draft, setDraft] = useState("");
    const [comments, setComments] = useState(() =>
       (post.comments || []).map((c: any) => ({
          ...c,
          text: c.content ?? c.text ?? "",
-         ts: c.datePosted ? new Date(c.datePosted).getTime() : (typeof c.ts === "number" ? c.ts : Date.now()),
-         likedBy: c.likedBy || [],
+         ts: c.datePosted
+            ? new Date(c.datePosted).getTime()
+            : typeof c.ts === "number"
+              ? c.ts
+              : Date.now(),
+         likedBy: c.likedBy || []
       }))
    );
 
@@ -50,14 +65,17 @@ export default function CommentsList({ post, user, onAdd, showList = true, openP
                   handle: data.currentUser.handle,
                   name: data.currentUser.name,
                   avatar: data.currentUser.avatar,
-                  isCurrentUser: true,
-               },
+                  isCurrentUser: true
+               }
             };
-            setComments(prev => [...prev, newComment]);
+            setComments((prev) => [...prev, newComment]);
             setDraft("");
             onAdd?.(post._id!, text);
          } else {
-            console.error("Failed to add comment:", data?.message || "Unknown error");
+            console.error(
+               "Failed to add comment:",
+               data?.message || "Unknown error"
+            );
          }
       } catch (err) {
          console.error("Error adding comment:", err);
@@ -67,8 +85,8 @@ export default function CommentsList({ post, user, onAdd, showList = true, openP
    const handleEditComment = async (commentId: string, text: string) => {
       try {
          await editComment(post._id!, commentId, text);
-         setComments(prev =>
-            prev.map(c =>
+         setComments((prev) =>
+            prev.map((c) =>
                c._id === commentId ? { ...c, text, content: text } : c
             )
          );
@@ -83,7 +101,7 @@ export default function CommentsList({ post, user, onAdd, showList = true, openP
 
       try {
          await deleteComment(post._id!, commentId);
-         setComments(prev => prev.filter(c => c._id !== commentId));
+         setComments((prev) => prev.filter((c) => c._id !== commentId));
       } catch (err) {
          console.error("Error deleting comment:", err);
          alert("Failed to delete comment. Please try again.");
@@ -93,15 +111,17 @@ export default function CommentsList({ post, user, onAdd, showList = true, openP
    const handleLikeComment = async (commentId: string) => {
       try {
          const data = await likeComment(post._id!, commentId);
-         setComments(prev =>
-            prev.map(c =>
+         setComments((prev) =>
+            prev.map((c) =>
                c._id === commentId
                   ? {
-                     ...c,
-                     likedBy: data.isLiked
-                        ? [...(c.likedBy || []), user?.uuid || ""]
-                        : (c.likedBy || []).filter((id: string) => id !== user?.uuid),
-                  }
+                       ...c,
+                       likedBy: data.isLiked
+                          ? [...(c.likedBy || []), user?.uuid || ""]
+                          : (c.likedBy || []).filter(
+                               (id: string) => id !== user?.uuid
+                            )
+                    }
                   : c
             )
          );
@@ -153,7 +173,7 @@ function CreateComment({
    draft,
    setDraft,
    addComment,
-   onAdd,
+   onAdd
 }: {
    user: User | null;
    postId: string;
@@ -171,21 +191,20 @@ function CreateComment({
             className="input bg-muted dark:bg-muted-dark"
             placeholder="Write a comment…"
             value={draft}
-            onChange={e => setDraft(e.target.value)}
-            onKeyDown={e => {
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
                if (e.key === "Enter") {
                   e.preventDefault();
                   addComment();
                }
             }}
          />
-         <GenericButton
-            className="inline-flex gap-2 items-center justify-center h-9 px-3 bg-accent text-white cursor-pointer disabled:bg-muted disabled:dark:bg-muted-dark disabled:text-sub dark:disabled:text-sub-dark"
+         <StyledButton
+            label="Post"
+            variant="primary"
             disabled={!draft.trim()}
             onClick={addComment}
-         >
-            Post
-         </GenericButton>
+         />
       </div>
    );
 }

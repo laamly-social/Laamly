@@ -1,7 +1,7 @@
 // src/components/feed/CreatePost.tsx
 import React, { useRef, useState } from "react";
 import Card from "../ui/Card";
-import GenericButton from "../ui/GenericButton";
+import StyledButton from "../ui/StyleButton";
 import { createPost, uploadImages } from "../../utils/posts";
 import { X } from "lucide-react"; // Still useful if you want a main close button, but we'll use it for image previews too
 
@@ -27,15 +27,17 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
 
    // Helper to revoke old URLs and create new ones
    const updatePreviews = (currentFiles: File[]) => {
-      previews.forEach(u => URL.revokeObjectURL(u)); // Revoke existing preview URLs
-      setPreviews(currentFiles.map(f => URL.createObjectURL(f)));
+      previews.forEach((u) => URL.revokeObjectURL(u)); // Revoke existing preview URLs
+      setPreviews(currentFiles.map((f) => URL.createObjectURL(f)));
    };
 
    const handleSetFiles = (newFiles: File[]) => {
       setError(null);
       let combined = [...files, ...newFiles];
       if (combined.length > MAX_MEDIA) {
-         setError(`You can attach up to ${MAX_MEDIA} items. Keeping the first ${MAX_MEDIA}.`);
+         setError(
+            `You can attach up to ${MAX_MEDIA} items. Keeping the first ${MAX_MEDIA}.`
+         );
          combined = combined.slice(0, MAX_MEDIA);
       }
       setFiles(combined);
@@ -47,7 +49,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
       handleSetFiles(picked);
       // Clear the input value so the same file can be selected again if needed
       if (fileInputRef.current) {
-         fileInputRef.current.value = '';
+         fileInputRef.current.value = "";
       }
    };
 
@@ -58,7 +60,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
       updatePreviews(updatedFiles); // Update previews after removal
       // If the last file was removed, also reset the file input
       if (updatedFiles.length === 0 && fileInputRef.current) {
-         fileInputRef.current.value = '';
+         fileInputRef.current.value = "";
       }
    };
 
@@ -67,7 +69,9 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
-      const droppedFiles = e.dataTransfer.files ? Array.from(e.dataTransfer.files) : [];
+      const droppedFiles = e.dataTransfer.files
+         ? Array.from(e.dataTransfer.files)
+         : [];
       handleSetFiles(droppedFiles);
    };
 
@@ -88,7 +92,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
       setText(e.target.value);
       const el = textareaRef.current;
       if (el) {
-         el.style.height = 'auto';
+         el.style.height = "auto";
          el.style.height = `${el.scrollHeight}px`;
       }
    };
@@ -103,38 +107,38 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
       try {
          // Upload ALL files (images + videos) to PictShare to get URLs
          const urls = files.length > 0 ? await uploadImages(files) : [];
-         
+
          // Filter to get only image URLs for AI analysis
          const imageUrls = [];
          let urlIndex = 0;
-         
+
          for (let i = 0; i < files.length; i++) {
-            if (files[i].type.startsWith('image/') && urls[urlIndex]) {
+            if (files[i].type.startsWith("image/") && urls[urlIndex]) {
                imageUrls.push(urls[urlIndex]);
             }
             urlIndex++;
          }
-         
+
          // Send to backend - backend will fetch images from PictShare URLs
-         const response = await createPost({ 
-            content: text, 
+         const response = await createPost({
+            content: text,
             imageUrls,
             urls,
-            meId 
+            meId
          });
 
          // Reset state
-         previews.forEach(u => URL.revokeObjectURL(u));
+         previews.forEach((u) => URL.revokeObjectURL(u));
          setText("");
          setFiles([]);
          setPreviews([]);
          if (fileInputRef.current) fileInputRef.current.value = "";
-         if (textareaRef.current) textareaRef.current.style.height = 'auto';
-         
+         if (textareaRef.current) textareaRef.current.style.height = "auto";
+
          // Show success message
          setSuccess(true);
          setTimeout(() => setSuccess(false), 3000);
-         
+
          onPosted?.();
       } catch (err) {
          console.error("Failed to create post:", err);
@@ -157,8 +161,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
                      type="button"
                      onClick={onClose}
                      className="p-1 rounded-full hover:bg-muted dark:hover:bg-muted-dark"
-                     aria-label="Close"
-                  >
+                     aria-label="Close">
                      <X size={18} />
                   </button>
                )}
@@ -186,26 +189,46 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
                />
 
                <div
-                  className={`upload-preview-area bg-muted dark:bg-muted-dark border-border dark:border-border-dark border-2 border-dashed mt-1 rounded-md p-4 text-center transition-all ${isDragging
-                     ? 'inset-shadow-sm shadow-close-h-dark ring-2 ring-blue-500'
-                     : 'bg-close-h-light dark:bg-close-h-dark hover:inset-shadow-sm shadow-close-h-dark'
-                     } text-close-b-dark dark:text-close-b-light cursor-pointer`}
+                  className={`upload-preview-area bg-muted dark:bg-muted-dark border-border dark:border-border-dark border-2 border-dashed mt-1 rounded-md p-4 text-center transition-all ${
+                     isDragging
+                        ? "inset-shadow-sm shadow-close-h-dark ring-2 ring-blue-500"
+                        : "bg-close-h-light dark:bg-close-h-dark hover:inset-shadow-sm shadow-close-h-dark"
+                  } text-close-b-dark dark:text-close-b-light cursor-pointer`}
                   onDrop={dropHandler}
                   onDragOver={dragOverHandler}
                   onDragLeave={dragLeaveHandler}
-                  onClick={() => fileInputRef.current?.click()}
-               >
+                  onClick={() => fileInputRef.current?.click()}>
                   {previews.length > 0 ? (
-                     <div className="grid gap-2" style={{ gridTemplateColumns: previews.length === 1 ? "1fr" : "repeat(auto-fill, minmax(120px, 1fr))" }}>
+                     <div
+                        className="grid gap-2"
+                        style={{
+                           gridTemplateColumns:
+                              previews.length === 1
+                                 ? "1fr"
+                                 : "repeat(auto-fill, minmax(120px, 1fr))"
+                        }}>
                         {files.map((file, i) => {
                            const src = previews[i];
                            const isVid = file.type.startsWith("video/");
                            return (
-                              <div key={i} className="relative rounded-xl overflow-hidden group"> {/* Added group for hover effects */}
+                              <div
+                                 key={i}
+                                 className="relative rounded-xl overflow-hidden group">
+                                 {" "}
+                                 {/* Added group for hover effects */}
                                  {isVid ? (
-                                    <video src={src} className="w-full h-full object-cover" muted playsInline />
+                                    <video
+                                       src={src}
+                                       className="w-full h-full object-cover"
+                                       muted
+                                       playsInline
+                                    />
                                  ) : (
-                                    <img src={src} className="w-full h-full object-cover" alt={`preview-${i}`} />
+                                    <img
+                                       src={src}
+                                       className="w-full h-full object-cover"
+                                       alt={`preview-${i}`}
+                                    />
                                  )}
                                  {/* X button for each image */}
                                  <button
@@ -215,8 +238,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
                                        removeFile(i);
                                     }}
                                     className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    aria-label={`Remove image ${i + 1}`}
-                                 >
+                                    aria-label={`Remove image ${i + 1}`}>
                                     <X size={16} />
                                  </button>
                               </div>
@@ -240,15 +262,15 @@ const CreatePost: React.FC<CreatePostProps> = ({ meId, onPosted, onClose }) => {
                   </div>
                )}
 
-               <div className="mt-4 clearfix">
-                  <GenericButton
+               <div className="mt-4 text-right">
+                  <StyledButton
                      type="submit"
-                     className="transition-all p-2 min-w-20 mb-4 border bg-close-light dark:bg-close-dark border-close-b-light dark:border-close-b-dark rounded-md float-right border-accent
-                hover:bg-accent hover:text-white hover:border-muted hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                     label={uploading ? "Posting..." : "Post"}
+                     variant="primary"
+                     onClick={() => {}}
                      disabled={uploading}
-                  >
-                     {uploading ? "Posting..." : "Post"}
-                  </GenericButton>
+                     className="w-full md:w-1/3"
+                  />
                </div>
             </div>
          </form>

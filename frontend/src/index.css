@@ -23,7 +23,6 @@
    --color-linklike-dark: #c9d3ff;
 }
 
-
 :root {
    --muted: #171a22;
    --text: #e9ecf2;
@@ -39,7 +38,8 @@
    box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
    margin: 0;
    padding: 0;
    width: 100%;
@@ -72,12 +72,12 @@ body.dark {
 
    /* Hide scrollbar but keep functionality */
    .scrollbar-hide {
-      -ms-overflow-style: none;  /* IE and Edge */
-      scrollbar-width: none;  /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+      scrollbar-width: none; /* Firefox */
    }
 
    .scrollbar-hide::-webkit-scrollbar {
-      display: none;  /* Chrome, Safari and Opera */
+      display: none; /* Chrome, Safari and Opera */
    }
 
    /* Lightbox for image preview */
@@ -98,7 +98,6 @@ body.dark {
 
    /* Typing indicator animation */
    @keyframes blip {
-
       0%,
       80%,
       100% {

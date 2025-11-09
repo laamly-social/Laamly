@@ -1,6 +1,15 @@
 // src/components/reels/ReelItem.tsx
 // @ts-nocheck
-import { VolumeX, Volume2, Heart, Bookmark, Share2, MessageSquare, Trash2, Eye } from "lucide-react";
+import {
+   VolumeX,
+   Volume2,
+   Heart,
+   Bookmark,
+   Share2,
+   MessageSquare,
+   Trash2,
+   Eye
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import Card from "../ui/Card";
 import Avatar from "../ui/Avatar";
@@ -56,13 +65,16 @@ export default function ReelItem({
 
    const handleShare = () => {
       const url = `${window.location.origin}/reel/${reel.id}`;
-      navigator.clipboard.writeText(url).then(() => {
-         setShowCopied(true);
-         setTimeout(() => setShowCopied(false), 2000);
-      }).catch((err) => {
-         console.error("Failed to copy:", err);
-         alert("Failed to copy link");
-      });
+      navigator.clipboard
+         .writeText(url)
+         .then(() => {
+            setShowCopied(true);
+            setTimeout(() => setShowCopied(false), 2000);
+         })
+         .catch((err) => {
+            console.error("Failed to copy:", err);
+            alert("Failed to copy link");
+         });
    };
 
    return (
@@ -73,9 +85,8 @@ export default function ReelItem({
          style={{
             height: "100vh",
             width: "100%",
-            scrollSnapAlign: "start",
-         }}
-      >
+            scrollSnapAlign: "start"
+         }}>
          {/* Stage 9:16; maximize screen on mobile, rounded on desktop */}
          <div
             className="relative overflow-hidden md:rounded-[18px]"
@@ -84,10 +95,9 @@ export default function ReelItem({
                height: "100%",
                maxHeight: "100vh",
                width: "auto",
-               maxWidth: "100%",
+               maxWidth: "100%"
             }}
-            data-idx={index}
-         >
+            data-idx={index}>
             <video
                src={reel.src + "/raw"}
                className="absolute inset-0 w-full h-full object-cover"
@@ -100,7 +110,10 @@ export default function ReelItem({
             />
 
             {/* Blur helper layer - needed because backdrop-filter doesn't work over video */}
-            <div className="absolute inset-0 pointer-events-none" style={{ backdropFilter: 'blur(0px)' }} />
+            <div
+               className="absolute inset-0 pointer-events-none"
+               style={{ backdropFilter: "blur(0px)" }}
+            />
 
             {/* Action rail */}
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10">
@@ -118,7 +131,9 @@ export default function ReelItem({
                         onClick={() => onLike(reel.id)}
                         active={reel.liked}
                      />
-                     <div className="text-center text-xs text-white drop-shadow">{reel.likes ?? 0}</div>
+                     <div className="text-center text-xs text-white drop-shadow">
+                        {reel.likes ?? 0}
+                     </div>
                   </>
                )}
 
@@ -128,11 +143,10 @@ export default function ReelItem({
                   onClick={() => toggleComments(reel)}
                />
 
-               <ActionButton
-                  title="Views"
-                  Icon={Eye}
-               />
-               <div className="text-center text-xs text-white drop-shadow">{viewCount}</div>
+               <ActionButton title="Views" Icon={Eye} />
+               <div className="text-center text-xs text-white drop-shadow">
+                  {viewCount}
+               </div>
 
                <div className="relative">
                   <ActionButton
@@ -160,13 +174,17 @@ export default function ReelItem({
             <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4">
                <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/60 to-transparent" />
                <div className="relative flex items-center gap-3 text-white">
-                  <Avatar src={reel.authorInfo?.avatar || ""} alt={reel.authorInfo?.name || ""} />
+                  <Avatar
+                     src={reel.authorInfo?.avatar || ""}
+                     alt={reel.authorInfo?.name || ""}
+                  />
                   <div>
                      <div className="font-semibold leading-tight">
                         {reel.authorInfo?.name || "Unknown"}
                      </div>
                      <div className="text-sm opacity-80 leading-tight">
-                        @{reel.authorInfo?.handle || "unknown"} {reel.title ? `• ${reel.title}` : ""}
+                        @{reel.authorInfo?.handle || "unknown"}{" "}
+                        {reel.title ? `• ${reel.title}` : ""}
                      </div>
                   </div>
                </div>
@@ -190,15 +208,14 @@ interface ActionButtonProps {
 
 function ActionButton({ title, Icon, onClick, active }: ActionButtonProps) {
    const isHeart = Icon === Heart;
-   
+
    return (
       <button
          className={`bg-white/35 hover:bg-white/45 dark:bg-black/35 hover:dark:bg-black/45 text-white backdrop-blur-2xl rounded-full h-11 w-11 grid place-items-center relative ${
-            active && isHeart ? 'text-red-500' : ''
+            active && isHeart ? "text-red-500" : ""
          }`}
          title={title}
-         onClick={onClick}
-      >
+         onClick={onClick}>
          {isHeart && active ? (
             <Icon size={18} fill="currentColor" />
          ) : (

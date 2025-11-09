@@ -1,26 +1,26 @@
 {
-  "name": "Laamly - Instagram but Sharia Compliant",
-  "short_name": "Laamly",
-  "description": "A Sharia-compliant social media platform for sharing posts, reels, and connecting with others",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1a1a1a",
-  "orientation": "portrait-primary",
-  "icons": [
-    {
-      "src": "/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "categories": ["social", "lifestyle"],
-  "prefer_related_applications": false
+   "name": "Laamly - Instagram but Sharia Compliant",
+   "short_name": "Laamly",
+   "description": "A Sharia-compliant social media platform for sharing posts, reels, and connecting with others",
+   "start_url": "/",
+   "display": "standalone",
+   "background_color": "#ffffff",
+   "theme_color": "#1a1a1a",
+   "orientation": "portrait-primary",
+   "icons": [
+      {
+         "src": "/icon-192x192.png",
+         "sizes": "192x192",
+         "type": "image/png",
+         "purpose": "any maskable"
+      },
+      {
+         "src": "/icon-512x512.png",
+         "sizes": "512x512",
+         "type": "image/png",
+         "purpose": "any maskable"
+      }
+   ],
+   "categories": ["social", "lifestyle"],
+   "prefer_related_applications": false
 }

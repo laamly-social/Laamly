@@ -1,11 +1,28 @@
 import { useEffect, useRef, useState } from "react";
-import { Paperclip, Send, X, File, Video, Edit2, Trash2, SmilePlus, Bell, MoreHorizontal, Settings } from "lucide-react";
+import {
+   Paperclip,
+   Send,
+   X,
+   File,
+   Video,
+   Edit2,
+   Trash2,
+   SmilePlus,
+   Bell,
+   MoreHorizontal,
+   Settings
+} from "lucide-react";
 import { clsx, formatDate, formatTimeFromDate } from "../../utils";
 import UserChip from "../ui/UserChip";
 import InputField from "../ui/InputField";
 import GenericButton from "../ui/GenericButton";
 import { uploadFiles, getFileType } from "../../utils/uploads";
-import { sendMessage as sendMessageAPI, reactToMessage, editMessage as editMessageAPI, deleteMessage } from "../../utils/messages";
+import {
+   sendMessage as sendMessageAPI,
+   reactToMessage,
+   editMessage as editMessageAPI,
+   deleteMessage
+} from "../../utils/messages";
 import { getSocket } from "../../utils/socket";
 import type { Thread, DM } from "../../types";
 
@@ -22,22 +39,44 @@ interface MessageProps {
    senderAvatar?: string;
 }
 
-function Message({ message, mine, onReact, onEdit, onDelete, onContextMenu, showHeader, senderName, senderHandle, senderAvatar }: MessageProps) {
+function Message({
+   message,
+   mine,
+   onReact,
+   onEdit,
+   onDelete,
+   onContextMenu,
+   showHeader,
+   senderName,
+   senderHandle,
+   senderAvatar
+}: MessageProps) {
    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-   const commonEmojis = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "✅", "💀", "😭"];
+   const commonEmojis = [
+      "👍",
+      "❤️",
+      "😂",
+      "😮",
+      "😢",
+      "🙏",
+      "🔥",
+      "✅",
+      "💀",
+      "😭"
+   ];
 
    useEffect(() => {
       const handleClick = () => setShowEmojiPicker(false);
       if (showEmojiPicker) {
-         document.addEventListener('click', handleClick);
-         return () => document.removeEventListener('click', handleClick);
+         document.addEventListener("click", handleClick);
+         return () => document.removeEventListener("click", handleClick);
       }
    }, [showEmojiPicker]);
 
    // Determine if message was sent in the last day
    const messageDate = new Date(message.ts);
    const now = Date.now();
-   const isWithinLastDay = (now - message.ts) < 86400000; // 24 hours in milliseconds
+   const isWithinLastDay = now - message.ts < 86400000; // 24 hours in milliseconds
 
    const timeDisplay = isWithinLastDay
       ? formatTimeFromDate(messageDate, "12")
@@ -71,18 +110,25 @@ function Message({ message, mine, onReact, onEdit, onDelete, onContextMenu, show
                         e.preventDefault();
                         onContextMenu(message.id, e.clientX, e.clientY);
                      }
-                  }}
-               >
+                  }}>
                   {message.text && (
                      <div className="whitespace-pre-wrap leading-[1.4]">
                         {message.text}
-                        {message.edited && <span className="ml-2 text-[11px] opacity-60 italic">(edited)</span>}
+                        {message.edited && (
+                           <span className="ml-2 text-[11px] opacity-60 italic">
+                              (edited)
+                           </span>
+                        )}
                         {/* time */}
                         <span className={clsx("mx-2 font-mono")}>
                            <time className={clsx("text-[11px] opacity-70")}>
                               {timeDisplay}
                            </time>
-                           {mine && message.read && <span className="text-[11px] opacity-70 ml-1">✓✓</span>}
+                           {mine && message.read && (
+                              <span className="text-[11px] opacity-70 ml-1">
+                                 ✓✓
+                              </span>
+                           )}
                         </span>
                      </div>
                   )}
@@ -92,33 +138,38 @@ function Message({ message, mine, onReact, onEdit, onDelete, onContextMenu, show
                            const fileType = getFileType(url);
                            return (
                               <div key={idx}>
-                                 {fileType === 'image' && (
+                                 {fileType === "image" && (
                                     <img
                                        src={url}
                                        alt="attachment"
                                        className="max-w-full rounded-xl max-h-80 object-cover cursor-pointer hover:opacity-95 transition"
-                                       onClick={() => window.open(url, '_blank')}
+                                       onClick={() =>
+                                          window.open(url, "_blank")
+                                       }
                                     />
                                  )}
-                                 {fileType === 'video' && (
+                                 {fileType === "video" && (
                                     <video
                                        src={url}
                                        controls
                                        className="max-w-full rounded-xl max-h-80"
                                     />
                                  )}
-                                 {fileType === 'file' && (
+                                 {fileType === "file" && (
                                     <a
                                        href={url}
                                        target="_blank"
                                        rel="noopener noreferrer"
                                        className={clsx(
                                           "flex items-center gap-2 p-2.5 rounded-lg transition",
-                                          mine ? "bg-white/15 hover:bg-white/25" : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
-                                       )}
-                                    >
+                                          mine
+                                             ? "bg-white/15 hover:bg-white/25"
+                                             : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                       )}>
                                        <File size={20} />
-                                       <span className="text-sm">View file</span>
+                                       <span className="text-sm">
+                                          View file
+                                       </span>
                                     </a>
                                  )}
                               </div>
@@ -131,19 +182,30 @@ function Message({ message, mine, onReact, onEdit, onDelete, onContextMenu, show
                         <time className={clsx("text-[11px] opacity-70")}>
                            {timeDisplay}
                         </time>
-                        {mine && message.read && <span className="text-[11px] opacity-70 ml-1">✓✓</span>}
+                        {mine && message.read && (
+                           <span className="text-[11px] opacity-70 ml-1">
+                              ✓✓
+                           </span>
+                        )}
                      </span>
                   )}
                </div>
             </div>
 
             {message.reactions && message.reactions.length > 0 && (
-               <div className={clsx("flex flex-wrap gap-1 mt-1", mine ? "justify-end" : "justify-start")}>
+               <div
+                  className={clsx(
+                     "flex flex-wrap gap-1 mt-1",
+                     mine ? "justify-end" : "justify-start"
+                  )}>
                   {Object.entries(
-                     message.reactions.reduce((acc, r) => {
-                        acc[r.emoji] = (acc[r.emoji] || 0) + 1;
-                        return acc;
-                     }, {} as Record<string, number>)
+                     message.reactions.reduce(
+                        (acc, r) => {
+                           acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                           return acc;
+                        },
+                        {} as Record<string, number>
+                     )
                   ).map(([emoji, count]) => (
                      <button
                         key={emoji}
@@ -152,10 +214,13 @@ function Message({ message, mine, onReact, onEdit, onDelete, onContextMenu, show
                            "px-2 py-1 rounded-xl text-sm flex items-center gap-1 transition-all",
                            "border bg-muted dark:bg-muted-dark border-border dark:border-border-dark shadow-sm hover:shadow-md"
                         )}
-                        title="Click to remove your reaction"
-                     >
+                        title="Click to remove your reaction">
                         <span className="leading-none">{emoji}</span>
-                        {count > 1 && <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">{count}</span>}
+                        {count > 1 && (
+                           <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                              {count}
+                           </span>
+                        )}
                      </button>
                   ))}
                </div>
@@ -171,9 +236,11 @@ function Message({ message, mine, onReact, onEdit, onDelete, onContextMenu, show
                   "opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 transform",
                   mine ? "-left-10" : "-right-10"
                )}
-               title="Add reaction"
-            >
-               <SmilePlus size={16} className="text-gray-600 dark:text-gray-400" />
+               title="Add reaction">
+               <SmilePlus
+                  size={16}
+                  className="text-gray-600 dark:text-gray-400"
+               />
             </button>
 
             {showEmojiPicker && (
@@ -182,15 +249,13 @@ function Message({ message, mine, onReact, onEdit, onDelete, onContextMenu, show
                   className={clsx(
                      "absolute z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl flex gap-1",
                      mine ? "right-0 top-12" : "left-0 top-12"
-                  )}
-               >
-                  {commonEmojis.map(emoji => (
+                  )}>
+                  {commonEmojis.map((emoji) => (
                      <button
                         key={emoji}
                         onClick={() => onReact(message.id, emoji)}
                         className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all transform hover:scale-120"
-                        title={`React with ${emoji}`}
-                     >
+                        title={`React with ${emoji}`}>
                         {emoji}
                      </button>
                   ))}
@@ -208,11 +273,20 @@ interface MessageThreadProps {
    onOpenSettings?: () => void;
 }
 
-export default function MessageThread({ thread, onThreadUpdate, typingUsers, onOpenSettings }: MessageThreadProps) {
+export default function MessageThread({
+   thread,
+   onThreadUpdate,
+   typingUsers,
+   onOpenSettings
+}: MessageThreadProps) {
    const [draft, setDraft] = useState("");
    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
    const [uploading, setUploading] = useState(false);
-   const [contextMenu, setContextMenu] = useState<{ messageId: string; x: number; y: number } | null>(null);
+   const [contextMenu, setContextMenu] = useState<{
+      messageId: string;
+      x: number;
+      y: number;
+   } | null>(null);
    const endRef = useRef<HTMLDivElement | null>(null);
    const fileInputRef = useRef<HTMLInputElement>(null);
    const messageInputRef = useRef<HTMLInputElement>(null);
@@ -237,8 +311,8 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
       const handleClick = () => {
          setContextMenu(null);
       };
-      document.addEventListener('click', handleClick);
-      return () => document.removeEventListener('click', handleClick);
+      document.addEventListener("click", handleClick);
+      return () => document.removeEventListener("click", handleClick);
    }, []);
 
    // Cleanup typing indicator on unmount
@@ -267,7 +341,7 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
    };
 
    const sendMessage = async () => {
-      if ((!draft.trim() && selectedFiles.length === 0)) return;
+      if (!draft.trim() && selectedFiles.length === 0) return;
 
       setUploading(true);
       shouldFocusRef.current = true;
@@ -278,7 +352,8 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
          }
          socket.emit("typing-stop", { threadId: thread.id });
 
-         const attachments = selectedFiles.length > 0 ? await uploadFiles(selectedFiles) : [];
+         const attachments =
+            selectedFiles.length > 0 ? await uploadFiles(selectedFiles) : [];
 
          const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -294,7 +369,9 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
             ...thread,
             unread: false,
             messages: [...thread.messages, msg],
-            last: msg.text || `${attachments.length} file${attachments.length > 1 ? 's' : ''}`,
+            last:
+               msg.text ||
+               `${attachments.length} file${attachments.length > 1 ? "s" : ""}`,
             lastTs: msg.ts
          };
          onThreadUpdate(updatedThread);
@@ -302,12 +379,16 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
          setDraft("");
          setSelectedFiles([]);
 
-         const response = await sendMessageAPI(thread.id, msg.text, attachments);
+         const response = await sendMessageAPI(
+            thread.id,
+            msg.text,
+            attachments
+         );
 
          if (response.messageId) {
             const finalThread = {
                ...updatedThread,
-               messages: updatedThread.messages.map(m =>
+               messages: updatedThread.messages.map((m) =>
                   m.id === tempId ? { ...m, id: response.messageId } : m
                )
             };
@@ -322,14 +403,14 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
 
    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
-      setSelectedFiles(prev => [...prev, ...files]);
+      setSelectedFiles((prev) => [...prev, ...files]);
       if (fileInputRef.current) {
-         fileInputRef.current.value = '';
+         fileInputRef.current.value = "";
       }
    };
 
    const removeFile = (index: number) => {
-      setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+      setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
    };
 
    const handleReaction = async (messageId: string, emoji: string) => {
@@ -361,8 +442,9 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
 
    const getThreadTitle = () => {
       if (thread.isGroup && thread.groupName) return thread.groupName;
-      if (!thread.participants || thread.participants.length === 0) return "Unknown";
-      return thread.participants.map(p => p.name).join(", ");
+      if (!thread.participants || thread.participants.length === 0)
+         return "Unknown";
+      return thread.participants.map((p) => p.name).join(", ");
    };
 
    const getThreadAvatar = () => {
@@ -391,8 +473,7 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
                      <button
                         onClick={onOpenSettings}
                         className="p-1.5 hover:text-text dark:hover:text-text-dark hover:bg-muted dark:hover:bg-muted-dark rounded-lg transition"
-                        aria-label="Chat settings"
-                     >
+                        aria-label="Chat settings">
                         <Settings size={18} />
                      </button>
                   )}
@@ -408,13 +489,18 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 bg-[linear-gradient(180deg,#dadada_0%,#ffffff_100%)] dark:bg-[linear-gradient(180deg,#12141a_0%,#090a0d_100%)]">
                {thread.messages.map((m, index) => {
                   const mine = m.from === "me";
-                  const prevMessage = index > 0 ? thread.messages[index - 1] : null;
-                  const showHeader = !mine && (!prevMessage || prevMessage.from !== m.from);
+                  const prevMessage =
+                     index > 0 ? thread.messages[index - 1] : null;
+                  const showHeader =
+                     !mine && (!prevMessage || prevMessage.from !== m.from);
 
                   // Get sender info from participants
-                  const sender = !mine && thread.participants
-                     ? thread.participants.find(p => p.id === m.from || p.githubId === m.from)
-                     : null;
+                  const sender =
+                     !mine && thread.participants
+                        ? thread.participants.find(
+                             (p) => p.id === m.from || p.githubId === m.from
+                          )
+                        : null;
 
                   return (
                      <Message
@@ -424,7 +510,9 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
                         onReact={handleReaction}
                         onEdit={handleEditMessage}
                         onDelete={handleDeleteMessage}
-                        onContextMenu={(messageId, x, y) => setContextMenu({ messageId, x, y })}
+                        onContextMenu={(messageId, x, y) =>
+                           setContextMenu({ messageId, x, y })
+                        }
                         showHeader={showHeader}
                         senderName={sender?.name}
                         senderHandle={sender?.handle}
@@ -457,8 +545,8 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
                {selectedFiles.length > 0 && (
                   <div className="flex flex-wrap gap-2 p-2 bg-muted dark:bg-muted-dark rounded-lg">
                      {selectedFiles.map((file, idx) => {
-                        const isImage = file.type.startsWith('image/');
-                        const isVideo = file.type.startsWith('video/');
+                        const isImage = file.type.startsWith("image/");
+                        const isVideo = file.type.startsWith("video/");
                         return (
                            <div key={idx} className="relative group">
                               {isImage ? (
@@ -478,8 +566,7 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
                               )}
                               <button
                                  onClick={() => removeFile(idx)}
-                                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                              >
+                                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                                  <X size={14} />
                               </button>
                               <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] p-1 rounded-b-lg truncate">
@@ -504,8 +591,7 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
                      onClick={() => fileInputRef.current?.click()}
                      className="inline-flex gap-2 items-center justify-center bg-transparent text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark h-[40px] w-[40px] p-0 cursor-pointer"
                      aria-label="attach"
-                     disabled={uploading}
-                  >
+                     disabled={uploading}>
                      <Paperclip size={18} />
                   </GenericButton>
                   {/* <GenericButton className="inline-flex gap-2 items-center justify-center bg-transparent text-text dark:text-text-dark hover:bg-muted dark:hover:bg-muted-dark h-[40px] w-[40px] p-0 cursor-pointer" aria-label="emoji">
@@ -517,11 +603,11 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
                      className="input bg-muted dark:bg-muted-dark"
                      placeholder="Message..."
                      value={draft}
-                     onChange={e => {
+                     onChange={(e) => {
                         setDraft(e.target.value);
                         handleTyping();
                      }}
-                     onKeyDown={e => {
+                     onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                            e.preventDefault();
                            sendMessage();
@@ -532,8 +618,10 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
                   <GenericButton
                      className="inline-flex gap-2 items-center justify-center h-9 px-3 bg-accent text-white hover:bg-accent/90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                      onClick={sendMessage}
-                     disabled={uploading || (!draft.trim() && selectedFiles.length === 0)}
-                  >
+                     disabled={
+                        uploading ||
+                        (!draft.trim() && selectedFiles.length === 0)
+                     }>
                      {uploading ? (
                         <>
                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -553,11 +641,12 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
             <div
                className="fixed z-50 bg-panel dark:bg-panel-dark border border-border dark:border-border-dark rounded-lg shadow-xl py-1 min-w-[150px]"
                style={{ top: contextMenu.y, left: contextMenu.x }}
-               onClick={(e) => e.stopPropagation()}
-            >
+               onClick={(e) => e.stopPropagation()}>
                <button
                   onClick={() => {
-                     const message = thread.messages.find(m => m.id === contextMenu.messageId);
+                     const message = thread.messages.find(
+                        (m) => m.id === contextMenu.messageId
+                     );
                      if (message?.text) {
                         const newText = prompt("Edit message:", message.text);
                         if (newText && newText !== message.text) {
@@ -566,15 +655,13 @@ export default function MessageThread({ thread, onThreadUpdate, typingUsers, onO
                      }
                      setContextMenu(null);
                   }}
-                  className="w-full px-4 py-2 text-left hover:bg-muted dark:hover:bg-muted-dark flex items-center gap-2 text-text dark:text-text-dark"
-               >
+                  className="w-full px-4 py-2 text-left hover:bg-muted dark:hover:bg-muted-dark flex items-center gap-2 text-text dark:text-text-dark">
                   <Edit2 size={16} />
                   <span>Edit</span>
                </button>
                <button
                   onClick={() => handleDeleteMessage(contextMenu.messageId)}
-                  className="w-full px-4 py-2 text-left hover:bg-muted dark:hover:bg-muted-dark flex items-center gap-2 text-red-600 dark:text-red-400"
-               >
+                  className="w-full px-4 py-2 text-left hover:bg-muted dark:hover:bg-muted-dark flex items-center gap-2 text-red-600 dark:text-red-400">
                   <Trash2 size={16} />
                   <span>Delete</span>
                </button>

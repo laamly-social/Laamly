@@ -4,34 +4,36 @@ import { apiEndpoint } from "./config";
 import { Header } from "./components/header";
 
 type InitialData = {
-  githubClientId: string | null;
-  googleClientId: string | null;
-  user: { id: string; name: string; avatar: string } | null;
+   githubClientId: string | null;
+   googleClientId: string | null;
+   user: { id: string; name: string; avatar: string } | null;
 };
 
 export default function AppShell() {
-  const [data, setData] = useState<InitialData | null>(null);
+   const [data, setData] = useState<InitialData | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const r = await fetch(apiEndpoint("/api/initial-data"), { credentials: "include" });
-      const j = await r.json();
-      setData({
-        githubClientId: j.githubClientId || null,
-        googleClientId: j.googleClientId || null,
-        user: j.user || null,
-      });
-    })();
-  }, []);
+   useEffect(() => {
+      (async () => {
+         const r = await fetch(apiEndpoint("/api/initial-data"), {
+            credentials: "include"
+         });
+         const j = await r.json();
+         setData({
+            githubClientId: j.githubClientId || null,
+            googleClientId: j.googleClientId || null,
+            user: j.user || null
+         });
+      })();
+   }, []);
 
-  if (!data) return null; // or a loader
+   if (!data) return null; // or a loader
 
-  return (
-    <Header
-      githubClientId={data.githubClientId}
-      googleClientId={data.googleClientId}
-      user={data.user}
-      openProfile={(id) => console.log("openProfile", id)}
-    />
-  );
+   return (
+      <Header
+         githubClientId={data.githubClientId}
+         googleClientId={data.googleClientId}
+         user={data.user}
+         openProfile={(id) => console.log("openProfile", id)}
+      />
+   );
 }

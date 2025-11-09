@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-import { useState } from 'react';
+import { useState } from "react";
 
 const Carousel = ({ urls }) => {
    const [current, setCurrent] = useState(0);
@@ -11,7 +11,9 @@ const Carousel = ({ urls }) => {
 
    const handlePrev = () => {
       // Go to the previous slide, wrapping around if at the start
-      setCurrent((prevCurrent) => (prevCurrent - 1 + urls.length) % urls.length);
+      setCurrent(
+         (prevCurrent) => (prevCurrent - 1 + urls.length) % urls.length
+      );
    };
 
    const handleNext = () => {
@@ -38,19 +40,31 @@ const Carousel = ({ urls }) => {
                break;
          }
          return (
-            <video className="relative max-w-full max-h-full z-10 shadow" controls style={{ background: '#000', width: '100%', height: '100%', objectFit: 'contain' }}>
+            <video
+               className="relative max-w-full max-h-full z-10 shadow"
+               controls
+               style={{
+                  background: "#000",
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain"
+               }}>
                <source src={`${url}/raw`} type={videoMimeType} />
             </video>
          );
       } else {
          return (
             <>
-               <img className="absolute inset-0 w-full h-full object-cover filter blur-lg scale-110 z-0 opacity-75 dark:opacity-25" src={url} alt="blurred background" />
+               <img
+                  className="absolute inset-0 w-full h-full object-cover filter blur-lg scale-110 z-0 opacity-75 dark:opacity-25"
+                  src={url}
+                  alt="blurred background"
+               />
                <img
                   className="relative max-w-full max-h-full z-10 shadow"
                   src={url}
                   alt="media content"
-                  style={{ objectFit: 'contain' }}
+                  style={{ objectFit: "contain" }}
                   onLoad={(e) => {
                      const img = e.target;
                      const container = img.parentElement;
@@ -58,15 +72,18 @@ const Carousel = ({ urls }) => {
                      const containerHeight = container.offsetHeight;
 
                      // Check if image is smaller than container
-                     if (img.naturalHeight < containerHeight || img.naturalWidth < containerWidth) {
+                     if (
+                        img.naturalHeight < containerHeight ||
+                        img.naturalWidth < containerWidth
+                     ) {
                         if (img.naturalHeight > img.naturalWidth) {
                            // Portrait: make it fill height
-                           img.style.height = '100%';
-                           img.style.width = 'auto';
+                           img.style.height = "100%";
+                           img.style.width = "auto";
                         } else {
                            // Landscape: make it fill width
-                           img.style.width = '100%';
-                           img.style.height = 'auto';
+                           img.style.width = "100%";
+                           img.style.height = "auto";
                         }
                      }
                   }}
@@ -81,10 +98,11 @@ const Carousel = ({ urls }) => {
          {/* This div holds all the slides and moves left/right based on the `current` state */}
          <div
             className="flex transition-transform duration-300 ease-in-out"
-            style={{ transform: `translateX(-${current * 100}%)` }}
-         >
+            style={{ transform: `translateX(-${current * 100}%)` }}>
             {urls.map((url, index) => (
-               <div key={index} className="w-full rounded-xl flex-shrink-0 flex justify-center items-center h-[280px] sm:h-[350px] md:h-[400px] relative overflow-hidden">
+               <div
+                  key={index}
+                  className="w-full rounded-xl flex-shrink-0 flex justify-center items-center h-[280px] sm:h-[350px] md:h-[400px] relative overflow-hidden">
                   {renderMedia(url)}
                </div>
             ))}
@@ -97,16 +115,14 @@ const Carousel = ({ urls }) => {
                   type="button"
                   onClick={handlePrev}
                   className="carousel-prev absolute left-2 top-1/2 -translate-y-1/2 bg-gray-200 dark:bg-gray-700 rounded-full p-2 shadow shadow-neutral-800 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-                  aria-label="Previous image"
-               >
+                  aria-label="Previous image">
                   &#8592;
                </button>
                <button
                   type="button"
                   onClick={handleNext}
                   className="carousel-next absolute right-2 top-1/2 -translate-y-1/2 bg-gray-200 dark:bg-gray-700 rounded-full p-2 shadow shadow-neutral-800 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-                  aria-label="Next image"
-               >
+                  aria-label="Next image">
                   &#8594;
                </button>
             </>

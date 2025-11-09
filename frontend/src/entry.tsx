@@ -9,86 +9,97 @@ import { apiEndpoint } from "./config";
 const path = window.location.pathname;
 
 // Extract initial data from URL params (passed from backend)
-function getInitialDataFromURL(): { githubClientId: string | null; user: User | null } | null {
-  const urlParams = new URLSearchParams(window.location.search);
-  const dataParam = urlParams.get('data');
+function getInitialDataFromURL(): {
+   githubClientId: string | null;
+   user: User | null;
+} | null {
+   const urlParams = new URLSearchParams(window.location.search);
+   const dataParam = urlParams.get("data");
 
-  if (dataParam) {
-    try {
-      const parsed = JSON.parse(decodeURIComponent(dataParam));
-      return {
-        githubClientId: parsed.githubClientId || null,
-        user: parsed.user || null
-      };
-    } catch (e) {
-      console.error("Failed to parse initial data:", e);
-    }
-  }
+   if (dataParam) {
+      try {
+         const parsed = JSON.parse(decodeURIComponent(dataParam));
+         return {
+            githubClientId: parsed.githubClientId || null,
+            user: parsed.user || null
+         };
+      } catch (e) {
+         console.error("Failed to parse initial data:", e);
+      }
+   }
 
-  return null;
+   return null;
 }
 
 // Fetch initial data from API if not in URL
-async function fetchInitialData(): Promise<{ githubClientId: string | null; user: User | null }> {
-  try {
-    const url = apiEndpoint("/api/initial-data");
+async function fetchInitialData(): Promise<{
+   githubClientId: string | null;
+   user: User | null;
+}> {
+   try {
+      const url = apiEndpoint("/api/initial-data");
 
-    const response = await fetch(url, {
-      credentials: "include"
-    });
+      const response = await fetch(url, {
+         credentials: "include"
+      });
 
-    if (!response.ok) {
-      console.error("Failed to fetch initial data: HTTP", response.status);
+      if (!response.ok) {
+         console.error("Failed to fetch initial data: HTTP", response.status);
+         return { githubClientId: null, user: null };
+      }
+
+      const text = await response.text();
+
+      try {
+         const data = JSON.parse(text);
+         return {
+            githubClientId: data.githubClientId || null,
+            user: data.user || null
+         };
+      } catch (parseError) {
+         console.error("Failed to parse JSON:", parseError);
+         console.error("Response was:", text.substring(0, 500));
+         return { githubClientId: null, user: null };
+      }
+   } catch (e) {
+      console.error("Failed to fetch initial data:", e);
       return { githubClientId: null, user: null };
-    }
-
-    const text = await response.text();
-
-    try {
-      const data = JSON.parse(text);
-      return {
-        githubClientId: data.githubClientId || null,
-        user: data.user || null
-      };
-    } catch (parseError) {
-      console.error("Failed to parse JSON:", parseError);
-      console.error("Response was:", text.substring(0, 500));
-      return { githubClientId: null, user: null };
-    }
-  } catch (e) {
-    console.error("Failed to fetch initial data:", e);
-    return { githubClientId: null, user: null };
-  }
+   }
 }
 
 function AppWrapper() {
-  const [initialData, setInitialData] = useState<{ githubClientId: string | null; user: User | null } | null>(
-    getInitialDataFromURL()
-  );
-  const [loading, setLoading] = useState(!initialData);
+   const [initialData, setInitialData] = useState<{
+      githubClientId: string | null;
+      user: User | null;
+   } | null>(getInitialDataFromURL());
+   const [loading, setLoading] = useState(!initialData);
 
-  useEffect(() => {
-    if (!initialData) {
-      fetchInitialData().then(data => {
-        setInitialData(data);
-        setLoading(false);
-      });
-    }
-  }, [initialData]);
+   useEffect(() => {
+      if (!initialData) {
+         fetchInitialData().then((data) => {
+            setInitialData(data);
+            setLoading(false);
+         });
+      }
+   }, [initialData]);
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
+   if (loading) {
+      return (
+         <div className="flex items-center justify-center h-screen">
+            Loading...
+         </div>
+      );
+   }
 
-  return <App initialData={initialData!} />;
+   return <App initialData={initialData!} />;
 }
 
 const showLoggedOut = path === "/logged-out";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      {showLoggedOut ? <LoggedOutPage /> : <AppWrapper />}
-    </BrowserRouter>
-  </React.StrictMode>
+   <React.StrictMode>
+      <BrowserRouter>
+         {showLoggedOut ? <LoggedOutPage /> : <AppWrapper />}
+      </BrowserRouter>
+   </React.StrictMode>
 );

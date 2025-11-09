@@ -21,19 +21,26 @@ export default function MessagesSidebar({
    loading,
    onThreadSelect,
    onSearchChange,
-   onNewMessage,
+   onNewMessage
 }: MessagesSidebarProps) {
-   const filteredThreads = threads.filter(t => {
+   const filteredThreads = threads.filter((t) => {
       if (!searchQuery.trim()) return true;
       const query = searchQuery.toLowerCase();
-      const participantNames = t.participants?.map(p => p.name.toLowerCase() + " " + p.handle.toLowerCase()).join(" ") || "";
-      return participantNames.includes(query) || t.last.toLowerCase().includes(query);
+      const participantNames =
+         t.participants
+            ?.map((p) => p.name.toLowerCase() + " " + p.handle.toLowerCase())
+            .join(" ") || "";
+      return (
+         participantNames.includes(query) ||
+         t.last.toLowerCase().includes(query)
+      );
    });
 
    const getThreadTitle = (thread: Thread) => {
       if (thread.isGroup && thread.groupName) return thread.groupName;
-      if (!thread.participants || thread.participants.length === 0) return "Unknown";
-      return thread.participants.map(p => p.name).join(", ");
+      if (!thread.participants || thread.participants.length === 0)
+         return "Unknown";
+      return thread.participants.map((p) => p.name).join(", ");
    };
 
    const getThreadAvatar = (thread: Thread) => {
@@ -48,17 +55,21 @@ export default function MessagesSidebar({
       <aside className="border-r border-border dark:border-border-dark bg-panel dark:bg-panel-dark flex flex-col w-full max-w-full overflow-hidden">
          <div className="sticky top-0 bg-panel dark:bg-panel-dark p-2.5 flex flex-col gap-2 z-10">
             <div className="flex items-center gap-2 w-full">
-               <h2 className="text-lg font-semibold text-text dark:text-text-dark flex-1 truncate">Messages</h2>
+               <h2 className="text-lg font-semibold text-text dark:text-text-dark flex-1 truncate">
+                  Messages
+               </h2>
                <GenericButton
                   onClick={onNewMessage}
-                  className="inline-flex gap-2 items-center justify-center bg-accent text-white hover:bg-accent/90 h-[36px] w-[36px] min-w-[36px] p-0 cursor-pointer flex-shrink-0"
-                  aria-label="New message"
-               >
+                  className="inline-flex gap-2 items-center justify-center bg-accent text-white hover:bg-accent/90 h-[36px] w-[36px] min-w-[36px] p-0 cursor-pointer flex-shrink-0 rounded-l-full rounded-r-full"
+                  aria-label="New message">
                   <Plus size={20} />
                </GenericButton>
             </div>
             <div className="flex items-center gap-2 bg-muted dark:bg-muted-dark rounded-xl px-3 py-2 w-full">
-               <Search size={18} className="text-sub dark:text-sub-dark flex-shrink-0" />
+               <Search
+                  size={18}
+                  className="text-sub dark:text-sub-dark flex-shrink-0"
+               />
                <input
                   type="text"
                   placeholder="Search DMs"
@@ -79,7 +90,7 @@ export default function MessagesSidebar({
                   {searchQuery ? "No conversations found" : "No messages yet"}
                </div>
             ) : (
-               filteredThreads.map(t => {
+               filteredThreads.map((t) => {
                   const isActive = activeId === t.id;
                   return (
                      <div
@@ -90,10 +101,13 @@ export default function MessagesSidebar({
                               ? "bg-muted dark:bg-muted-dark border-accent"
                               : "border-transparent"
                         )}
-                        onClick={() => onThreadSelect(t.id)}
-                     >
+                        onClick={() => onThreadSelect(t.id)}>
                         <div className="relative flex-shrink-0">
-                           <Avatar src={getThreadAvatar(t)} alt={getThreadTitle(t)} size="sm" />
+                           <Avatar
+                              src={getThreadAvatar(t)}
+                              alt={getThreadTitle(t)}
+                              size="sm"
+                           />
                            {/* {t.unread && (
                               <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full border-2 border-panel dark:border-panel-dark" />
                            )} */}

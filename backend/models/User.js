@@ -35,14 +35,14 @@ const userSchema = new mongoose.Schema({
     {
       type: {
         type: String,
-        enum: ['like', 'comment', 'comment_like', 'message', 'reply', 'group-add'],
+        enum: ['like', 'comment', 'comment_like', 'message', 'reply', 'group-add', 'follow', 'unfollow'],
         required: true,
       },
       from: { type: String, required: true }, // uuid of the person who triggered the notification
       fromName: String,
       fromAvatar: String,
-      contentId: String, // postId, reelId, or threadId
-      contentType: { type: String, enum: ['post', 'reel', 'message', 'comment', 'group'] },
+      contentId: String, // postId, reelId, threadId, or userId
+      contentType: { type: String, enum: ['post', 'reel', 'message', 'comment', 'group', 'user'] },
       message: String,
       read: { type: Boolean, default: false },
       createdAt: { type: Date, default: Date.now },

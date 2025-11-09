@@ -21,9 +21,11 @@ export default function Messages() {
    const [searchQuery, setSearchQuery] = useState("");
    const [loading, setLoading] = useState(true);
    const [loggedOut, setLoggedOut] = useState(false);
-   const [typingUsers, setTypingUsers] = useState<{ [threadId: string]: string[] }>({});
+   const [typingUsers, setTypingUsers] = useState<{
+      [threadId: string]: string[];
+   }>({});
    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-   const activeThread = threads.find(t => t.id === activeId);
+   const activeThread = threads.find((t) => t.id === activeId);
 
    // Initialize Socket.IO
    useEffect(() => {
@@ -31,52 +33,81 @@ export default function Messages() {
 
       // Listen for new messages
       socket.on("new-message", (data: { threadId: string; message: any }) => {
-         setThreads(prev => prev.map(t => {
-            if (t.id === data.threadId) {
-               // Check if message already exists (avoid duplicates)
-               const messageExists = t.messages.some(m => m.id === data.message.id);
-               if (messageExists) return t;
+         setThreads((prev) =>
+            prev.map((t) => {
+               if (t.id === data.threadId) {
+                  // Check if message already exists (avoid duplicates)
+                  const messageExists = t.messages.some(
+                     (m) => m.id === data.message.id
+                  );
+                  if (messageExists) return t;
 
-               return {
-                  ...t,
-                  messages: [...t.messages, data.message],
-                  last: data.message.text || `${data.message.attachments?.length || 0} file${(data.message.attachments && data.message.attachments.length !== 1 ? 's' : '')}`,
-                  lastTs: data.message.ts
-               };
-            }
-            return t;
-         }));
+                  return {
+                     ...t,
+                     messages: [...t.messages, data.message],
+                     last:
+                        data.message.text ||
+                        `${data.message.attachments?.length || 0} file${data.message.attachments && data.message.attachments.length !== 1 ? "s" : ""}`,
+                     lastTs: data.message.ts
+                  };
+               }
+               return t;
+            })
+         );
       });
 
       // Listen for reactions
-      socket.on("message-reaction", (data: { threadId: string; messageId: string; reactions: any[] }) => {
-         setThreads(prev => prev.map(t => {
-            if (t.id === data.threadId) {
-               return {
-                  ...t,
-                  messages: t.messages.map(m =>
-                     m.id === data.messageId ? { ...m, reactions: data.reactions } : m
-                  )
-               };
-            }
-            return t;
-         }));
-      });
+      socket.on(
+         "message-reaction",
+         (data: { threadId: string; messageId: string; reactions: any[] }) => {
+            setThreads((prev) =>
+               prev.map((t) => {
+                  if (t.id === data.threadId) {
+                     return {
+                        ...t,
+                        messages: t.messages.map((m) =>
+                           m.id === data.messageId
+                              ? { ...m, reactions: data.reactions }
+                              : m
+                        )
+                     };
+                  }
+                  return t;
+               })
+            );
+         }
+      );
 
       // Listen for typing indicators
-      socket.on("user-typing", (data: { threadId: string; userId: string; userName?: string; isTyping: boolean }) => {
-         setTypingUsers(prev => {
-            const threadTyping = prev[data.threadId] || [];
-            const displayName = data.userName || data.userId || "Someone";
+      socket.on(
+         "user-typing",
+         (data: {
+            threadId: string;
+            userId: string;
+            userName?: string;
+            isTyping: boolean;
+         }) => {
+            setTypingUsers((prev) => {
+               const threadTyping = prev[data.threadId] || [];
+               const displayName = data.userName || data.userId || "Someone";
 
-            if (data.isTyping && !threadTyping.includes(displayName)) {
-               return { ...prev, [data.threadId]: [...threadTyping, displayName] };
-            } else if (!data.isTyping) {
-               return { ...prev, [data.threadId]: threadTyping.filter(name => name !== displayName) };
-            }
-            return prev;
-         });
-      });
+               if (data.isTyping && !threadTyping.includes(displayName)) {
+                  return {
+                     ...prev,
+                     [data.threadId]: [...threadTyping, displayName]
+                  };
+               } else if (!data.isTyping) {
+                  return {
+                     ...prev,
+                     [data.threadId]: threadTyping.filter(
+                        (name) => name !== displayName
+                     )
+                  };
+               }
+               return prev;
+            });
+         }
+      );
 
       return () => {
          socket.off("new-message");
@@ -113,7 +144,9 @@ export default function Messages() {
             setLoading(true);
             // quick auth check
             try {
-               const response = await fetch(apiEndpoint('/api/me'), { credentials: 'include' });
+               const response = await fetch(apiEndpoint("/api/me"), {
+                  credentials: "include"
+               });
                if (!response.ok) {
                   setLoggedOut(true);
                   return;
@@ -126,30 +159,33 @@ export default function Messages() {
                   setLoggedOut(false);
                }
 
-
                if (!response.ok && !data.id) {
-                  console.warn('Auth check failed: HTTP', response.status);
+                  console.warn("Auth check failed: HTTP", response.status);
                   return;
                }
             } catch (e) {
-               console.warn('Auth check failed', e);
+               console.warn("Auth check failed", e);
                setLoggedOut(true);
                return;
             }
-
 
             const fetchedThreads = await fetchThreads();
             setThreads(fetchedThreads);
 
             // If there's a threadId in the URL, set it as active
-            if (urlThreadId && fetchedThreads.some(t => t.id === urlThreadId)) {
+            if (
+               urlThreadId &&
+               fetchedThreads.some((t) => t.id === urlThreadId)
+            ) {
                setActiveId(urlThreadId);
             } else if (fetchedThreads.length > 0) {
                // Otherwise, select the first thread
                setActiveId(fetchedThreads[0].id);
                // Update URL to reflect the first thread
                if (!isMobile) {
-                  navigate(`/messages/${fetchedThreads[0].id}`, { replace: true });
+                  navigate(`/messages/${fetchedThreads[0].id}`, {
+                     replace: true
+                  });
                }
             }
          } catch (error) {
@@ -162,13 +198,15 @@ export default function Messages() {
 
    // Sync activeId when URL changes (without reloading threads)
    useEffect(() => {
-      if (urlThreadId && threads.some(t => t.id === urlThreadId)) {
+      if (urlThreadId && threads.some((t) => t.id === urlThreadId)) {
          setActiveId(urlThreadId);
       }
    }, [urlThreadId, threads]);
 
    useEffect(() => {
-      setThreads(prev => prev.map(t => (t.id === activeId ? { ...t, unread: false } : t)));
+      setThreads((prev) =>
+         prev.map((t) => (t.id === activeId ? { ...t, unread: false } : t))
+      );
    }, [activeId]);
 
    const handleCreateChat = async (
@@ -176,17 +214,17 @@ export default function Messages() {
       options?: { isGroup?: boolean; groupName?: string; groupAvatar?: string }
    ) => {
       try {
-         console.log('Creating chat with users:', userIds, 'options:', options);
+         console.log("Creating chat with users:", userIds, "options:", options);
          const response = await createThread(userIds, options);
-         console.log('Create chat response:', response);
+         console.log("Create chat response:", response);
          const threadId = response.threadId || `t_${Date.now()}`;
 
          // Check if thread already exists in the list
-         const existingThread = threads.find(t => t.id === threadId);
+         const existingThread = threads.find((t) => t.id === threadId);
 
          if (existingThread) {
             // Thread already exists, just switch to it
-            console.log('Thread already exists, switching to it:', threadId);
+            console.log("Thread already exists, switching to it:", threadId);
             setActiveId(threadId);
             navigate(`/messages/${threadId}`);
             return;
@@ -195,7 +233,8 @@ export default function Messages() {
          // Create new thread entry
          const newThread: Thread = {
             id: threadId,
-            participantIds: response.participants?.map((p: any) => p.id) || userIds,
+            participantIds:
+               response.participants?.map((p: any) => p.id) || userIds,
             participants: response.participants || [],
             last: "",
             lastTs: Date.now(),
@@ -203,24 +242,28 @@ export default function Messages() {
             unread: false,
             isGroup: response.isGroup ?? true,
             groupName: response.groupName,
-            groupAvatar: response.groupAvatar,
+            groupAvatar: response.groupAvatar
          };
-         console.log('Adding new thread to list:', newThread);
-         setThreads(prev => [newThread, ...prev]);
+         console.log("Adding new thread to list:", newThread);
+         setThreads((prev) => [newThread, ...prev]);
          setActiveId(newThread.id);
          navigate(`/messages/${newThread.id}`);
       } catch (error) {
          console.error("Failed to create thread:", error);
-         alert(`Failed to create chat: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
+         alert(
+            `Failed to create chat: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`
+         );
       }
    };
 
    const handleThreadUpdate = (updatedThread: Thread) => {
-      setThreads(prev => prev.map(t => t.id === updatedThread.id ? updatedThread : t));
+      setThreads((prev) =>
+         prev.map((t) => (t.id === updatedThread.id ? updatedThread : t))
+      );
    };
 
    const handleGroupDeleted = () => {
-      setThreads(prev => prev.filter(t => t.id !== activeId));
+      setThreads((prev) => prev.filter((t) => t.id !== activeId));
       setActiveId("");
       setShowSettings(false);
    };
@@ -234,11 +277,19 @@ export default function Messages() {
 
    return (
       <>
-         <div className={`grid overflow-hidden ${
-            isMobile
-               ? 'h-[calc(100vh-5rem)] w-full m-0 rounded-none border-0'
-               : 'h-[calc(100vh-1rem)] w-[calc(100vw-12.5rem)] rounded-xl border border-border dark:border-border-dark m-2 ml-0'
-         } small:grid-cols-1`} style={{ gridTemplateColumns: loggedOut ? "minmax(420px, 1fr)" : isMobile ? "1fr" : "320px minmax(420px, 1fr)" }}>
+         <div
+            className={`grid overflow-hidden ${
+               isMobile
+                  ? "h-[calc(100vh-5rem)] w-full m-0 rounded-none border-0"
+                  : "h-[calc(100vh-1rem)] w-[calc(100vw-12.5rem)] rounded-xl border border-border dark:border-border-dark m-2 ml-0"
+            } small:grid-cols-1`}
+            style={{
+               gridTemplateColumns: loggedOut
+                  ? "minmax(420px, 1fr)"
+                  : isMobile
+                    ? "1fr"
+                    : "320px minmax(420px, 1fr)"
+            }}>
             {!loggedOut && (
                <MessagesSidebar
                   threads={threads}
@@ -279,18 +330,22 @@ export default function Messages() {
                               <h3 className="text-xl font-semibold text-text dark:text-text-dark mb-2">
                                  You must be logged in to view messages
                               </h3>
-                              <p className="text-sub dark:text-sub-dark mb-4">Please sign in to access your messages.</p>
+                              <p className="text-sub dark:text-sub-dark mb-4">
+                                 Please sign in to access your messages.
+                              </p>
                               <div className="flex items-center justify-center gap-3">
                                  <GenericButton
-                                    onClick={() => { window.location.href = '/'; }}
-                                    className="inline-flex gap-2 items-center justify-center bg-muted dark:bg-muted-dark text-text dark:text-text-dark hover:bg-muted/90 px-4 py-2 cursor-pointer"
-                                 >
+                                    onClick={() => {
+                                       window.location.href = "/";
+                                    }}
+                                    className="inline-flex gap-2 items-center justify-center bg-muted dark:bg-muted-dark text-text dark:text-text-dark hover:bg-muted/90 px-4 py-2 cursor-pointer">
                                     Go home
                                  </GenericButton>
                                  <GenericButton
-                                    onClick={() => { window.location.href = '/logged-out'; }}
-                                    className="inline-flex gap-2 items-center justify-center bg-accent dark:bg-accent-dark text-white hover:bg-accent/90 px-4 py-2 cursor-pointer transition border-accent-dark dark:border-accent"
-                                 >
+                                    onClick={() => {
+                                       window.location.href = "/logged-out";
+                                    }}
+                                    className="inline-flex gap-2 items-center justify-center bg-accent dark:bg-accent-dark text-white hover:bg-accent/90 px-4 py-2 cursor-pointer transition border-accent-dark dark:border-accent">
                                     Log in
                                  </GenericButton>
                               </div>
@@ -301,12 +356,12 @@ export default function Messages() {
                                  Select a conversation
                               </h3>
                               <p className="text-sub dark:text-sub-dark mb-4">
-                                 Choose a conversation from the sidebar or start a new one
+                                 Choose a conversation from the sidebar or start
+                                 a new one
                               </p>
                               <GenericButton
                                  onClick={() => setIsModalOpen(true)}
-                                 className="inline-flex gap-2 items-center justify-center bg-accent text-white hover:bg-accent/90 px-4 py-2 cursor-pointer"
-                              >
+                                 className="inline-flex gap-2 items-center justify-center bg-accent text-white hover:bg-accent/90 px-4 py-2 cursor-pointer">
                                  <Plus size={18} /> New Message
                               </GenericButton>
                            </>

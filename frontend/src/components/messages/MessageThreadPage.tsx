@@ -23,17 +23,21 @@ export default function MessageThreadPage() {
       // Listen for new messages
       socket.on("new-message", (data: { threadId: string; message: any }) => {
          if (data.threadId === threadId) {
-            setThread(prev => {
+            setThread((prev) => {
                if (!prev) return null;
 
                // Check if message already exists (avoid duplicates)
-               const messageExists = prev.messages.some(m => m.id === data.message.id);
+               const messageExists = prev.messages.some(
+                  (m) => m.id === data.message.id
+               );
                if (messageExists) return prev;
 
                return {
                   ...prev,
                   messages: [...prev.messages, data.message],
-                  last: data.message.text || `${data.message.attachments?.length || 0} file${(data.message.attachments && data.message.attachments.length !== 1 ? 's' : '')}`,
+                  last:
+                     data.message.text ||
+                     `${data.message.attachments?.length || 0} file${data.message.attachments && data.message.attachments.length !== 1 ? "s" : ""}`,
                   lastTs: data.message.ts
                };
             });
@@ -41,34 +45,47 @@ export default function MessageThreadPage() {
       });
 
       // Listen for reactions
-      socket.on("message-reaction", (data: { threadId: string; messageId: string; reactions: any[] }) => {
-         if (data.threadId === threadId) {
-            setThread(prev => {
-               if (!prev) return null;
-               return {
-                  ...prev,
-                  messages: prev.messages.map(m =>
-                     m.id === data.messageId ? { ...m, reactions: data.reactions } : m
-                  )
-               };
-            });
+      socket.on(
+         "message-reaction",
+         (data: { threadId: string; messageId: string; reactions: any[] }) => {
+            if (data.threadId === threadId) {
+               setThread((prev) => {
+                  if (!prev) return null;
+                  return {
+                     ...prev,
+                     messages: prev.messages.map((m) =>
+                        m.id === data.messageId
+                           ? { ...m, reactions: data.reactions }
+                           : m
+                     )
+                  };
+               });
+            }
          }
-      });
+      );
 
       // Listen for typing indicators
-      socket.on("user-typing", (data: { threadId: string; userId: string; userName?: string; isTyping: boolean }) => {
-         if (data.threadId === threadId) {
-            const displayName = data.userName || data.userId || "Someone";
-            setTypingUsers(prev => {
-               if (data.isTyping && !prev.includes(displayName)) {
-                  return [...prev, displayName];
-               } else if (!data.isTyping) {
-                  return prev.filter(name => name !== displayName);
-               }
-               return prev;
-            });
+      socket.on(
+         "user-typing",
+         (data: {
+            threadId: string;
+            userId: string;
+            userName?: string;
+            isTyping: boolean;
+         }) => {
+            if (data.threadId === threadId) {
+               const displayName = data.userName || data.userId || "Someone";
+               setTypingUsers((prev) => {
+                  if (data.isTyping && !prev.includes(displayName)) {
+                     return [...prev, displayName];
+                  } else if (!data.isTyping) {
+                     return prev.filter((name) => name !== displayName);
+                  }
+                  return prev;
+               });
+            }
          }
-      });
+      );
 
       return () => {
          socket.off("new-message");
@@ -94,7 +111,7 @@ export default function MessageThreadPage() {
          try {
             setLoading(true);
             const threads = await fetchThreads();
-            const foundThread = threads.find(t => t.id === threadId);
+            const foundThread = threads.find((t) => t.id === threadId);
             if (foundThread) {
                setThread(foundThread);
             } else {
@@ -121,7 +138,9 @@ export default function MessageThreadPage() {
    if (loading) {
       return (
          <div className="flex items-center justify-center h-screen bg-bg dark:bg-bg-dark">
-            <div className="text-text dark:text-text-dark">Loading conversation...</div>
+            <div className="text-text dark:text-text-dark">
+               Loading conversation...
+            </div>
          </div>
       );
    }
@@ -129,11 +148,12 @@ export default function MessageThreadPage() {
    if (!thread) {
       return (
          <div className="flex flex-col items-center justify-center h-screen bg-bg dark:bg-bg-dark p-4">
-            <div className="text-text dark:text-text-dark mb-4">Conversation not found</div>
+            <div className="text-text dark:text-text-dark mb-4">
+               Conversation not found
+            </div>
             <GenericButton
                onClick={() => navigate("/messages")}
-               className="inline-flex gap-2 items-center justify-center bg-accent text-white hover:bg-accent/90 px-4 py-2 cursor-pointer"
-            >
+               className="inline-flex gap-2 items-center justify-center bg-accent text-white hover:bg-accent/90 px-4 py-2 cursor-pointer">
                <ChevronLeft size={18} /> Back to Messages
             </GenericButton>
          </div>
@@ -157,23 +177,25 @@ export default function MessageThreadPage() {
             <button
                onClick={() => navigate("/messages")}
                className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted dark:hover:bg-muted-dark transition"
-               aria-label="Back to messages"
-            >
-               <ChevronLeft size={24} className="text-text dark:text-text-dark" />
+               aria-label="Back to messages">
+               <ChevronLeft
+                  size={24}
+                  className="text-text dark:text-text-dark"
+               />
             </button>
             <div className="flex-1">
                <h2 className="text-lg font-semibold text-text dark:text-text-dark">
                   {thread.isGroup && thread.groupName
                      ? thread.groupName
-                     : thread.participants?.map(p => p.name).join(", ") || "Unknown"}
+                     : thread.participants?.map((p) => p.name).join(", ") ||
+                       "Unknown"}
                </h2>
             </div>
             {/* Settings cog icon for all chats */}
             <button
                onClick={() => setShowSettings(true)}
                className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted dark:hover:bg-muted-dark transition"
-               aria-label="Chat settings"
-            >
+               aria-label="Chat settings">
                <Settings size={20} className="text-text dark:text-text-dark" />
             </button>
          </div>
