@@ -90,11 +90,6 @@ export function Header({ openProfile, githubClientId, googleClientId, user }: He
                 </button>
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-lg font-semibold text-text dark:text-text-dark">Hi, {getFirstName(user.name)}!</span>
-                  {user.privilegeLevel === "admin" && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                      👑 ADMIN
-                    </span>
-                  )}
                 </div>
                 <a
                   href={`${BACKEND_URL}/logout`}
